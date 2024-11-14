@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
 
@@ -49,7 +52,7 @@ class LoginScreen extends StatelessWidget {
                   }
                 }
               },
-              label: Text('Login with Google'),
+              label: Text('Login with FaceBook'),
             ),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
@@ -61,7 +64,7 @@ class LoginScreen extends StatelessWidget {
               ),
               onPressed: () async {
                 final success =
-                    await authService.signInWithEmail('correo', 'contraseña');
+                    await authService.signInWithEmail('email', 'password');
                 if (success) {
                   if (context.mounted) {
                     // Flutter 3.7+ only
@@ -69,7 +72,7 @@ class LoginScreen extends StatelessWidget {
                   }
                 }
               },
-              label: Text('Login with Google'),
+              label: Text('Login with E-mail'),
             ),
           ],
         ),

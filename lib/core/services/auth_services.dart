@@ -5,7 +5,7 @@ import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 
 class AuthService {
-  final String backendUrl = 'http://localhost:3000/auth/google';
+  final String backendUrl = 'http://10.0.2.2:3000/auth';
   final AuthStorageService storageService = AuthStorageService();
 
   Future<bool> signInWithGoogle() async {
@@ -29,23 +29,22 @@ class AuthService {
       // print('Envía el token al backend');
 
       // // Envía el token al backend
-      // final response = await http.get(
-      //   Uri.parse('$backendUrl/google'),
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': 'Bearer ${googleAuth.accessToken}',
-      //   },
-      // );
-      return true;
+      final response = await http.get(
+        Uri.parse('$backendUrl/google'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${googleAuth.accessToken}',
+        },
+      );
       // Verifica si la respuesta del servidor es exitosa
-      // if (response.statusCode == 200) {
-      //   // Manejo de respuesta exitosa (puedes hacer otras validaciones aquí si es necesario)
-      //   return true;
-      // } else {
-      //   // Manejo de error del servidor
-      //   print('Error en autenticación con Google: ${response.body}');
-      //   return false;
-      // }
+      if (response.statusCode == 200) {
+        // Manejo de respuesta exitosa (puedes hacer otras validaciones aquí si es necesario)
+        return true;
+      } else {
+        // Manejo de error del servidor
+        print('Error en autenticación con Google: ${response.body}');
+        return false;
+      }
     } catch (e) {
       // Manejo de errores en la solicitud
       print('Error en autenticación con Google: $e');
@@ -55,11 +54,11 @@ class AuthService {
 
   Future<bool> signInWithFacebook() async {
     try {
-      final LoginResult result = await FacebookAuth.instance.login();
+      final LoginResult result = await FacebookAuth.instance.login(permissions: ['public_profile'],);
       if (result.status == LoginStatus.success) {
         final response = await http.post(
-          Uri.parse('$backendUrl/facebook'),
-          body: jsonEncode({'token': result.accessToken!.token}),
+          Uri.parse('$backendUrl/facebook-login'),
+          body: jsonEncode({'token': result.accessToken!.tokenString}),
           headers: {'Content-Type': 'application/json'},
         );
 
@@ -84,7 +83,7 @@ class AuthService {
     try {
       final response = await http.post(
         Uri.parse('$backendUrl/login'),
-        body: jsonEncode({'email': email, 'password': password}),
+        body: jsonEncode({'userName': email, 'password': password}),
         headers: {'Content-Type': 'application/json'},
       );
 

@@ -1,0 +1,8 @@
+
+<resources>
+    <string name="app_name">Sportify Amateur</string>
+    <string name="facebook_app_id">1298138314700802</string>
+    <string name="fb_login_protocol_scheme">fb1298138314700802</string>
+    <string name="facebook_client_token">814b1092ddaa8172eeb636146176113f</string>
+
+</resources>
