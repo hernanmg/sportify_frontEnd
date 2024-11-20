@@ -64,7 +64,7 @@ class LoginScreen extends StatelessWidget {
               ),
               onPressed: () async {
                 final success =
-                    await authService.signInWithEmail('email', 'password');
+                    await authService.signInWithEmail('pepa', 'password123');
                 if (success) {
                   if (context.mounted) {
                     // Flutter 3.7+ only
