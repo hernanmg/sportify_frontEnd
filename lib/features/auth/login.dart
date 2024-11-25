@@ -62,15 +62,16 @@ class LoginScreen extends StatelessWidget {
                 FontAwesomeIcons.envelope,
                 color: Color.fromARGB(255, 2, 39, 70),
               ),
-              onPressed: () async {
-                final success =
-                    await authService.signInWithEmail('pepa', 'password123');
-                if (success) {
-                  if (context.mounted) {
-                    // Flutter 3.7+ only
-                    Navigator.pushReplacementNamed(context, '/dashboard');
-                  }
-                }
+              onPressed: ()  {
+                // final success =
+                //     await authService.signInWithEmail('pepa', 'password123');
+                // if (success) {
+                //   if (context.mounted) {
+                //     // Flutter 3.7+ only
+                //     Navigator.pushReplacementNamed(context, '/login');
+                //   }
+                // }
+                Navigator.pushReplacementNamed(context, '/login');
               },
               label: Text('Login with E-mail'),
             ),
