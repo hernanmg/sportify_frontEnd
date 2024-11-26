@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:sportify_amateur/core/common/app_config.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 
 class AuthService {
-  final String backendUrl = 'http://10.0.2.2:3000/auth';
+  final String backendUrl = AppConfig.apiBaseUrl;
   final AuthStorageService storageService = AuthStorageService();
 
   Future<bool> signInWithGoogle() async {
@@ -81,17 +82,21 @@ class AuthService {
 
   Future<bool> signInWithEmail(String email, String password) async {
     try {
-      final response = await http.post(
-        Uri.parse('$backendUrl/login'),
-        body: jsonEncode({'userName': email, 'password': password}),
-        headers: {'Content-Type': 'application/json'},
-      );
-
+      // final response = await http.post(
+      //   Uri.parse('$backendUrl/login'),
+      //   body: jsonEncode({'userName': email, 'password': password}),
+      //   headers: {'Content-Type': 'application/json'},
+      // );
+      await Future.delayed(Duration(seconds: 1)); // Simula un retraso de red
+      final response = {
+        'statusCode': 200,
+        'body': jsonEncode({'message': 'Login successful'}),
+      };
       // Verifica si la respuesta del servidor es exitosa
-      if (response.statusCode == 200) {
+      if (response['statusCode'] == 200) { //if (response.statusCode == 200) {
         return true; // Autenticación exitosa
       } else {
-        print('Error en autenticación con Email: ${response.body}');
+        // print('Error en autenticación con Email: ${response.body}');
         return false; // Error en la autenticación
       }
     } catch (e) {

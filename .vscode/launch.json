@@ -5,21 +5,46 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "sportify_amateur",
-            "request": "launch",
-            "type": "dart"
-        },
-        {
-            "name": "sportify_amateur (profile mode)",
+            "name": "sportify_amateur (Development)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "profile"
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define",
+                "API_BASE_URL=http://10.0.2.2:3000/auth"
+            ]
         },
         {
-            "name": "sportify_amateur (release mode)",
+            "name": "sportify_amateur (Production)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "release"
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define",
+                "API_BASE_URL=https://prod.api.sportify.com"
+            ]
+        },
+        {
+            "name": "sportify_amateur (Profile mode)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "profile",
+            "args": [
+                "--dart-define",
+                "API_BASE_URL=https://dev.api.sportify.com"
+            ]
+        },
+        {
+            "name": "sportify_amateur (Release mode)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "release",
+            "args": [
+                "--dart-define",
+                "API_BASE_URL=https://prod.api.sportify.com"
+            ]
         }
     ]
 }
