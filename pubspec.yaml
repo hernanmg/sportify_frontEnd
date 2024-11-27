@@ -19,7 +19,9 @@ dependencies:
   shared_preferences: ^2.2.3
   font_awesome_flutter: ^10.1.0
   flutter_launcher_icons: ^0.13.1
-  fl_chart: ^0.65.0
+  fl_chart: ^0.60.0
+  csv: ^5.0.0
+  pdf: ^3.11.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

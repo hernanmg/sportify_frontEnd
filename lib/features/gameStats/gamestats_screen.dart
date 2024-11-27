@@ -57,11 +57,13 @@ class _GameStatsScreenState extends State<GameStatsScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: teamStats
-                  .map((stat) => _buildStatCard(stat['title'], stat['value']))
-                  .toList(),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: teamStats
+                    .map((stat) => _buildStatCard(stat['title'], stat['value']))
+                    .toList(),
+              ),
             ),
             const SizedBox(height: 32),
             const Text(
@@ -105,8 +107,10 @@ class _GameStatsScreenState extends State<GameStatsScreen> {
         alignment: BarChartAlignment.spaceAround,
         barGroups: data
             .map((entry) => BarChartGroupData(x: entry['x'], barRods: [
-                  BarChartRodData(toY: entry['scored'].toDouble(), color: Colors.green),
-                  BarChartRodData(toY: entry['conceded'].toDouble(), color: Colors.red),
+                  BarChartRodData(
+                      toY: entry['scored'].toDouble(), color: Colors.green),
+                  BarChartRodData(
+                      toY: entry['conceded'].toDouble(), color: Colors.red),
                 ]))
             .toList(),
         titlesData: FlTitlesData(show: true),
