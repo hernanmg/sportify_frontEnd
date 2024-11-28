@@ -173,19 +173,19 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                                   value: normalizeValue(minutesPlayed, 5400)),
                               RadarEntry(
                                   value: normalizeValue(
-                                      player['Remates al Arco'], 20)),
+                                      player['rematesAlArco'], 20)),
                               RadarEntry(
                                   value: normalizeValue(
-                                      player['Pases Completados'], 100)),
+                                      player['pasesCompletados'], 100)),
                               RadarEntry(
                                   value: normalizeValue(
-                                      player['Pases Errados'], 100)),
+                                      player['pasesErrados'], 100)),
                               RadarEntry(
                                   value: normalizeValue(
-                                      player['Tarjetas Amarillas'], 100)),
+                                      player['tarjetasAmarillas'], 100)),
                               RadarEntry(
                                   value: normalizeValue(
-                                      player['Tarjetas Rojas'],
+                                      player['tarjetasRojas'],
                                       100)), // Normalizado para máximo de 60 partidos (5400 minutos)
                             ],
                             fillColor: Colors.blue.withOpacity(0.2),
@@ -361,7 +361,7 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                                       BarChartRodData(
                                           fromY: 0,
                                           toY: (player['minutesPlayed'] /
-                                                  player['partidos jugados']) /
+                                                  player['partidosJugados']) /
                                               10,
                                           color: Colors.blue,
                                           width: 10),
@@ -392,7 +392,7 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                                     barRods: [
                                       BarChartRodData(
                                           fromY: 0,
-                                          toY: player['Remates al Arco'],
+                                          toY: player['rematesAlArco'],
                                           color: Colors.black,
                                           width: 10),
                                     ],
@@ -402,7 +402,7 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                                     barRods: [
                                       BarChartRodData(
                                           fromY: 0,
-                                          toY: player['Pases Completados'] / 10,
+                                          toY: player['pasesCompletados'] / 10,
                                           color: Colors.purple,
                                           width: 10),
                                     ],
@@ -412,7 +412,7 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                                     barRods: [
                                       BarChartRodData(
                                           fromY: 0,
-                                          toY: player['Pases Errados'],
+                                          toY: player['pasesErrados'],
                                           color: Colors.brown,
                                           width: 10),
                                     ],
@@ -422,7 +422,7 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                                     barRods: [
                                       BarChartRodData(
                                           fromY: 0,
-                                          toY: player['Tarjetas Amarillas'],
+                                          toY: player['tarjetasAmarillas'],
                                           color: Colors.yellow,
                                           width: 10),
                                     ],
@@ -432,13 +432,13 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                                     barRods: [
                                       BarChartRodData(
                                           fromY: 0,
-                                          toY: player['Tarjetas Rojas'],
+                                          toY: player['tarjetasRojas'],
                                           color: Colors.red,
                                           width: 10),
                                     ],
                                   ),
                                 ],
-                                maxY: player['partidos jugados'] * 1.0,
+                                maxY: player['partidosJugados'] * 1.0,
                                 barTouchData: BarTouchData(
                                     enabled: true,
                                     touchTooltipData: BarTouchTooltipData(

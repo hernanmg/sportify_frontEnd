@@ -3,7 +3,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:sportify_amateur/core/services/gamestat_service.dart';
 
 class GameStatsScreen extends StatefulWidget {
-  const GameStatsScreen({super.key});
+  final bool? isAdmin;
+
+  const GameStatsScreen({super.key, this.isAdmin});
 
   @override
   State<GameStatsScreen> createState() => _GameStatsScreenState();
@@ -11,26 +13,35 @@ class GameStatsScreen extends StatefulWidget {
 
 class _GameStatsScreenState extends State<GameStatsScreen> {
   final GameStatsService mockService = GameStatsService();
-
+  late bool isAdmin;
   late List<Map<String, dynamic>> teamStats;
   late List<Map<String, dynamic>> goalsEvolution;
 
   @override
   void initState() {
     super.initState();
+    _loadSession();
     _loadInitialData();
   }
 
+  void _loadSession() {
+    // Simula obtener datos de la sesión o token almacenado
+    isAdmin = widget.isAdmin ?? getIsAdminFromSession();
+  }
+
+  bool getIsAdminFromSession() {
+    // Implementa aquí la lógica para verificar si el usuario es admin
+    return true; // Simulación
+  }
+
   void _loadInitialData() {
-    // Carga los datos iniciales desde el servicio mock
     teamStats = mockService.getTeamStats();
     goalsEvolution = mockService.getGoalsEvolution();
   }
 
   void _refreshData() {
-    // Simula un refresco de datos
     setState(() {
-      teamStats = mockService.getTeamStats(); // Podrías simular cambios aquí
+      teamStats = mockService.getTeamStats();
       goalsEvolution = mockService.getGoalsEvolution();
     });
   }
@@ -73,11 +84,23 @@ class _GameStatsScreenState extends State<GameStatsScreen> {
             const SizedBox(height: 16),
             Expanded(child: _buildGoalsChart(goalsEvolution)),
             const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/playerStats');
-              },
-              child: const Text('Ver Estadísticas por Jugador'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/playerStats');
+                  },
+                  child: const Text('Ver Estadísticas por Jugador'),
+                ),
+                if (isAdmin)
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/comparePlayers');
+                    },
+                    child: const Text('Comparar'),
+                  ),
+              ],
             ),
           ],
         ),

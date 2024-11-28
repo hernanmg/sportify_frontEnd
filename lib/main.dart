@@ -5,6 +5,7 @@ import 'package:sportify_amateur/features/auth/login.dart';
 import 'package:sportify_amateur/features/auth/user_login.dart';
 import 'package:sportify_amateur/features/dashboard/dashboard_screen.dart';
 import 'package:sportify_amateur/features/dashboard/secondaryHome_screen.dart';
+import 'package:sportify_amateur/features/gameStats/comparePlayerStats_screen.dart';
 import 'package:sportify_amateur/features/gameStats/gamestats_screen.dart';
 import 'package:sportify_amateur/features/gameStats/playerdetail_screen.dart';
 import 'package:sportify_amateur/features/gameStats/playerstats_screen.dart';
@@ -38,6 +39,7 @@ class MainApp extends StatelessWidget {
         '/users': (context) => const UsersScreen(),
         '/game-stats': (context) => const GameStatsScreen(),
         '/playerStats': (context) => PlayerStatsScreen(),
+        '/comparePlayers': (context) => ComparePlayersScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/player-detail') {
