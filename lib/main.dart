@@ -10,6 +10,7 @@ import 'package:sportify_amateur/features/gameStats/gamestats_screen.dart';
 import 'package:sportify_amateur/features/gameStats/playerdetail_screen.dart';
 import 'package:sportify_amateur/features/gameStats/playerstats_screen.dart';
 import 'package:sportify_amateur/features/roles/roles_screen.dart';
+import 'package:sportify_amateur/features/users/users_form_screen.dart';
 import 'package:sportify_amateur/features/users/users_screen.dart';
 
 void main() async {
@@ -40,6 +41,7 @@ class MainApp extends StatelessWidget {
         '/game-stats': (context) => const GameStatsScreen(),
         '/playerStats': (context) => PlayerStatsScreen(),
         '/comparePlayers': (context) => ComparePlayersScreen(),
+        '/userDetail': (context) => UserFormScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/player-detail') {
