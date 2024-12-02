@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   Future<String?> _getUserRole() async {
     final prefs = await SharedPreferences.getInstance();
@@ -16,6 +16,7 @@ class DashboardScreen extends StatelessWidget {
           'description': 'Gestiona accesos y permisos de usuarios',
           'requiredRole': 'admin',
           'color': Colors.blue,
+          'route': '/secondary',
         },
         {
           'title': 'Estadísticas de Juego',
@@ -23,6 +24,7 @@ class DashboardScreen extends StatelessWidget {
           'description': 'Analiza el rendimiento de tus equipos y jugadores',
           'requiredRole': 'user',
           'color': Colors.indigo,
+          'route': '/game-stats',
         },
         {
           'title': 'Finanzas y Pagos',
@@ -30,6 +32,7 @@ class DashboardScreen extends StatelessWidget {
           'description': 'Controla ingresos, gastos y pagos',
           'requiredRole': 'user',
           'color': Colors.green,
+          'route': '/game-stats',
         },
         {
           'title': 'Gestión de Asistencia y Horarios',
@@ -37,6 +40,7 @@ class DashboardScreen extends StatelessWidget {
           'description': 'Organiza entrenamientos y eventos',
           'requiredRole': 'user',
           'color': Colors.blueGrey,
+          'route': '/game-stats',
         },
         {
           'title': 'Comunicaciones',
@@ -44,6 +48,7 @@ class DashboardScreen extends StatelessWidget {
           'description': 'Mantén informados a todos los miembros del equipo',
           'requiredRole': 'user',
           'color': Colors.orange,
+          'route': '/game-stats',
         },
         {
           'title': 'Configuración Multilenguaje',
@@ -51,6 +56,7 @@ class DashboardScreen extends StatelessWidget {
           'description': 'Adapta la app a diferentes idiomas',
           'requiredRole': 'user',
           'color': Colors.amberAccent,
+          'route': '/game-stats',
         },
         {
           'title': 'Administración y Reportes',
@@ -58,6 +64,7 @@ class DashboardScreen extends StatelessWidget {
           'description': 'Genera informes detallados y gestiona la app',
           'requiredRole': 'admin',
           'color': Colors.teal,
+          'route': '/game-stats',
         },
       ];
 
@@ -86,15 +93,31 @@ class DashboardScreen extends StatelessWidget {
                 elevation: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 child: ListTile(
-                  leading: Icon(feature['icon'], size: 48, color: feature['color'],),
+                  leading: Icon(
+                    feature['icon'],
+                    size: 48,
+                    color: feature['color'],
+                  ),
                   title: Text(feature['title']),
                   subtitle: Text(feature['description']),
                   onTap: () {
-                    Navigator.pushNamed(
-                        context,
-                        feature['title'] == 'Autenticación y Roles'
-                            ? '/secondary'
-                            : '/game-stats'); // Define la navegación
+                    final routeName = feature['route'];
+                    if (routeName != null) {
+                      Navigator.pushNamed(context, routeName);
+                    } else {
+                      // Manejo para rutas no definidas
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content:
+                              Text('Ruta no definida para ${feature['title']}'),
+                        ),
+                      );
+                    }
+                    // Navigator.pushNamed(
+                    //     context,
+                    //     feature['title'] == 'Autenticación y Roles'
+                    //         ? '/secondary'
+                    //         : '/game-stats'); // Define la navegación
                   },
                 ),
               );

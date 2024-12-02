@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/user_service.dart';
+import 'package:sportify_amateur/features/users/user_detail_screen.dart';
+import 'package:sportify_amateur/features/users/users_form_screen.dart';
 import 'package:sportify_amateur/models/user.dart';
 
 class UsersScreen extends StatefulWidget {
-  const UsersScreen({Key? key}) : super(key: key);
+  const UsersScreen({super.key});
 
   @override
   State<UsersScreen> createState() => _UsersScreenState();
@@ -16,7 +18,50 @@ class _UsersScreenState extends State<UsersScreen> {
   @override
   void initState() {
     super.initState();
-    _usersFuture = _userService.getUsers();
+    _loadUsers();
+  }
+
+  void _loadUsers() {
+    setState(() {
+      _usersFuture = _userService.fetchMockUsers();
+    });
+  }
+
+  void _deleteUser(BuildContext context, User user) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Delete'),
+          content: Text('Are you sure you want to delete ${user.name}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _userService.deleteMockUser(user.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${user.name} has been deleted')),
+      );
+      _loadUsers();
+    }
+  }
+
+  void _navigateToAddUser(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const UserFormScreen()),
+    ).then((_) => _loadUsers()); // Refresh users after returning
   }
 
   @override
@@ -39,18 +84,33 @@ class _UsersScreenState extends State<UsersScreen> {
             return ListView.builder(
               itemCount: users.length,
               itemBuilder: (context, index) {
-                final user = users[index];
+                final selectedUser = users[index];
                 return ListTile(
-                  title: Text(user.name),
-                  subtitle: Text(user.email),
+                  title: Text(selectedUser.name),
+                  subtitle: Text(selectedUser.email),
                   onTap: () {
                     // Navega a detalles del usuario (puedes implementarlo después)
+                    //  Navigator.pushNamed(context, '/userDetail');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              UserDetailScreen(user: selectedUser)),
+                    );
                   },
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _deleteUser(context, selectedUser),
+                  ),
                 );
               },
             );
           }
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _navigateToAddUser(context),
+        child: const Icon(Icons.add),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:sportify_amateur/core/common/app_config.dart';
+import 'package:sportify_amateur/models/permission.dart';
 import 'package:sportify_amateur/models/role.dart';
 
 class RoleService {
@@ -75,5 +76,51 @@ class RoleService {
       // Manejo genérico de errores
       throw Exception('Ocurrió un error inesperado: $e');
     }
+  }
+
+  Future<void> deleteMocRole(int userId) async {
+    // Simula una espera como si estuvieras llamando al backend
+    await Future.delayed(Duration(seconds: 1));
+    // Aquí podrías implementar lógica para eliminar en la lista mock
+    print('User with ID $userId deleted');
+  }
+
+  Future<List<Role>> fetchMockRoles() async {
+    // Simula un tiempo de espera como si estuvieras llamando a un backend
+    await Future.delayed(Duration(seconds: 2));
+
+    // Retorna una lista de usuarios mock
+    return [
+      Role(
+        id: 1,
+        name: 'Administrador',
+        permissions: [
+          Permission(
+            id: 1,
+            name: 'pantalla user',
+          )
+        ],
+      ),
+      Role(
+        id: 2,
+        name: 'Viewer',
+        permissions: [
+          Permission(
+            id: 3,
+            name: 'Viewer',
+          )
+        ],
+      ),
+      Role(
+        id: 3,
+        name: 'LALALA',
+        permissions: [
+          Permission(
+            id: 1,
+            name: 'Reportes',
+          )
+        ],
+      ),
+    ];
   }
 }

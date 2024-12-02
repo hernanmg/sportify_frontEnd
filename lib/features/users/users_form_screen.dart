@@ -4,7 +4,7 @@ import 'package:sportify_amateur/models/user.dart';
 class UserFormScreen extends StatefulWidget {
   final User? user;
 
-  const UserFormScreen({Key? key, this.user}) : super(key: key);
+  const UserFormScreen({super.key, this.user});
 
   @override
   State<UserFormScreen> createState() => _UserFormScreenState();

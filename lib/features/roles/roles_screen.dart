@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
+import 'package:sportify_amateur/features/roles/role_detail_screen.dart';
+import 'package:sportify_amateur/features/roles/role_form_screen.dart';
 import 'package:sportify_amateur/models/role.dart';
 
 class RolesScreen extends StatefulWidget {
@@ -16,7 +18,50 @@ class _RolesScreenState extends State<RolesScreen> {
   @override
   void initState() {
     super.initState();
-    _rolesFuture = _roleService.getRoles();
+    _loadRoles();
+  }
+
+  void _loadRoles() {
+    setState(() {
+      _rolesFuture = _roleService.fetchMockRoles();
+    });
+  }
+
+  void _deleteRole(BuildContext context, Role role) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Delete'),
+          content: Text('Are you sure you want to delete ${role.name}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _roleService.deleteMocRole(role.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${role.name} has been deleted')),
+      );
+      _loadRoles();
+    }
+  }
+
+  void _navigateToAddUser(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RoleFormScreen()),
+    ).then((_) => _loadRoles()); // Refresh users after returning
   }
 
   @override
@@ -44,21 +89,31 @@ class _RolesScreenState extends State<RolesScreen> {
                   title: Text(role.name),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () async {
-                      await _roleService.deleteRole(role.id);
-                      setState(() {
-                        _rolesFuture = _roleService.getRoles();
-                      });
-                    },
+                     onPressed: () => _deleteRole(context, role),
+                    // onPressed: () async {
+                    //   await _roleService.deleteMocRole(role.id);  
+                    //   setState(() {
+                    //     _rolesFuture = _roleService.fetchMockRoles();
+                    //   });
+                    // },
                   ),
                   onTap: () {
-                    // Navegar a detalles del rol
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              RoleDetailScreen(role: role)),
+                    );
                   },
                 );
               },
             );
           }
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _navigateToAddUser(context),
+        child: const Icon(Icons.add),
       ),
     );
   }
