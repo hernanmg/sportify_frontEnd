@@ -56,6 +56,26 @@ class _GameStatsScreenState extends State<GameStatsScreen> {
             icon: const Icon(Icons.refresh),
             onPressed: _refreshData,
           ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'register_events') {
+                Navigator.pushNamed(context, '/events');
+              }
+              if (value == 'games') {
+                Navigator.pushNamed(context, '/games');
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'register_events',
+                child: Text('Eventos'),
+              ),
+              const PopupMenuItem(
+                value: 'games',
+                child: Text('Partidos'),
+              ),
+            ],
+          ),
         ],
       ),
       body: Padding(
