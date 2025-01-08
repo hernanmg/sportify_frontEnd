@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sportify_amateur/core/common/themes_provider.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -70,8 +72,20 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
     return Scaffold(
-      appBar: AppBar(title: const Text('SportManage Pro')),
+      appBar: AppBar(
+        title: const Text('SportManage Pro'),
+        actions: [
+          Switch(
+            value: isDarkMode,
+            onChanged: (value) {
+              themeProvider.toggleTheme(value);
+            },
+          ),
+        ],
+      ),
       body: FutureBuilder<String?>(
         future: _getUserRole(),
         builder: (context, snapshot) {
