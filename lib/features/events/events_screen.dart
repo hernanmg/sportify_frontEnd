@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/event_service.dart';
+import 'package:sportify_amateur/features/events/events_detail_screen.dart';
 import 'package:sportify_amateur/features/events/events_form_screen.dart';
 import 'package:sportify_amateur/models/event.dart';
 
@@ -52,17 +53,85 @@ class _EventsScreenState extends State<EventsScreen> {
       body: ListView.builder(
         itemCount: _eventos.length,
         itemBuilder: (context, index) {
-          final evento = _eventos[index];
-          return ListTile(
-            title: Text('${evento.tipoEvento} - ${evento.jugador}'),
-            subtitle: Text('Minuto: ${evento.minuto}'),
+          final event = _eventos[index];
+          return Card(
+            margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Color(0xFF2A2D3E),
+            child: ListTile(
+              leading: Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _getEventTypeColor(event.type),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _getEventTypeIcon(event.type),
+                  color: Colors.white,
+                ),
+              ),
+              title: Text(
+                event.type.toString().split('.').last,
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                '${event.location} - ${_formatDateTime(event.startTime)}',
+                style: TextStyle(color: Colors.grey),
+              ),
+              trailing: Icon(Icons.chevron_right, color: Colors.white),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EventDetailScreen(event: event),
+                  ),
+                );
+              },
+            ),
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _agregarEvento,
+        onPressed: () {
+          // Navegar a la pantalla de agregar evento
+          print('nuevo partido');
+        },
         child: Icon(Icons.add),
+        backgroundColor: Colors.green,
       ),
     );
+  }
+
+  Color _getEventTypeColor(EventType type) {
+    switch (type) {
+      case EventType.training:
+        return Colors.blue;
+      case EventType.game:
+        return Colors.red;
+      case EventType.strength:
+        return Colors.orange;
+      case EventType.testing:
+        return Colors.purple;
+      case EventType.recover:
+        return Colors.green;
+    }
+  }
+
+  IconData _getEventTypeIcon(EventType type) {
+    switch (type) {
+      case EventType.training:
+        return Icons.sports;
+      case EventType.game:
+        return Icons.sports_soccer;
+      case EventType.strength:
+        return Icons.fitness_center;
+      case EventType.testing:
+        return Icons.speed;
+      case EventType.recover:
+        return Icons.healing;
+    }
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }
