@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/app_config.dart';
+import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/features/auth/login.dart';
@@ -20,12 +21,14 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final storageService = AuthStorageService();
   print('Base URL: ${AppConfig.apiBaseUrl}');
+  // Inicializar Dio con interceptores
+  DioClient.initialize();
   // Limpia el token al iniciar la app (solo para pruebas)
   await storageService.clearStoredToken();
   runApp(ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
-      child: const MainApp(),
-    ));
+    create: (_) => ThemeProvider(),
+    child: const MainApp(),
+  ));
 }
 
 class MainApp extends StatelessWidget {
