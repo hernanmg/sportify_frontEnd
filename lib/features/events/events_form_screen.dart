@@ -231,7 +231,7 @@ class _EventsFormScreenScreenState extends State<EventsFormScreen> {
                 style: TextStyle(fontSize: 16),
               ),
               style: ElevatedButton.styleFrom(
-                primary: Colors.green,
+                backgroundColor: Colors.green,
                 padding: EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

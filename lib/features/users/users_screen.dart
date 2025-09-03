@@ -23,7 +23,7 @@ class _UsersScreenState extends State<UsersScreen> {
 
   void _loadUsers() {
     setState(() {
-      _usersFuture = _userService.fetchMockUsers();
+      _usersFuture = _userService.findAll();
     });
   }
 
