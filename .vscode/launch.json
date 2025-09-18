@@ -5,13 +5,33 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "sportify_amateur (Development Web)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+              "-d",
+              "chrome",
+              "--web-port",
+              "8082",
+              "--dart-define",
+              "API_BASE_URL=http://localhost:3000"
+            ]
+          },
+        {
+            "name": "Flutter Debug",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart"
+          },
+        {
             "name": "sportify_amateur (Development)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "--dart-define",
-                "API_BASE_URL=http://10.0.2.2:3000"
+                "API_BASE_URL=http://localhost:3000"
             ]
         },
         {

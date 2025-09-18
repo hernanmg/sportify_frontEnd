@@ -3,7 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sportify_amateur/core/common/app_config.dart';
 
 class DioClient {
-  static const backendUrl = AppConfig.apiBaseUrl;
+  static String get backendUrl => AppConfig.apiBaseUrl;
 
   static final Dio _dio = Dio(BaseOptions(
     baseUrl: backendUrl,
@@ -18,7 +18,7 @@ class DioClient {
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         // Adjuntar token en cada solicitud
-        final accessToken = await _storage.read(key: 'accessToken');
+        final accessToken = await _storage.read(key: 'authToken');
         if (accessToken != null) {
           options.headers['Authorization'] = 'Bearer $accessToken';
         }
@@ -53,7 +53,7 @@ class DioClient {
       final newRefreshToken = response.data['refreshToken'];
 
       // Almacenar los nuevos tokens
-      await _storage.write(key: 'accessToken', value: newAccessToken);
+      await _storage.write(key: 'authToken', value: newAccessToken);
       await _storage.write(key: 'refreshToken', value: newRefreshToken);
       return true;
     } catch (e) {

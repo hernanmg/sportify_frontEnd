@@ -8,18 +8,37 @@ import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:sportify_amateur/core/common/app_config.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/services/user_profile_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 
 class AuthService {
-  final String backendUrl = AppConfig.apiBaseUrl;
+  //final String backendUrl = AppConfig.apiBaseUrl;
+  static String get backendUrl => AppConfig.apiBaseUrl;
   final AuthStorageService storageService = AuthStorageService();
+  final UserProfileService profileService = UserProfileService();
   final secureStorage = FlutterSecureStorage();
   final Dio _dio = DioClient.instance;
-  
+
   Future<bool> signInWithGoogle() async {
     try {
-      // Inicia el proceso de autenticación con Google
       print('Inicia el proceso de autenticación con Google');
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      print('kIsWeb: $kIsWeb');
+      print('kDebugMode: $kDebugMode');
+      print('backendUrl: $backendUrl');
+
+      GoogleSignIn googleSignIn;
+
+      if (kIsWeb) {
+        // 🔑 En Web hay que pasar el clientId explícito
+        googleSignIn = GoogleSignIn(
+          clientId: AppConfig.googleClientId,
+        );
+      } else {
+        // En Android/iOS se usa la configuración de Firebase/Google Console
+        googleSignIn = GoogleSignIn();
+      }
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       print('googleUser');
       if (googleUser == null) {
@@ -27,34 +46,51 @@ class AuthService {
         return false;
       }
 
-      // Obtén el token de autenticación de Google
       print('Obtén el token de autenticación de Google');
-
       final googleAuth = await googleUser.authentication;
 
-      print(googleAuth);
-      // print('Envía el token al backend');
+      // print(googleAuth);
 
-      // // Envía el token al backend
-      final response = await http.get(
-        Uri.parse('$backendUrl/google'),
+      // Envía el token al backend
+      final String finalUrl = kIsWeb ? 'http://localhost:3000' : backendUrl;
+      print('URL final: $finalUrl/auth/google/token');
+      final response = await http.post(
+        Uri.parse('$finalUrl/auth/google/token'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${googleAuth.accessToken}',
         },
+        body: jsonEncode({
+          'accessToken': googleAuth.accessToken,
+        }),
       );
-      // Verifica si la respuesta del servidor es exitosa
+
       if (response.statusCode == 200) {
-        // Manejo de respuesta exitosa (puedes hacer otras validaciones aquí si es necesario)
+        // Procesar la respuesta del backend y guardar tokens
+        final data = json.decode(response.body);
+        final token = data['accessToken'];
+        final refreshToken = data['refreshToken'];
+        final userId = data['userId'];
+        final userName = data['userName'];
+        final role = data['role'];
+
+        // Guardar los tokens y datos del usuario en almacenamiento seguro
+        await secureStorage.write(key: 'authToken', value: token);
+        await secureStorage.write(key: 'refreshToken', value: refreshToken);
+        await secureStorage.write(key: 'userId', value: userId.toString());
+        await secureStorage.write(key: 'userName', value: userName);
+        await secureStorage.write(key: 'role', value: role);
+
+        print('Tokens guardados exitosamente');
+        print('userId: $userId, userName: $userName, role: $role');
+
         return true;
       } else {
-        // Manejo de error del servidor
         print('Error en autenticación con Google: ${response.body}');
         return false;
       }
-    } catch (e) {
-      // Manejo de errores en la solicitud
+    } catch (e, st) {
       print('Error en autenticación con Google: $e');
+      print(st);
       return false;
     }
   }
@@ -166,5 +202,29 @@ class AuthService {
     final profile = await getProfile();
     return profile[
         'role']; // Asumiendo que el backend incluye "role" en el perfil
+  }
+
+  Future<Map<String, dynamic>> checkAuthStatus() async {
+    try {
+      final token = await storageService.getToken();
+      if (token == null) {
+        return {'isAuthenticated': false, 'needsOnboarding': false};
+      }
+
+      // Verificar si el perfil necesita onboarding
+      final profileCompletion = await profileService.getProfileCompletion();
+      final completion = profileCompletion['completion'] as int;
+
+      return {
+        'isAuthenticated': true,
+        'needsOnboarding':
+            completion < 80, // Si el perfil está menos del 80% completo
+        'profileCompletion': completion,
+        'missingFields': profileCompletion['missingFields'],
+      };
+    } catch (e) {
+      print('Error checking auth status: $e');
+      return {'isAuthenticated': false, 'needsOnboarding': false};
+    }
   }
 }

@@ -5,7 +5,7 @@ import 'package:sportify_amateur/models/role.dart';
 class RoleFormScreen extends StatefulWidget {
   final Role? role;
 
-  const RoleFormScreen({Key? key, this.role}) : super(key: key);
+  const RoleFormScreen({super.key, this.role});
 
   @override
   State<RoleFormScreen> createState() => _RoleFormScreenState();

@@ -5,7 +5,7 @@ import 'package:sportify_amateur/features/roles/role_form_screen.dart';
 import 'package:sportify_amateur/models/role.dart';
 
 class RolesScreen extends StatefulWidget {
-  const RolesScreen({Key? key}) : super(key: key);
+  const RolesScreen({super.key});
 
   @override
   State<RolesScreen> createState() => _RolesScreenState();
@@ -89,9 +89,9 @@ class _RolesScreenState extends State<RolesScreen> {
                   title: Text(role.name),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
-                     onPressed: () => _deleteRole(context, role),
+                    onPressed: () => _deleteRole(context, role),
                     // onPressed: () async {
-                    //   await _roleService.deleteMocRole(role.id);  
+                    //   await _roleService.deleteMocRole(role.id);
                     //   setState(() {
                     //     _rolesFuture = _roleService.fetchMockRoles();
                     //   });
@@ -101,8 +101,7 @@ class _RolesScreenState extends State<RolesScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) =>
-                              RoleDetailScreen(role: role)),
+                          builder: (context) => RoleDetailScreen(role: role)),
                     );
                   },
                 );

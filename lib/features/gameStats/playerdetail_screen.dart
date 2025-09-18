@@ -442,8 +442,6 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                                 barTouchData: BarTouchData(
                                     enabled: true,
                                     touchTooltipData: BarTouchTooltipData(
-                                      tooltipBgColor:
-                                          Colors.black.withOpacity(0.7),
                                       getTooltipItem:
                                           (group, groupIndex, rod, rodIndex) {
                                         final value = rod.toY *

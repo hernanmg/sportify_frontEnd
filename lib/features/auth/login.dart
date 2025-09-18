@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
 
@@ -11,7 +8,7 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Bienvenido a Sportify Amateur')),
+      appBar: AppBar(title: Text('Bienvenido a Sports Manager Pro')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -26,9 +23,13 @@ class LoginScreen extends StatelessWidget {
               ),
               onPressed: () async {
                 final success = await authService.signInWithGoogle();
-                if (success) {
-                  if (context.mounted) {
-                    // Flutter 3.7+ only
+                if (success && context.mounted) {
+                  // Verificar si necesita onboarding
+                  final authStatus = await authService.checkAuthStatus();
+                  // Navigator.pushReplacementNamed(context, '/onboarding');
+                  if (authStatus['needsOnboarding'] == true) {
+                    Navigator.pushReplacementNamed(context, '/onboarding');
+                  } else {
                     Navigator.pushReplacementNamed(context, '/dashboard');
                   }
                 }
@@ -45,9 +46,12 @@ class LoginScreen extends StatelessWidget {
               ),
               onPressed: () async {
                 final success = await authService.signInWithFacebook();
-                if (success) {
-                  if (context.mounted) {
-                    // Flutter 3.7+ only
+                if (success && context.mounted) {
+                  // Verificar si necesita onboarding
+                  final authStatus = await authService.checkAuthStatus();
+                  if (authStatus['needsOnboarding'] == true) {
+                    Navigator.pushReplacementNamed(context, '/onboarding');
+                  } else {
                     Navigator.pushReplacementNamed(context, '/dashboard');
                   }
                 }
@@ -62,7 +66,7 @@ class LoginScreen extends StatelessWidget {
                 FontAwesomeIcons.envelope,
                 color: Color.fromARGB(255, 2, 39, 70),
               ),
-              onPressed: ()  {
+              onPressed: () {
                 // final success =
                 //     await authService.signInWithEmail('pepa', 'password123');
                 // if (success) {

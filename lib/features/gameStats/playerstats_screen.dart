@@ -3,7 +3,7 @@ import 'package:sportify_amateur/core/services/gamestat_service.dart';
 import 'package:sportify_amateur/features/gameStats/playerdetail_screen.dart';
 
 class PlayerStatsScreen extends StatefulWidget {
-  const PlayerStatsScreen({Key? key}) : super(key: key);
+  const PlayerStatsScreen({super.key});
 
   @override
   State<PlayerStatsScreen> createState() => _PlayerStatsScreenState();
@@ -59,7 +59,8 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => PlayerDetailScreen(playerId: selectedPlayer!['id']),
+                    builder: (context) =>
+                        PlayerDetailScreen(playerId: selectedPlayer!['id']),
                   ),
                 );
               },

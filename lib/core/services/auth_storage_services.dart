@@ -7,7 +7,8 @@ import 'package:http/http.dart' as http;
 
 class AuthStorageService {
   final FlutterSecureStorage secureStorage = FlutterSecureStorage();
-  final String backendUrl = AppConfig.apiBaseUrl;
+  //final String backendUrl = AppConfig.apiBaseUrl;
+  static String get backendUrl => AppConfig.apiBaseUrl;
   // Guarda el token en almacenamiento
   Future<void> saveTokens(String accessToken, String refreshToken) async {
     // SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -37,6 +38,8 @@ class AuthStorageService {
     await secureStorage.delete(key: 'authToken');
     await secureStorage.delete(key: 'refreshToken');
     await secureStorage.delete(key: 'role');
+    await secureStorage.delete(key: 'userId');
+    await secureStorage.delete(key: 'userName');
   }
 
   Future<Map<String, String>> getHeaders() async {
@@ -65,5 +68,20 @@ class AuthStorageService {
     } else {
       throw Exception('Error al renovar el token');
     }
+  }
+
+  // Obtiene el rol del usuario guardado
+  Future<String?> getRole() async {
+    return await secureStorage.read(key: 'role');
+  }
+
+  // Obtiene el userId guardado
+  Future<String?> getUserId() async {
+    return await secureStorage.read(key: 'userId');
+  }
+
+  // Obtiene el userName guardado
+  Future<String?> getUserName() async {
+    return await secureStorage.read(key: 'userName');
   }
 }

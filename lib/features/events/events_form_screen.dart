@@ -214,8 +214,7 @@ class _EventsFormScreenScreenState extends State<EventsFormScreen> {
                       style: TextStyle(color: Colors.white),
                     ),
                     value: _isRequired,
-                    onChanged: (value) =>
-                        setState(() => _isRequired = value),
+                    onChanged: (value) => setState(() => _isRequired = value),
                     activeColor: Colors.green,
                   ),
                 ],
@@ -226,16 +225,16 @@ class _EventsFormScreenScreenState extends State<EventsFormScreen> {
               onPressed: () {
                 // Aquí iría la lógica para crear el evento
               },
-              child: Text(
-                'Create Event',
-                style: TextStyle(fontSize: 16),
-              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 padding: EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
+              ),
+              child: Text(
+                'Create Event',
+                style: TextStyle(fontSize: 16),
               ),
             ),
           ],
