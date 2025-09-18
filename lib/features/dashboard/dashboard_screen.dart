@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   Future<String?> _getUserRole() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('role');
+    final authStorage = AuthStorageService();
+    return await authStorage.getRole();
   }
 
   List<Map<String, dynamic>> get allFeatures => [
@@ -76,7 +76,7 @@ class DashboardScreen extends StatelessWidget {
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SportManage Pro'),
+        title: const Text('Sports Manager Pro'),
         actions: [
           Switch(
             value: isDarkMode,

@@ -144,7 +144,10 @@ class _ComparePlayersScreenState extends State<ComparePlayersScreen> {
         quarterTurns: 3,
         child: Text(
           'Partidos Del Equipo',
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold,),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       Expanded(
@@ -176,8 +179,9 @@ class _ComparePlayersScreenState extends State<ComparePlayersScreen> {
                         reservedSize:
                             60, // Espacio reservado para evitar cortes
                         getTitlesWidget: (value, meta) {
-                          if (value < 0 || value >= _categories.length)
+                          if (value < 0 || value >= _categories.length) {
                             return const SizedBox.shrink();
+                          }
                           return Transform.translate(
                               offset: const Offset(
                                   0, 10), // Ajustar para mayor claridad

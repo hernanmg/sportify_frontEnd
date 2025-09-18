@@ -4,7 +4,7 @@ import 'package:sportify_amateur/models/event.dart';
 class EventDetailScreen extends StatelessWidget {
   final Event event;
 
-  const EventDetailScreen({Key? key, required this.event}) : super(key: key);
+  const EventDetailScreen({super.key, required this.event});
 
   Widget _buildHeader() {
     return Container(
@@ -46,8 +46,7 @@ class EventDetailScreen extends StatelessWidget {
                     SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.location_on,
-                            color: Colors.blue, size: 16),
+                        Icon(Icons.location_on, color: Colors.blue, size: 16),
                         SizedBox(width: 4),
                         Text(
                           event.location,
@@ -148,11 +147,11 @@ class EventDetailScreen extends StatelessWidget {
               final status = event.attendance[player];
               return ListTile(
                 leading: CircleAvatar(
+                  backgroundColor: Colors.grey[800],
                   child: Text(
                     player[0],
                     style: TextStyle(color: Colors.white),
                   ),
-                  backgroundColor: Colors.grey[800],
                 ),
                 title: Text(
                   player,

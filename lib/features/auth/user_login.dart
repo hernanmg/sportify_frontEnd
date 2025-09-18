@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
 
 class UserLoginScreen extends StatefulWidget {
-  const UserLoginScreen({Key? key}) : super(key: key);
+  const UserLoginScreen({super.key});
 
   @override
   State<UserLoginScreen> createState() => _LoginScreenState();

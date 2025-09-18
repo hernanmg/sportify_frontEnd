@@ -71,7 +71,8 @@ class _EventsScreenState extends State<EventsScreen> {
               ),
               title: Text(
                 event.type.toString().split('.').last,
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
                 '${event.location} - ${_formatDateTime(event.startTime)}',
@@ -95,8 +96,8 @@ class _EventsScreenState extends State<EventsScreen> {
           // Navegar a la pantalla de agregar evento
           print('nuevo partido');
         },
-        child: Icon(Icons.add),
         backgroundColor: Colors.green,
+        child: Icon(Icons.add),
       ),
     );
   }

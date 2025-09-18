@@ -6,8 +6,8 @@ import 'package:sportify_amateur/models/permission.dart';
 import 'package:sportify_amateur/models/role.dart';
 
 class RoleService {
-  final String baseUrl = AppConfig.apiBaseUrl;
-
+  //final String baseUrl = AppConfig.apiBaseUrl;
+  static String get baseUrl => AppConfig.apiBaseUrl;
   RoleService();
 
   Future<List<Role>> getRoles() async {

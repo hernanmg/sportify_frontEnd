@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/models/role.dart';
-import 'package:sportify_amateur/models/user.dart';
 
 class RoleDetailScreen extends StatelessWidget {
   final Role role;

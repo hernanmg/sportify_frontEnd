@@ -7,7 +7,7 @@ import 'package:sportify_amateur/models/role.dart';
 import 'package:sportify_amateur/models/user.dart';
 
 class UserService {
-  static const String baseUrl = AppConfig.apiBaseUrl;
+  static String get baseUrl => AppConfig.apiBaseUrl;
 
   // UserService(this.baseUrl);
   final FlutterSecureStorage _secureStorage =

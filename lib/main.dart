@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:sportify_amateur/core/common/app_config.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/features/auth/login.dart';
 import 'package:sportify_amateur/features/auth/user_login.dart';
 import 'package:sportify_amateur/features/dashboard/dashboard_screen.dart';
+import 'package:sportify_amateur/features/onboarding/onboarding_wizard.dart';
+import 'package:sportify_amateur/features/teams/team_form_screen.dart';
 import 'package:sportify_amateur/features/dashboard/secondaryHome_screen.dart';
 import 'package:sportify_amateur/features/gameStats/comparePlayerStats_screen.dart';
 import 'package:sportify_amateur/features/gameStats/gamestats_screen.dart';
@@ -20,11 +22,11 @@ import 'package:sportify_amateur/features/users/users_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final storageService = AuthStorageService();
-  print('Base URL: ${AppConfig.apiBaseUrl}');
+  //print('Base URL: ${AppConfig.apiBaseUrl}');
   // Inicializar Dio con interceptores
   DioClient.initialize();
   // Limpia el token al iniciar la app (solo para pruebas)
-  await storageService.clearStoredToken();
+  // await storageService.clearStoredToken();
   runApp(ChangeNotifierProvider(
     create: (_) => ThemeProvider(),
     child: const MainApp(),
@@ -52,6 +54,8 @@ class MainApp extends StatelessWidget {
       routes: {
         '/': (context) => LoginScreen(),
         '/login': (context) => const UserLoginScreen(),
+        '/onboarding': (context) => const OnboardingWizard(),
+        '/team-form': (context) => const TeamFormScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/secondary': (context) => const SecondaryHomeScreen(),
         '/roles': (context) => const RolesScreen(),
@@ -75,6 +79,15 @@ class MainApp extends StatelessWidget {
         }
         return null; // Si no coincide con ninguna ruta, retorna null
       },
+      supportedLocales: const [
+        Locale('es', 'ES'),
+        Locale('en', 'US'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
     );
   }
 }
