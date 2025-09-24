@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/features/onboarding/widgets/team_autocomplete.dart';
 import 'package:sportify_amateur/models/team.dart';
+import 'package:sportify_amateur/models/role.dart';
+import 'package:sportify_amateur/core/services/role_service.dart';
 
 class InstitutionalInfoStep extends StatefulWidget {
   final Map<String, dynamic> initialData;
@@ -22,15 +24,58 @@ class InstitutionalInfoStep extends StatefulWidget {
 
 class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
   bool _hasTeam = false;
-  String _selectedRole = 'jugador';
+  String _selectedRole = 'player'; // Valor por defecto
   Team? _selectedTeam;
+  List<Role> _availableRoles = [];
+  bool _loadingRoles = true;
+  final RoleService _roleService = RoleService();
 
   @override
   void initState() {
     super.initState();
     _hasTeam = widget.initialData['hasTeam'] ?? false;
-    _selectedRole = widget.initialData['role'] ?? 'jugador';
-    // TODO: Si hay datos del equipo guardados, cargarlos aquí
+    _selectedRole = widget.initialData['role'] ?? 'player';
+    if (widget.initialData['selectedTeam'] != null) {
+      _selectedTeam = Team.fromJson(widget.initialData['selectedTeam']);
+    }
+    _loadRoles();
+  }
+
+  Future<void> _loadRoles() async {
+    try {
+      // Cargar solo roles de equipo para el onboarding
+      final roles = await _roleService.getTeamRoles();
+      setState(() {
+        _availableRoles = roles;
+        _loadingRoles = false;
+        // Si el rol seleccionado no está en la lista, usar el primero disponible
+        if (roles.isNotEmpty && !roles.any((r) => r.name == _selectedRole)) {
+          _selectedRole = roles.first.name;
+        }
+      });
+    } catch (e) {
+      print('Error cargando roles: $e');
+      setState(() {
+        _loadingRoles = false;
+        // Fallback a roles hardcodeados si falla la carga
+        _availableRoles = [
+          Role(
+            id: 4,
+            name: 'player',
+            description: 'Jugador activo de un equipo',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+          Role(
+            id: 3,
+            name: 'team_captain',
+            description: 'Capitán de equipo',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        ];
+      });
+    }
   }
 
   void _handleNext() {
@@ -220,47 +265,48 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          DropdownButtonFormField<String>(
-                            value: _selectedRole,
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                          _loadingRoles
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                )
+                              : DropdownButtonFormField<String>(
+                                  value: _selectedRole,
+                                  decoration: InputDecoration(
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    filled: true,
+                                    fillColor: Colors.grey[50],
+                                  ),
+                                  items: _availableRoles.map((role) {
+                                    return DropdownMenuItem(
+                                      value: role.name,
+                                      child: Text(
+                                          RoleService.getRoleDisplayName(
+                                              role.name)),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedRole = value!;
+                                    });
+                                  },
+                                ),
+                          if (!_loadingRoles && _availableRoles.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                RoleService.getRoleDescription(_selectedRole),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
                               ),
-                              filled: true,
-                              fillColor: Colors.grey[50],
                             ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'jugador',
-                                child: Text('Jugador'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'capitan',
-                                child: Text('Capitán'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'entrenador',
-                                child: Text('Entrenador/DT'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'presidente',
-                                child: Text('Presidente'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'dirigente',
-                                child: Text('Dirigente'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'manager',
-                                child: Text('Manager'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedRole = value!;
-                              });
-                            },
-                          ),
                         ],
                       ),
                     ),

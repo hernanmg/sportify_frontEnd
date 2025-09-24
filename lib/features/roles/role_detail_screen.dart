@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/models/role.dart';
+import 'package:sportify_amateur/core/services/role_service.dart';
 
 class RoleDetailScreen extends StatelessWidget {
   final Role role;
@@ -46,10 +47,10 @@ class RoleDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  role.name,
+                  role.description ?? RoleService.getRoleDescription(role.name),
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey[600],
+                    color: const Color.fromARGB(255, 39, 37, 37),
                   ),
                 ),
                 const Divider(
@@ -59,7 +60,7 @@ class RoleDetailScreen extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Permisos:',
+                    'Información del Rol:',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -67,12 +68,23 @@ class RoleDetailScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                ...role.permissions.map((permissiom) {
-                  return ListTile(
-                    leading: const Icon(Icons.check, color: Colors.green),
-                    title: Text(permissiom.name),
-                  );
-                }),
+                ListTile(
+                  leading: const Icon(Icons.badge, color: Colors.blue),
+                  title: const Text('Nombre del Rol'),
+                  subtitle: Text(RoleService.getRoleDisplayName(role.name)),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.info, color: Colors.orange),
+                  title: const Text('Jerarquía'),
+                  subtitle:
+                      Text('Nivel ${RoleService.getRoleHierarchy(role.name)}'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.date_range, color: Colors.green),
+                  title: const Text('Creado'),
+                  subtitle: Text(
+                      '${role.createdAt.day}/${role.createdAt.month}/${role.createdAt.year}'),
+                ),
               ],
             ),
           ),
