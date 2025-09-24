@@ -78,6 +78,19 @@ class DashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Sports Manager Pro'),
         actions: [
+          // Icono de perfil/configuración
+          FutureBuilder<String?>(
+            future: _getUserRole(),
+            builder: (context, snapshot) {
+              return IconButton(
+                icon: const Icon(Icons.account_circle),
+                tooltip: 'Perfil y Configuración',
+                onPressed: () {
+                  Navigator.pushNamed(context, '/profile');
+                },
+              );
+            },
+          ),
           Switch(
             value: isDarkMode,
             onChanged: (value) {

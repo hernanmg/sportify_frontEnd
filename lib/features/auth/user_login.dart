@@ -24,9 +24,14 @@ class _LoginScreenState extends State<UserLoginScreen> {
     try {
       final response = await authService.signInWithEmail(email, password);
 
-      if (response) {
-        if (!context.mounted) return;
-        Navigator.pushReplacementNamed(context, '/dashboard');
+      if (response && context.mounted) {
+        // Verificar si necesita onboarding (igual que Google login)
+        final authStatus = await authService.checkAuthStatus();
+        if (authStatus['needsOnboarding'] == true) {
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        } else {
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        }
       } else {
         throw Exception('Error en el login');
       }
@@ -86,8 +91,49 @@ class _LoginScreenState extends State<UserLoginScreen> {
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
                     onPressed: _login,
-                    child: const Text('Login'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Iniciar Sesión',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
+            const SizedBox(height: 24),
+
+            // Link de registro
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/register');
+              },
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                  children: const [
+                    TextSpan(text: '¿No tienes cuenta? '),
+                    TextSpan(
+                      text: 'Regístrate aquí',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -138,7 +138,9 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
     }
 
     setState(() {
-      final currentData = Map<String, dynamic>.from(wizardData[stepKey] as Map);
+      final currentData = Map<String, dynamic>.from(
+          (wizardData[stepKey] as Map<String, dynamic>?) ??
+              <String, dynamic>{});
       currentData.addAll(Map<String, dynamic>.from(data));
       wizardData[stepKey] = currentData;
     });

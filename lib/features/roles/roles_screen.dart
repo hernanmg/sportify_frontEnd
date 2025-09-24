@@ -23,7 +23,7 @@ class _RolesScreenState extends State<RolesScreen> {
 
   void _loadRoles() {
     setState(() {
-      _rolesFuture = _roleService.fetchMockRoles();
+      _rolesFuture = _roleService.getAllRoles();
     });
   }
 
@@ -49,11 +49,14 @@ class _RolesScreenState extends State<RolesScreen> {
     );
 
     if (confirmed == true) {
-      await _roleService.deleteMocRole(role.id);
+      // Por ahora solo mostrar mensaje ya que no tenemos endpoint de eliminación
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${role.name} has been deleted')),
+        SnackBar(
+          content: Text('Función de eliminar rol no implementada aún'),
+          backgroundColor: Colors.orange,
+        ),
       );
-      _loadRoles();
+      // _loadRoles(); // Comentado hasta implementar delete
     }
   }
 
@@ -85,25 +88,43 @@ class _RolesScreenState extends State<RolesScreen> {
               itemCount: roles.length,
               itemBuilder: (context, index) {
                 final role = roles[index];
-                return ListTile(
-                  title: Text(role.name),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _deleteRole(context, role),
-                    // onPressed: () async {
-                    //   await _roleService.deleteMocRole(role.id);
-                    //   setState(() {
-                    //     _rolesFuture = _roleService.fetchMockRoles();
-                    //   });
-                    // },
+                return Card(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      child: Text(role.name.substring(0, 1).toUpperCase()),
+                    ),
+                    title: Text(RoleService.getRoleDisplayName(role.name)),
+                    subtitle: Text(role.description ??
+                        RoleService.getRoleDescription(role.name)),
+                    trailing: PopupMenuButton(
+                      onSelected: (value) {
+                        if (value == 'delete') {
+                          _deleteRole(context, role);
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Eliminar'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => RoleDetailScreen(role: role)),
+                      );
+                    },
                   ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => RoleDetailScreen(role: role)),
-                    );
-                  },
                 );
               },
             );

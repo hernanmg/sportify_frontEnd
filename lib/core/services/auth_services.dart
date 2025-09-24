@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
@@ -126,47 +125,46 @@ class AuthService {
 
   Future<bool> signInWithEmail(String email, String password) async {
     try {
-      // final response = await http.post(
-      //   Uri.parse('$backendUrl/login'),
-      //   body: jsonEncode({'userName': email, 'password': password}),
-      //   headers: {'Content-Type': 'application/json'},
-      // );
-      final response = await _dio.post('/login', data: {
-        'email': email,
+      print('🔐 Iniciando login con email: $email');
+      print('🌐 URL base configurada: ${_dio.options.baseUrl}');
+      print('📤 Datos a enviar: {email: $email, password: [OCULTA]}');
+
+      // Usar Dio en lugar de http directo para consistencia
+      final response = await _dio.post('/auth/login', data: {
+        'email': email, // Campo correcto según el backend
         'password': password,
       });
 
-      if (response.statusCode == 200) {
-        // final data = json.decode(response.data);
-        final token = response.data['accessToken'];
-        final refreshToken = response.data['refreshToken'];
-        final rol = response.data['role'];
+      print('📡 Respuesta del servidor: ${response.statusCode}');
+      print('📦 Datos recibidos: ${response.data}');
 
-        // Guardar el token y el role en almacenamiento seguro
+      if (response.statusCode == 200) {
+        // Procesar la respuesta del backend y guardar tokens
+        final data = Map<String, dynamic>.from(response.data as Map);
+        final token = data['accessToken'];
+        final refreshToken = data['refreshToken'];
+        final userId = data['userId'];
+        final userName = data['userName'];
+        final role = data['role'];
+
+        // Guardar los tokens y datos del usuario en almacenamiento seguro
         await secureStorage.write(key: 'authToken', value: token);
         await secureStorage.write(key: 'refreshToken', value: refreshToken);
-        await secureStorage.write(key: 'role', value: rol);
+        await secureStorage.write(key: 'userId', value: userId.toString());
+        await secureStorage.write(key: 'userName', value: userName);
+        await secureStorage.write(key: 'role', value: role);
+
+        print('✅ Tokens guardados exitosamente');
+        print('👤 Usuario: $userName, Rol: $role');
 
         return true;
       } else {
+        print('❌ Error de autenticación: ${response.data}');
         return false;
       }
-
-      // await Future.delayed(Duration(seconds: 1)); // Simula un retraso de red
-      // final response = {
-      //   'statusCode': 200,
-      //   'body': jsonEncode({'message': 'Login successful'}),
-      // };
-      // // Verifica si la respuesta del servidor es exitosa
-      // if (response['statusCode'] == 200) { //if (response.statusCode == 200) {
-      //   return true; // Autenticación exitosa
-      // } else {
-      //   // print('Error en autenticación con Email: ${response.body}');
-      //   return false; // Error en la autenticación
-      // }
     } catch (e) {
-      print('Error en autenticación con Email: $e');
-      return false; // Error en la solicitud
+      print('💥 Error en autenticación con Email: $e');
+      return false;
     }
   }
 
@@ -225,6 +223,56 @@ class AuthService {
     } catch (e) {
       print('Error checking auth status: $e');
       return {'isAuthenticated': false, 'needsOnboarding': false};
+    }
+  }
+
+  Future<bool> registerWithEmail({
+    required String email,
+    required String password,
+    String? firstName,
+    String? lastName,
+  }) async {
+    try {
+      print('📝 Iniciando registro con email: $email');
+      print('🌐 URL base configurada: ${_dio.options.baseUrl}');
+
+      final response = await _dio.post('/auth/register', data: {
+        'email': email,
+        'password': password,
+        if (firstName != null) 'firstName': firstName,
+        if (lastName != null) 'lastName': lastName,
+      });
+
+      print('📡 Respuesta del servidor: ${response.statusCode}');
+      print('📦 Datos recibidos: ${response.data}');
+
+      if (response.statusCode == 201) {
+        // Procesar la respuesta del backend y guardar tokens
+        final data = Map<String, dynamic>.from(response.data as Map);
+        final token = data['accessToken'];
+        final refreshToken = data['refreshToken'];
+        final userId = data['userId'];
+        final userName = data['userName'];
+        final role = data['role'];
+
+        // Guardar los tokens y datos del usuario en almacenamiento seguro
+        await secureStorage.write(key: 'authToken', value: token);
+        await secureStorage.write(key: 'refreshToken', value: refreshToken);
+        await secureStorage.write(key: 'userId', value: userId.toString());
+        await secureStorage.write(key: 'userName', value: userName);
+        await secureStorage.write(key: 'role', value: role);
+
+        print('✅ Usuario registrado y tokens guardados exitosamente');
+        print('👤 Nuevo usuario: $userName, Rol: $role');
+
+        return true;
+      } else {
+        print('❌ Error de registro: ${response.data}');
+        return false;
+      }
+    } catch (e) {
+      print('💥 Error en registro con Email: $e');
+      return false;
     }
   }
 }

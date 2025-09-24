@@ -1,16 +1,25 @@
 class Permission {
   final int id;
   final String name;
+  final String? description;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   Permission({
     required this.id,
     required this.name,
+    this.description,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   factory Permission.fromJson(Map<String, dynamic> json) {
     return Permission(
       id: json['id'],
       name: json['name'],
+      description: json['description'],
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: DateTime.parse(json['updatedAt']),
     );
   }
 
@@ -18,6 +27,22 @@ class Permission {
     return {
       'id': id,
       'name': name,
+      'description': description,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
+
+  @override
+  String toString() {
+    return 'Permission{id: $id, name: $name, description: $description}';
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Permission && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }

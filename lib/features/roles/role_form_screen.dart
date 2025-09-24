@@ -14,6 +14,7 @@ class RoleFormScreen extends StatefulWidget {
 class _RoleFormScreenState extends State<RoleFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late String _name;
+  late String _description;
 
   final RoleService _roleService = RoleService();
 
@@ -21,6 +22,7 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
   void initState() {
     super.initState();
     _name = widget.role?.name ?? '';
+    _description = widget.role?.description ?? '';
   }
 
   @override
@@ -37,27 +39,44 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
             children: [
               TextFormField(
                 initialValue: _name,
-                decoration: const InputDecoration(labelText: 'Role Name'),
+                decoration: const InputDecoration(labelText: 'Nombre del Rol'),
                 validator: (value) =>
-                    value!.isEmpty ? 'Role name is required' : null,
+                    value!.isEmpty ? 'El nombre del rol es requerido' : null,
                 onSaved: (value) => _name = value!,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                initialValue: _description,
+                decoration: const InputDecoration(labelText: 'Descripción'),
+                validator: (value) =>
+                    value!.isEmpty ? 'La descripción es requerida' : null,
+                onSaved: (value) => _description = value!,
               ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
                     _formKey.currentState!.save();
-                    final role = Role(
-                      id: widget.role?.id ?? 0,
-                      name: _name,
-                      permissions: [], // Actualizar según permisos
-                    );
-                    if (widget.role == null) {
-                      await _roleService.createRole(role);
-                    } else {
-                      // Editar rol si fuera necesario
+
+                    try {
+                      // Por ahora solo mostrar mensaje ya que no tenemos endpoint de creación
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(widget.role == null
+                              ? 'Función de crear rol no implementada aún'
+                              : 'Función de editar rol no implementada aún'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
                     }
-                    Navigator.pop(context);
                   }
                 },
                 child: const Text('Save'),

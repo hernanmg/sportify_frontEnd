@@ -17,6 +17,8 @@ class UserProfile {
   final bool emailVerified;
   final bool phoneVerified;
   final bool isActive;
+  final String? googleId;
+  final String? facebookId;
   final DateTime? ultimoLogin;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -40,6 +42,8 @@ class UserProfile {
     required this.emailVerified,
     required this.phoneVerified,
     required this.isActive,
+    this.googleId,
+    this.facebookId,
     this.ultimoLogin,
     required this.createdAt,
     required this.updatedAt,
@@ -67,6 +71,8 @@ class UserProfile {
       emailVerified: json['emailVerified'] ?? false,
       phoneVerified: json['phoneVerified'] ?? false,
       isActive: json['isActive'] ?? true,
+      googleId: json['googleId'],
+      facebookId: json['facebookId'],
       ultimoLogin: json['ultimoLogin'] != null
           ? DateTime.parse(json['ultimoLogin'])
           : null,
@@ -95,6 +101,8 @@ class UserProfile {
       'emailVerified': emailVerified,
       'phoneVerified': phoneVerified,
       'isActive': isActive,
+      'googleId': googleId,
+      'facebookId': facebookId,
       'ultimoLogin': ultimoLogin?.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),

@@ -6,7 +6,12 @@ import 'package:sportify_amateur/core/common/themes_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/features/auth/login.dart';
 import 'package:sportify_amateur/features/auth/user_login.dart';
+import 'package:sportify_amateur/features/auth/register_screen.dart';
 import 'package:sportify_amateur/features/dashboard/dashboard_screen.dart';
+import 'package:sportify_amateur/features/profile/profile_screen.dart';
+import 'package:sportify_amateur/features/profile/profile_info_screen.dart';
+import 'package:sportify_amateur/features/profile/security_screen.dart';
+import 'package:sportify_amateur/features/profile/admin_config_screen.dart';
 import 'package:sportify_amateur/features/onboarding/onboarding_wizard.dart';
 import 'package:sportify_amateur/features/teams/team_form_screen.dart';
 import 'package:sportify_amateur/features/dashboard/secondaryHome_screen.dart';
@@ -54,8 +59,13 @@ class MainApp extends StatelessWidget {
       routes: {
         '/': (context) => LoginScreen(),
         '/login': (context) => const UserLoginScreen(),
+        '/register': (context) => const RegisterScreen(),
         '/onboarding': (context) => const OnboardingWizard(),
         '/team-form': (context) => const TeamFormScreen(),
+        '/profile': (context) => const ProfileScreen(),
+        '/profile/info': (context) => const ProfileInfoScreen(),
+        '/profile/security': (context) => const SecurityScreen(),
+        '/profile/admin': (context) => const AdminConfigScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/secondary': (context) => const SecondaryHomeScreen(),
         '/roles': (context) => const RolesScreen(),
