@@ -206,4 +206,57 @@ class UserService {
       throw Exception('Error de conexión: $e');
     }
   }
+
+  // Gestión de usuarios eliminados
+  Future<List<User>> getDeletedUsers() async {
+    try {
+      final response = await _dio.get('/users/deleted');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((json) => User.fromJson(json)).toList();
+      }
+      throw Exception('Error al obtener usuarios eliminados');
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  Future<User> restoreUser(int userId) async {
+    try {
+      final response = await _dio.put('/users/$userId/restore');
+      if (response.statusCode == 200) {
+        return User.fromJson(response.data);
+      }
+      throw Exception('Error al restaurar usuario');
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  Future<void> permanentDeleteUser(int userId) async {
+    try {
+      final response = await _dio.delete('/users/$userId/permanent');
+      if (response.statusCode != 204) {
+        throw Exception('Error al eliminar permanentemente el usuario');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  // Gestión de roles de usuarios
+  Future<User> updateUserRole(int userId, int newRoleId) async {
+    try {
+      final response = await _dio.put('/users/$userId/role', data: {
+        'roleId': newRoleId,
+      });
+      if (response.statusCode == 200) {
+        final responseData = Map<String, dynamic>.from(response.data as Map);
+        return User.fromJson(responseData['user']);
+      }
+      throw Exception('Error al actualizar rol del usuario');
+    } catch (e) {
+      throw Exception('Error actualizando rol del usuario: $e');
+    }
+  }
 }

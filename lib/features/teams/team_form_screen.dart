@@ -46,20 +46,16 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
 
   void _initializeControllers() {
     _nameController = TextEditingController(
-      text: widget.team?.name ?? widget.initialName ?? ''
-    );
-    _descriptionController = TextEditingController(
-      text: widget.team?.description ?? ''
-    );
-    _colorsController = TextEditingController(
-      text: widget.team?.colors ?? ''
-    );
-    _foundedYearController = TextEditingController(
-      text: widget.team?.foundedYear?.toString() ?? ''
-    );
+        text: widget.team?.name ?? widget.initialName ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.team?.description ?? '');
+    _colorsController = TextEditingController(text: widget.team?.colors ?? '');
+    _foundedYearController =
+        TextEditingController(text: widget.team?.foundedYear?.toString() ?? '');
 
     if (widget.team != null) {
-      _selectedSportId = widget.team!.sportId;
+      _selectedSportId =
+          widget.team!.sportId ?? 1; // Default a Fútbol si es null
       // TODO: Cargar categoría del equipo existente
     }
   }
@@ -67,7 +63,8 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
   Future<void> _loadCategories() async {
     setState(() => _isLoadingCategories = true);
     try {
-      final categories = await _categoryService.getCategoriesBySport(_selectedSportId);
+      final categories =
+          await _categoryService.getCategoriesBySport(_selectedSportId);
       setState(() {
         _categories = categories;
         // Si el equipo tiene categoría, seleccionarla
@@ -95,15 +92,15 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
         'name': _nameController.text.trim(),
         'sport_id': _selectedSportId,
         'category_id': _selectedCategory?.id,
-        'description': _descriptionController.text.trim().isEmpty 
-          ? null 
-          : _descriptionController.text.trim(),
-        'founded_year': _foundedYearController.text.trim().isEmpty 
-          ? null 
-          : int.parse(_foundedYearController.text.trim()),
-        'colors': _colorsController.text.trim().isEmpty 
-          ? null 
-          : _colorsController.text.trim(),
+        'description': _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        'founded_year': _foundedYearController.text.trim().isEmpty
+            ? null
+            : int.parse(_foundedYearController.text.trim()),
+        'colors': _colorsController.text.trim().isEmpty
+            ? null
+            : _colorsController.text.trim(),
       };
 
       Team savedTeam;
@@ -151,8 +148,10 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final isFromOnboarding = args?['isFromOnboarding'] ?? widget.isFromOnboarding;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final isFromOnboarding =
+        args?['isFromOnboarding'] ?? widget.isFromOnboarding;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -205,7 +204,9 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  widget.team == null ? 'Nuevo Equipo' : 'Editar Equipo',
+                                  widget.team == null
+                                      ? 'Nuevo Equipo'
+                                      : 'Editar Equipo',
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -214,9 +215,9 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  isFromOnboarding 
-                                    ? 'Completa los datos para crear tu equipo'
-                                    : 'Configura la información del equipo',
+                                  isFromOnboarding
+                                      ? 'Completa los datos para crear tu equipo'
+                                      : 'Configura la información del equipo',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey[600],
@@ -304,7 +305,9 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
                             validator: (value) {
                               if (value != null && value.isNotEmpty) {
                                 final year = int.tryParse(value);
-                                if (year == null || year < 1800 || year > DateTime.now().year) {
+                                if (year == null ||
+                                    year < 1800 ||
+                                    year > DateTime.now().year) {
                                   return 'Año inválido';
                                 }
                               }
@@ -357,7 +360,9 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
                               ),
                             ),
                             child: Text(
-                              widget.team == null ? 'Crear Equipo' : 'Guardar Cambios',
+                              widget.team == null
+                                  ? 'Crear Equipo'
+                                  : 'Guardar Cambios',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -408,7 +413,8 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
         ),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }
@@ -452,7 +458,8 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.category, size: 20),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
                   ),
                   hint: const Text('Selecciona una categoría'),
                   items: _categories.map((category) {

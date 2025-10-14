@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/models/role.dart';
 
@@ -123,6 +124,122 @@ class RoleService {
         return 1;
       default:
         return 0;
+    }
+  }
+
+  // CRUD de roles
+  Future<Role> createRole(Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.post('/roles', data: data);
+      if (response.statusCode == 201) {
+        final roleData = Map<String, dynamic>.from(response.data as Map);
+        return Role.fromJson(roleData);
+      }
+      throw Exception('Error al crear el rol');
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  Future<Role> updateRole(int id, Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.put('/roles/$id', data: data);
+      if (response.statusCode == 200) {
+        final roleData = Map<String, dynamic>.from(response.data as Map);
+        return Role.fromJson(roleData);
+      }
+      throw Exception('Error al actualizar el rol');
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  Future<void> deleteRole(int id) async {
+    try {
+      final response = await _dio.delete('/roles/$id');
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Error al eliminar el rol');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  // Gestión de permisos de roles
+  Future<void> assignPermissionToRole(int roleId, int permissionId) async {
+    try {
+      final response = await _dio.post('/roles/$roleId/permissions', data: {
+        'permissionId': permissionId,
+      });
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('Error al asignar permiso al rol');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  Future<void> removePermissionFromRole(int roleId, int permissionId) async {
+    try {
+      final response =
+          await _dio.delete('/roles/$roleId/permissions/$permissionId');
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Error al remover permiso del rol');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  Future<Role> updateRolePermissions(
+      int roleId, List<int> permissionIds) async {
+    try {
+      final response = await _dio.put('/roles/$roleId/permissions', data: {
+        'permissionIds': permissionIds,
+      });
+      if (response.statusCode == 200) {
+        final responseData = Map<String, dynamic>.from(response.data as Map);
+        return Role.fromJson(responseData['role']);
+      }
+      throw Exception('Error al actualizar permisos del rol');
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  Future<Role> fetchRoleWithPermissions(int roleId) async {
+    try {
+      final response = await _dio.get('/roles/$roleId');
+      if (response.statusCode == 200) {
+        final data = Map<String, dynamic>.from(response.data as Map);
+        return Role.fromJson(data);
+      }
+      throw Exception('Error al cargar rol con permisos');
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  // Helpers para UI
+  static bool isSystemRole(String roleName) {
+    return ['super_admin', 'manager', 'team_captain', 'player', 'guest']
+        .contains(roleName);
+  }
+
+  static IconData getRoleIcon(String roleName) {
+    switch (roleName) {
+      case 'super_admin':
+        return Icons.security;
+      case 'manager':
+        return Icons.admin_panel_settings;
+      case 'team_captain':
+        return Icons.military_tech;
+      case 'player':
+        return Icons.sports_soccer;
+      case 'guest':
+        return Icons.person_outline;
+      default:
+        return Icons.category;
     }
   }
 }

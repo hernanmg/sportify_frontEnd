@@ -13,6 +13,24 @@ class DashboardScreen extends StatelessWidget {
 
   List<Map<String, dynamic>> get allFeatures => [
         {
+          'title': 'Gestión Deportiva',
+          'icon': Icons.sports_soccer,
+          'description':
+              'Lista de buena fe, convocatorias y eventos del equipo',
+          'requiredRole': 'manager',
+          'color': Colors.green,
+          'route': '/sports/roster',
+        },
+        {
+          'title': 'Gestión de Equipos',
+          'icon': Icons.groups,
+          'description':
+              'Crear, editar y administrar equipos de la organización',
+          'requiredRole': 'manager',
+          'color': Colors.blue,
+          'route': '/teams',
+        },
+        {
           'title': 'Autenticación y Roles',
           'icon': Icons.security,
           'description': 'Gestiona accesos y permisos de usuarios',
@@ -107,11 +125,36 @@ class DashboardScreen extends StatelessWidget {
           }
           final role = snapshot.data;
           final features = allFeatures;
-          final filteredFeatures = features
-              .where((feature) =>
-                  feature['requiredRole'] != null && role == 'admin' ||
-                  feature['requiredRole'] == 'user')
-              .toList();
+          final filteredFeatures = features.where((feature) {
+            final requiredRole = feature['requiredRole'];
+            if (requiredRole == null) return true;
+
+            // Super admin puede ver todo
+            if (role == 'super_admin') return true;
+
+            // Manager puede ver características de manager y user
+            if (role == 'manager' &&
+                (requiredRole == 'manager' || requiredRole == 'user'))
+              return true;
+
+            // Team captain puede ver características de team_captain y user
+            if (role == 'team_captain' &&
+                (requiredRole == 'team_captain' || requiredRole == 'user'))
+              return true;
+
+            // Player puede ver características de user
+            if (role == 'player' && requiredRole == 'user') return true;
+
+            // Admin legacy (mantener compatibilidad)
+            if (role == 'admin' &&
+                (requiredRole == 'admin' || requiredRole == 'user'))
+              return true;
+
+            // Características públicas (user)
+            if (requiredRole == 'user') return true;
+
+            return false;
+          }).toList();
 
           return ListView(
             padding: const EdgeInsets.all(16.0),
