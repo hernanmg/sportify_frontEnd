@@ -12,6 +12,11 @@ import 'package:sportify_amateur/features/profile/profile_screen.dart';
 import 'package:sportify_amateur/features/profile/profile_info_screen.dart';
 import 'package:sportify_amateur/features/profile/security_screen.dart';
 import 'package:sportify_amateur/features/profile/admin_config_screen.dart';
+import 'package:sportify_amateur/features/admin/admin_users_screen.dart';
+import 'package:sportify_amateur/features/admin/deleted_users_screen.dart';
+import 'package:sportify_amateur/features/permissions/permissions_screen.dart';
+import 'package:sportify_amateur/features/sports/roster_management_screen.dart';
+import 'package:sportify_amateur/features/teams/teams_management_screen.dart';
 import 'package:sportify_amateur/features/onboarding/onboarding_wizard.dart';
 import 'package:sportify_amateur/features/teams/team_form_screen.dart';
 import 'package:sportify_amateur/features/dashboard/secondaryHome_screen.dart';
@@ -66,6 +71,11 @@ class MainApp extends StatelessWidget {
         '/profile/info': (context) => const ProfileInfoScreen(),
         '/profile/security': (context) => const SecurityScreen(),
         '/profile/admin': (context) => const AdminConfigScreen(),
+        '/admin/users': (context) => const AdminUsersScreen(),
+        '/admin/deleted-users': (context) => const DeletedUsersScreen(),
+        '/admin/permissions': (context) => const PermissionsScreen(),
+        '/sports/roster': (context) => const RosterManagementScreen(),
+        '/teams': (context) => const TeamsManagementScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/secondary': (context) => const SecondaryHomeScreen(),
         '/roles': (context) => const RolesScreen(),

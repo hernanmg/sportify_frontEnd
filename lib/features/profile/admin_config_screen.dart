@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
+import 'package:sportify_amateur/core/services/admin_metrics_service.dart';
 
 class AdminConfigScreen extends StatefulWidget {
   const AdminConfigScreen({super.key});
@@ -11,17 +12,31 @@ class AdminConfigScreen extends StatefulWidget {
 
 class _AdminConfigScreenState extends State<AdminConfigScreen> {
   final AuthStorageService _authStorage = AuthStorageService();
+  final AdminMetricsService _metricsService = AdminMetricsService();
   String? _userRole;
+  Map<String, dynamic>? _metrics;
+  // Eliminamos el scope ya que ahora es automático según el rol
 
   @override
   void initState() {
     super.initState();
     _loadUserRole();
+    _loadMetrics();
   }
 
   Future<void> _loadUserRole() async {
     final role = await _authStorage.getRole();
     setState(() => _userRole = role);
+  }
+
+  Future<void> _loadMetrics() async {
+    try {
+      final metrics = await _metricsService.getDashboardMetrics(
+          userRole: _userRole ?? 'player');
+      setState(() => _metrics = metrics);
+    } catch (e) {
+      print('Error loading metrics: $e');
+    }
   }
 
   bool _hasAdminAccess() {
@@ -126,6 +141,12 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
             ),
             const SizedBox(height: 24),
 
+            // Métricas del sistema
+            if (_metrics != null) ...[
+              _buildMetricsDashboard(),
+              const SizedBox(height: 24),
+            ],
+
             // Opciones administrativas
             _buildAdminOptions(),
           ],
@@ -151,6 +172,14 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
         'color': Colors.purple,
         'route': '/roles',
         'stats': 'Roles disponibles',
+      },
+      {
+        'title': 'Gestión de Permisos',
+        'subtitle': 'Crear, editar y eliminar permisos del sistema',
+        'icon': Icons.security,
+        'color': Colors.deepPurple,
+        'route': '/admin/permissions',
+        'stats': 'Permisos disponibles',
       },
       {
         'title': 'Usuarios Eliminados',
@@ -201,7 +230,14 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
                 final route = option['route'] as String;
 
                 // Verificar si es una ruta que existe
-                if (route == '/roles') {
+                final implementedRoutes = [
+                  '/roles',
+                  '/admin/users',
+                  '/admin/deleted-users',
+                  '/admin/permissions'
+                ];
+
+                if (implementedRoutes.contains(route)) {
                   Navigator.pushNamed(context, route);
                 } else {
                   // Para rutas no implementadas, mostrar mensaje
@@ -296,6 +332,366 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildMetricsDashboard() {
+    if (_metrics == null) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _getContextTitle(),
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Métricas específicas según el rol
+        _buildRoleSpecificMetrics(),
+
+        const SizedBox(height: 16),
+
+        // Actividad reciente
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.timeline, color: Colors.purple),
+                    SizedBox(width: 8),
+                    Text(
+                      'Actividad Reciente',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...((_metrics!['recentActivity'] as List?) ?? [])
+                    .take(3)
+                    .map((activity) {
+                  return _buildActivityItem(activity);
+                }).toList(),
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'Vista completa de actividad - Próximamente'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    },
+                    child: const Text('Ver todo'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricCard(
+      String title, String value, IconData icon, Color color, String subtitle) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 10,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityItem(Map<String, dynamic> activity) {
+    Color color = _getActivityColor(activity['color'] ?? 'grey');
+    IconData iconData = _getActivityIcon(activity['icon'] ?? 'info');
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(iconData, color: color, size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              activity['message'] ?? 'Sin descripción',
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          Text(
+            _formatTime(
+                activity['timestamp'] ?? DateTime.now().toIso8601String()),
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getActivityColor(String colorName) {
+    switch (colorName) {
+      case 'green':
+        return Colors.green;
+      case 'blue':
+        return Colors.blue;
+      case 'orange':
+        return Colors.orange;
+      case 'red':
+        return Colors.red;
+      case 'purple':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getActivityIcon(String iconName) {
+    switch (iconName) {
+      case 'person_add':
+        return Icons.person_add;
+      case 'group_add':
+        return Icons.group_add;
+      case 'sports_soccer':
+        return Icons.sports_soccer;
+      case 'person_remove':
+        return Icons.person_remove;
+      case 'badge':
+        return Icons.badge;
+      default:
+        return Icons.info;
+    }
+  }
+
+  String _formatTime(String timestamp) {
+    try {
+      final time = DateTime.parse(timestamp);
+      final now = DateTime.now();
+      final difference = now.difference(time);
+
+      if (difference.inMinutes < 60) {
+        return '${difference.inMinutes}m';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours}h';
+      } else {
+        return '${difference.inDays}d';
+      }
+    } catch (e) {
+      return 'ahora';
+    }
+  }
+
+  String _getContextTitle() {
+    switch (_userRole) {
+      case 'player':
+        return 'Mis Estadísticas';
+      case 'team_captain':
+        return 'Mi Equipo';
+      case 'manager':
+      case 'super_admin':
+        return 'Mi Organización';
+      default:
+        return 'Dashboard';
+    }
+  }
+
+  Widget _buildRoleSpecificMetrics() {
+    switch (_userRole) {
+      case 'player':
+        return _buildPlayerMetrics();
+      case 'team_captain':
+        return _buildTeamCaptainMetrics();
+      case 'manager':
+      case 'super_admin':
+        return _buildManagerMetrics();
+      default:
+        return _buildPlayerMetrics();
+    }
+  }
+
+  Widget _buildPlayerMetrics() {
+    final personalStats =
+        _metrics!['personal_stats'] as Map<String, dynamic>? ?? {};
+    final teamContext =
+        _metrics!['team_context'] as Map<String, dynamic>? ?? {};
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                'Goles',
+                (personalStats['goals_scored'] ?? 0).toString(),
+                Icons.sports_soccer,
+                Colors.green,
+                '${personalStats['matches_played'] ?? 0} partidos',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                'Asistencias',
+                (personalStats['assists'] ?? 0).toString(),
+                Icons.handshake,
+                Colors.blue,
+                'Rating ${personalStats['average_rating'] ?? 0.0}',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                'Equipo',
+                teamContext['team_name'] ?? 'Sin equipo',
+                Icons.groups,
+                Colors.orange,
+                'Posición ${teamContext['team_position'] ?? 'N/A'}',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTeamCaptainMetrics() {
+    final teamMgmt =
+        _metrics!['team_management'] as Map<String, dynamic>? ?? {};
+    final teamPerf =
+        _metrics!['team_performance'] as Map<String, dynamic>? ?? {};
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                'Jugadores',
+                (teamMgmt['total_players'] ?? 0).toString(),
+                Icons.people,
+                Colors.blue,
+                '${teamMgmt['active_players'] ?? 0} activos',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                'Partidos',
+                (teamPerf['matches_played'] ?? 0).toString(),
+                Icons.sports_soccer,
+                Colors.green,
+                '${teamPerf['matches_won'] ?? 0} ganados',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                'Posición',
+                (teamPerf['current_position'] ?? 0).toString(),
+                Icons.leaderboard,
+                Colors.orange,
+                '${teamPerf['goals_scored'] ?? 0} goles',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildManagerMetrics() {
+    final overview =
+        _metrics!['organization_overview'] as Map<String, dynamic>? ?? {};
+    final competition =
+        _metrics!['competition_stats'] as Map<String, dynamic>? ?? {};
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                'Equipos',
+                (overview['total_teams'] ?? 0).toString(),
+                Icons.groups,
+                Colors.blue,
+                '${overview['total_players'] ?? 0} jugadores',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                'Fecha',
+                (competition['matchday'] ?? 0).toString(),
+                Icons.calendar_today,
+                Colors.green,
+                'de ${competition['total_matchdays'] ?? 0}',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMetricCard(
+                'Goles Total',
+                (competition['goals_total'] ?? 0).toString(),
+                Icons.sports_soccer,
+                Colors.orange,
+                'Prom ${competition['average_goals_per_match'] ?? 0.0}',
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

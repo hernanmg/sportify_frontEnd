@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/services/password_service.dart';
 
 class SecurityScreen extends StatefulWidget {
   const SecurityScreen({super.key});
@@ -10,6 +11,7 @@ class SecurityScreen extends StatefulWidget {
 
 class _SecurityScreenState extends State<SecurityScreen> {
   final AuthStorageService _authStorage = AuthStorageService();
+  final PasswordService _passwordService = PasswordService();
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
@@ -394,8 +396,10 @@ class _SecurityScreenState extends State<SecurityScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implementar cambio de contraseña en el backend
-      await Future.delayed(const Duration(seconds: 2)); // Simular llamada API
+      await _passwordService.changePassword(
+        currentPassword: _currentPasswordController.text,
+        newPassword: _newPasswordController.text,
+      );
 
       setState(() => _isLoading = false);
 
@@ -414,7 +418,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error al cambiar contraseña: $e'),
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
           backgroundColor: Colors.red,
         ),
       );
