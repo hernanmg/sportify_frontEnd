@@ -79,6 +79,14 @@ class DashboardScreen extends StatelessWidget {
           'route': '/game-stats',
         },
         {
+          'title': 'Notificaciones',
+          'icon': Icons.notifications,
+          'description': 'Ver notificaciones de eventos y convocatorias',
+          'requiredRole': 'user',
+          'color': Colors.orange,
+          'route': '/notifications',
+        },
+        {
           'title': 'Administración y Reportes',
           'icon': Icons.assessment,
           'description': 'Genera informes detallados y gestiona la app',
