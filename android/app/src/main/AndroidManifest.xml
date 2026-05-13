@@ -12,7 +12,7 @@
             android:value="@string/facebook_client_token"/>
 
         <activity
-            android:name=".MainActivity"
+            android:name="sportify.amateur.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"

@@ -21,7 +21,8 @@ enum SportEventStatus {
   confirmed('confirmed'),
   inProgress('in_progress'),
   completed('completed'),
-  cancelled('cancelled');
+  cancelled('cancelled'),
+  postponed('postponed');
 
   const SportEventStatus(this.value);
   final String value;
@@ -351,6 +352,8 @@ class SportEvent {
         return 'Completado';
       case SportEventStatus.cancelled:
         return 'Cancelado';
+      case SportEventStatus.postponed:
+        return 'Pospuesto';
     }
   }
 

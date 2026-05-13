@@ -1,17 +1,60 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/models/notification.dart';
+import 'websocket_service.dart';
 
 class NotificationService {
   final Dio _dio = DioClient.instance;
+  final WebSocketService _wsService = WebSocketService();
 
   // Stream para notificaciones en tiempo real
   final StreamController<List<NotificationModel>> _notificationsController =
       StreamController<List<NotificationModel>>.broadcast();
 
+  // Stream para notificaciones individuales en tiempo real
+  final StreamController<NotificationModel> _newNotificationController =
+      StreamController<NotificationModel>.broadcast();
+
   Stream<List<NotificationModel>> get notificationsStream =>
       _notificationsController.stream;
+
+  Stream<NotificationModel> get newNotificationStream =>
+      _newNotificationController.stream;
+
+  NotificationService() {
+    _initializeWebSocket();
+  }
+
+  void _initializeWebSocket() {
+    // Conectar WebSocket
+    _wsService.connect();
+
+    // Escuchar notificaciones en tiempo real
+    _wsService.onNotificationReceived((data) {
+      debugPrint('🔔 Nueva notificación via WebSocket: ${data['title']}');
+      
+      try {
+        final notification = NotificationModel.fromJson(data);
+        _newNotificationController.add(notification);
+        
+        // Refrescar lista de notificaciones
+        getMyNotifications();
+      } catch (e) {
+        debugPrint('❌ Error procesando notificación WebSocket: $e');
+      }
+    });
+
+    // Manejar conexión WebSocket
+    _wsService.onConnected((data) {
+      debugPrint('✅ WebSocket conectado para notificaciones');
+    });
+
+    _wsService.onError((data) {
+      debugPrint('❌ Error WebSocket notificaciones: ${data['message']}');
+    });
+  }
 
   // Obtener notificaciones del usuario
   Future<List<NotificationModel>> getMyNotifications({int limit = 50}) async {
@@ -237,6 +280,8 @@ class NotificationService {
   // Limpiar recursos
   void dispose() {
     _notificationsController.close();
+    _newNotificationController.close();
+    _wsService.disconnect();
   }
 
   // Legacy compatibility

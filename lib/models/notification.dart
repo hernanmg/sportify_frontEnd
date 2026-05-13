@@ -5,7 +5,12 @@ enum NotificationType {
   socialEvent('social_event'),
   medicalExpiry('medical_expiry'),
   general('general'),
-  rosterUpdate('roster_update');
+  rosterUpdate('roster_update'),
+  eventCancelled('event_cancelled'),
+  eventPostponed('event_postponed'),
+  eventRescheduled('event_rescheduled'),
+  eventCompleted('event_completed'),
+  eventStarted('event_started');
 
   const NotificationType(this.value);
   final String value;
@@ -147,6 +152,16 @@ class NotificationModel {
         return 'Lista de Buena Fe';
       case NotificationType.general:
         return 'General';
+      case NotificationType.eventCancelled:
+        return 'Evento Cancelado';
+      case NotificationType.eventPostponed:
+        return 'Evento Pospuesto';
+      case NotificationType.eventRescheduled:
+        return 'Evento Reprogramado';
+      case NotificationType.eventCompleted:
+        return 'Evento Finalizado';
+      case NotificationType.eventStarted:
+        return 'Evento Iniciado';
     }
   }
 

@@ -35,17 +35,23 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
         title: const Text('Gestión Deportiva'),
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelStyle:
+              const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+          unselectedLabelStyle:
+              const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
           tabs: const [
             Tab(
-              icon: Icon(Icons.list_alt),
+              icon: Icon(Icons.list_alt, size: 20),
               text: 'Lista de Buena Fe',
             ),
             Tab(
-              icon: Icon(Icons.event),
+              icon: Icon(Icons.event, size: 20),
               text: 'Eventos',
             ),
             Tab(
-              icon: Icon(Icons.sports_soccer),
+              icon: Icon(Icons.sports_soccer, size: 20),
               text: 'Convocatorias',
             ),
           ],
