@@ -124,9 +124,11 @@ class _PersonalInfoStepState extends State<PersonalInfoStep> {
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'phone': _phoneController.text.trim(),
-        'fechaNacimiento': (_selectedDate != null
-            ? "${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}"
-            : "Seleccionar fecha"),
+        'fechaNacimiento': _selectedDate != null
+            ? '${_selectedDate!.year.toString().padLeft(4, '0')}-'
+                '${_selectedDate!.month.toString().padLeft(2, '0')}-'
+                '${_selectedDate!.day.toString().padLeft(2, '0')}'
+            : null,
         'ciudad': _ciudadController.text.trim(),
         'provincia': _provinciaController.text.trim(),
         'pais': _paisController.text.trim(),

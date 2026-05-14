@@ -85,31 +85,37 @@ class NotificationModel {
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
-      id: json['id'],
-      userId: json['userId'] ?? json['user_id'],
+      id: json['id'] is int
+          ? json['id']
+          : int.tryParse('${json['id']}') ?? DateTime.now().millisecondsSinceEpoch,
+      userId: json['userId'] ?? json['user_id'] ?? 0,
       teamId: json['teamId'] ?? json['team_id'],
       eventId: json['eventId'] ?? json['event_id'],
       sportEventId: json['sportEventId'] ?? json['sport_event_id'],
       type: NotificationType.fromString(json['type'] ?? 'general'),
       priority: NotificationPriority.fromString(json['priority'] ?? 'medium'),
       title: json['title'] ?? '',
-      message: json['message'] ?? '',
+      message: json['message'] ?? json['body'] ?? '',
       data:
           json['data'] != null ? Map<String, dynamic>.from(json['data']) : null,
       isRead: json['isRead'] ?? json['is_read'] ?? false,
       readAt: json['readAt'] != null
-          ? DateTime.parse(json['readAt'])
+          ? DateTime.tryParse(json['readAt'].toString())
           : json['read_at'] != null
-              ? DateTime.parse(json['read_at'])
+              ? DateTime.tryParse(json['read_at'].toString())
               : null,
       scheduledFor: json['scheduledFor'] != null
-          ? DateTime.parse(json['scheduledFor'])
+          ? DateTime.tryParse(json['scheduledFor'].toString())
           : json['scheduled_for'] != null
-              ? DateTime.parse(json['scheduled_for'])
+              ? DateTime.tryParse(json['scheduled_for'].toString())
               : null,
-      sent: json['sent'] ?? false,
-      createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at']),
+      sent: json['sent'] ?? true,
+      createdAt: DateTime.tryParse(
+              json['createdAt']?.toString() ?? json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse(
+              json['updatedAt']?.toString() ?? json['updated_at']?.toString() ?? '') ??
+          DateTime.now(),
       teamName: json['team']?['name'],
       eventTitle: json['sportEvent']?['title'] ?? json['event']?['title'],
     );

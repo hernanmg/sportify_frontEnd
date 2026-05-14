@@ -28,8 +28,7 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
   Future<void> _loadEvents() async {
     try {
       setState(() => _isLoading = true);
-      final events = await _eventsService.getAllEvents(
-          teamId: 2); // Equipo con jugadores en roster
+      final events = await _eventsService.getAllEvents();
       setState(() {
         _events = events;
         _applyFilter();

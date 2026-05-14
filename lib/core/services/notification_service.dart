@@ -6,10 +6,15 @@ import 'package:sportify_amateur/models/notification.dart';
 import 'websocket_service.dart';
 
 class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal() {
+    _initializeWebSocket();
+  }
+
   final Dio _dio = DioClient.instance;
   final WebSocketService _wsService = WebSocketService();
-
-  // Stream para notificaciones en tiempo real
+  static bool _wsListenersRegistered = false;
   final StreamController<List<NotificationModel>> _notificationsController =
       StreamController<List<NotificationModel>>.broadcast();
 
@@ -23,15 +28,11 @@ class NotificationService {
   Stream<NotificationModel> get newNotificationStream =>
       _newNotificationController.stream;
 
-  NotificationService() {
-    _initializeWebSocket();
-  }
-
   void _initializeWebSocket() {
-    // Conectar WebSocket
     _wsService.connect();
+    if (_wsListenersRegistered) return;
+    _wsListenersRegistered = true;
 
-    // Escuchar notificaciones en tiempo real
     _wsService.onNotificationReceived((data) {
       debugPrint('🔔 Nueva notificación via WebSocket: ${data['title']}');
       
@@ -277,11 +278,13 @@ class NotificationService {
     return grouped;
   }
 
-  // Limpiar recursos
   void dispose() {
-    _notificationsController.close();
-    _newNotificationController.close();
+    // NotificationService es singleton; no desconectar WS al salir de una pantalla.
+  }
+
+  void disconnectOnLogout() {
     _wsService.disconnect();
+    _wsListenersRegistered = false;
   }
 
   // Legacy compatibility

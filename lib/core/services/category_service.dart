@@ -104,4 +104,20 @@ class CategoryService {
       throw Exception('Error de conexión: $e');
     }
   }
+
+  Future<List<Category>> seedFootballCategories({int? sportId}) async {
+    try {
+      final response = await _dio.post(
+        '/categories/seed/football',
+        data: sportId != null ? {'sportId': sportId} : {},
+      );
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data.map((json) => Category.fromJson(json)).toList();
+      }
+      throw Exception('Error al cargar categorías iniciales');
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
 }

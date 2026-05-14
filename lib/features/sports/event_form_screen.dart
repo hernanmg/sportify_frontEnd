@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
+import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
+import 'package:sportify_amateur/models/team.dart';
 
 class EventFormScreen extends StatefulWidget {
   final SportEvent? event;
@@ -14,6 +16,10 @@ class EventFormScreen extends StatefulWidget {
 class _EventFormScreenState extends State<EventFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final SportEventsService _eventsService = SportEventsService();
+  final TeamService _teamService = TeamService();
+
+  List<Team> _teams = [];
+  Team? _selectedTeam;
 
   // Controllers
   final _titleController = TextEditingController();
@@ -40,8 +46,31 @@ class _EventFormScreenState extends State<EventFormScreen> {
   @override
   void initState() {
     super.initState();
+    _loadTeams();
     if (widget.event != null) {
       _loadEventData();
+    }
+  }
+
+  Future<void> _loadTeams() async {
+    try {
+      final teams = await _teamService.getAllTeams();
+      Team? selected;
+      if (widget.event != null) {
+        try {
+          selected = teams.firstWhere((t) => t.id == widget.event!.teamId);
+        } catch (_) {
+          selected = teams.isNotEmpty ? teams.first : null;
+        }
+      } else {
+        selected = teams.isNotEmpty ? teams.first : null;
+      }
+      setState(() {
+        _teams = teams;
+        _selectedTeam = selected;
+      });
+    } catch (_) {
+      // El formulario mostrará aviso si no hay equipos
     }
   }
 
@@ -138,6 +167,28 @@ class _EventFormScreenState extends State<EventFormScreen> {
               'Información Básica',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 16),
+            if (_teams.isEmpty)
+              const Text('No hay equipos cargados. Creá uno en Gestión de Equipos.')
+            else
+              DropdownButtonFormField<Team>(
+                value: _selectedTeam,
+                decoration: const InputDecoration(
+                  labelText: 'Equipo *',
+                  border: OutlineInputBorder(),
+                ),
+                items: _teams
+                    .map(
+                      (team) => DropdownMenuItem(
+                        value: team,
+                        child: Text(team.name),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (team) => setState(() => _selectedTeam = team),
+                validator: (value) =>
+                    value == null ? 'Seleccioná un equipo' : null,
+              ),
             const SizedBox(height: 16),
             DropdownButtonFormField<SportEventType>(
               value: _selectedType,
@@ -529,6 +580,15 @@ class _EventFormScreenState extends State<EventFormScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+    if (_selectedTeam == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seleccioná un equipo para el evento'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -552,7 +612,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         'eventDate': eventDateTime.toIso8601String(),
         'location':
             _locationController.text.isEmpty ? null : _locationController.text,
-        'teamId': 2, // Equipo con jugadores en roster
+        'teamId': _selectedTeam!.id,
         'durationMinutes': _durationController.text.isEmpty
             ? null
             : int.tryParse(_durationController.text),

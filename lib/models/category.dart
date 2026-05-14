@@ -3,6 +3,7 @@ class Category {
   final String name;
   final String? description;
   final int sportId;
+  final String? sportName;
   final int? ageMin;
   final int? ageMax;
   final String? gender;
@@ -14,6 +15,7 @@ class Category {
     required this.name,
     this.description,
     required this.sportId,
+    this.sportName,
     this.ageMin,
     this.ageMax,
     this.gender,
@@ -27,6 +29,7 @@ class Category {
       name: json['name'],
       description: json['description'],
       sportId: json['sportId'],
+      sportName: json['sport'] is Map ? json['sport']['name'] : null,
       ageMin: json['ageMin'],
       ageMax: json['ageMax'],
       gender: json['gender'],

@@ -11,6 +11,7 @@ class WebSocketService {
 
   IO.Socket? _socket;
   bool _isConnected = false;
+  bool _isConnecting = false;
   String? _userId;
   String? _userRole;
   Timer? _reconnectTimer;
@@ -23,6 +24,13 @@ class WebSocketService {
   String? get userRole => _userRole;
 
   Future<void> connect() async {
+    if (_isConnecting) return;
+    if (_socket?.connected == true) {
+      debugPrint('📡 Socket.IO ya conectado (${_socket!.id})');
+      return;
+    }
+
+    _isConnecting = true;
     try {
       final token = await AuthStorageService().getToken();
       if (token == null) {
@@ -30,20 +38,24 @@ class WebSocketService {
         return;
       }
 
-      // Construir URL base (sin el path /notifications)
-      final baseUrl = ApiConstants.baseUrl;
-      debugPrint('🔗 Conectando a Socket.IO: $baseUrl/notifications');
+      if (_socket != null) {
+        _socket!.clearListeners();
+        _socket!.dispose();
+        _socket = null;
+      }
 
-      // Configurar Socket.IO
+      final socketUrl = '${ApiConstants.baseUrl}${ApiConstants.wsNotifications}';
+      debugPrint('🔗 Conectando a Socket.IO: $socketUrl');
+
       _socket = IO.io(
-        baseUrl,
+        socketUrl,
         IO.OptionBuilder()
-            .setTransports(['websocket']) // Usar solo WebSocket
-            .enableAutoConnect()
+            .setTransports(['websocket', 'polling'])
+            .disableAutoConnect()
             .enableReconnection()
             .setReconnectionAttempts(5)
             .setReconnectionDelay(3000)
-            .setPath('/socket.io/') // Path por defecto de Socket.IO
+            .setPath('/socket.io/')
             .setExtraHeaders({
               'Authorization': 'Bearer $token',
             })
@@ -53,10 +65,7 @@ class WebSocketService {
             .build(),
       );
 
-      // Configurar listeners de Socket.IO
       _setupSocketListeners();
-
-      // Conectar manualmente
       _socket!.connect();
 
       debugPrint('📡 Socket.IO inicializado');
@@ -64,20 +73,19 @@ class WebSocketService {
       debugPrint('❌ Error conectando Socket.IO: $e');
       _isConnected = false;
       _scheduleReconnect();
+    } finally {
+      _isConnecting = false;
     }
   }
 
   void _setupSocketListeners() {
     if (_socket == null) return;
-
+    _socket!.clearListeners();
     // Evento: Conexión exitosa
     _socket!.on('connect', (_) {
       _isConnected = true;
       _reconnectTimer?.cancel();
       debugPrint('✅ Socket.IO conectado - ID: ${_socket!.id}');
-      
-      // Unirse al namespace de notificaciones
-      _socket!.emit('join', {'namespace': 'notifications'});
       
       _notifyListeners('connected', {
         'socketId': _socket!.id,
@@ -94,6 +102,11 @@ class WebSocketService {
         'reason': reason,
         'timestamp': DateTime.now().toIso8601String(),
       });
+
+      if (reason == 'io server disconnect') {
+        debugPrint('⚠️ El servidor cerró la conexión WS (revisar JWT o sesión)');
+        return;
+      }
 
       if (reason != 'io client disconnect') {
         _scheduleReconnect();
@@ -140,6 +153,21 @@ class WebSocketService {
     });
 
     // Evento: Usuario conectado (confirmación del servidor)
+    _socket!.on('connected', (data) {
+      if (data is Map) {
+        final payload = Map<String, dynamic>.from(data);
+        _userId = payload['userId']?.toString();
+        debugPrint('👤 Usuario autenticado en WS - ID: $_userId');
+        
+        _notifyListeners('authenticated', {
+          'userId': _userId,
+          'rooms': payload['rooms'],
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+      }
+    });
+
+    // Compatibilidad con nombre anterior
     _socket!.on('user_connected', (data) {
       if (data is Map) {
         _userId = data['userId']?.toString();
