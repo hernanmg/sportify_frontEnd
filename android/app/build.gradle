@@ -1,6 +1,6 @@
 plugins {
     id "com.android.application"
-    id "kotlin-android"
+    id "org.jetbrains.kotlin.android"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -23,16 +23,19 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.example.sportify_amateur"
-    compileSdkVersion 34
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+    namespace "sportify.amateur"
+    compileSdk 36
+ 
+    buildFeatures {
+        buildConfig = true
     }
-
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = "17"
     }
 
     sourceSets {
@@ -44,8 +47,8 @@ android {
         applicationId "sportify.amateur"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
-        minSdkVersion 21
-        targetSdkVersion 34
+        minSdkVersion flutter.minSdkVersion
+        targetSdk 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
@@ -56,6 +59,8 @@ android {
             keyPassword 'debugkey'
             storeFile file('upload-keystore.jks')
             storePassword 'debugkey'
+            v1SigningEnabled true
+            v2SigningEnabled true
         }
     }
     buildTypes {

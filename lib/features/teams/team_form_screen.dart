@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/category_service.dart';
+import 'package:sportify_amateur/core/services/sport_service.dart';
 import 'package:sportify_amateur/models/team.dart';
 import 'package:sportify_amateur/models/category.dart';
+import 'package:sportify_amateur/models/sport.dart';
 
 class TeamFormScreen extends StatefulWidget {
   final Team? team;
@@ -25,23 +27,26 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final TeamService _teamService = TeamService();
   final CategoryService _categoryService = CategoryService();
+  final SportService _sportService = SportService();
 
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
   late TextEditingController _colorsController;
   late TextEditingController _foundedYearController;
 
-  int _selectedSportId = 1; // Por defecto Fútbol
+  List<Sport> _sports = [];
+  Sport? _selectedSport;
   Category? _selectedCategory;
   List<Category> _categories = [];
   bool _isLoading = false;
+  bool _isLoadingSports = false;
   bool _isLoadingCategories = false;
 
   @override
   void initState() {
     super.initState();
     _initializeControllers();
-    _loadCategories();
+    _loadSports();
   }
 
   void _initializeControllers() {
@@ -52,27 +57,62 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
     _colorsController = TextEditingController(text: widget.team?.colors ?? '');
     _foundedYearController =
         TextEditingController(text: widget.team?.foundedYear?.toString() ?? '');
+  }
 
-    if (widget.team != null) {
-      _selectedSportId =
-          widget.team!.sportId ?? 1; // Default a Fútbol si es null
-      // TODO: Cargar categoría del equipo existente
+  Future<void> _loadSports() async {
+    setState(() => _isLoadingSports = true);
+    try {
+      final sports = await _sportService.getAllSports();
+      Sport? selected;
+      if (widget.team?.sportId != null) {
+        try {
+          selected = sports.firstWhere((s) => s.id == widget.team!.sportId);
+        } catch (_) {
+          selected = sports.isNotEmpty ? sports.first : null;
+        }
+      } else {
+        selected = sports.isNotEmpty ? sports.first : null;
+      }
+      setState(() {
+        _sports = sports;
+        _selectedSport = selected;
+      });
+      if (selected != null) {
+        await _loadCategories();
+      }
+    } catch (e) {
+      _showError('Error al cargar deportes: $e');
+    } finally {
+      setState(() => _isLoadingSports = false);
     }
   }
 
   Future<void> _loadCategories() async {
+    if (_selectedSport == null) {
+      setState(() {
+        _categories = [];
+        _selectedCategory = null;
+      });
+      return;
+    }
+
     setState(() => _isLoadingCategories = true);
     try {
       final categories =
-          await _categoryService.getCategoriesBySport(_selectedSportId);
+          await _categoryService.getCategoriesBySport(_selectedSport!.id);
       setState(() {
         _categories = categories;
-        // Si el equipo tiene categoría, seleccionarla
         if (widget.team?.categoryId != null) {
-          _selectedCategory = categories.firstWhere(
-            (cat) => cat.id == widget.team!.categoryId,
-            orElse: () => categories.first,
-          );
+          try {
+            _selectedCategory = categories
+                .firstWhere((cat) => cat.id == widget.team!.categoryId);
+          } catch (_) {
+            _selectedCategory =
+                categories.isNotEmpty ? categories.first : null;
+          }
+        } else {
+          _selectedCategory =
+              categories.isNotEmpty ? categories.first : null;
         }
       });
     } catch (e) {
@@ -84,13 +124,17 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
 
   Future<void> _saveTeam() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedSport == null) {
+      _showError('Seleccioná un deporte. Si no hay ninguno, cargalos en Gestión de Equipos > Deportes.');
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
       final teamData = {
         'name': _nameController.text.trim(),
-        'sport_id': _selectedSportId,
+        'sport_id': _selectedSport!.id,
         'category_id': _selectedCategory?.id,
         'description': _descriptionController.text.trim().isEmpty
             ? null
@@ -165,9 +209,11 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: _isLoading
+      body: _isLoading || _isLoadingSports
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
+          : _sports.isEmpty
+              ? _buildNoSportsState()
+              : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Form(
                 key: _formKey,
@@ -248,28 +294,7 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Deporte (por ahora solo Fútbol)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.sports_soccer, color: Colors.grey[600]),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Deporte: Fútbol',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildSportDropdown(),
 
                     const SizedBox(height: 20),
 
@@ -419,6 +444,79 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
     );
   }
 
+  Widget _buildNoSportsState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.sports, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            const Text(
+              'No hay deportes cargados',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Andá a Gestión de Equipos > Deportes y cargá los iniciales antes de crear un equipo.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSportDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Deporte *',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+            color: Colors.white,
+          ),
+          child: DropdownButtonFormField<Sport>(
+            value: _selectedSport,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.sports, size: 20),
+              border: InputBorder.none,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            ),
+            items: _sports
+                .map(
+                  (sport) => DropdownMenuItem(
+                    value: sport,
+                    child: Text(sport.name),
+                  ),
+                )
+                .toList(),
+            onChanged: (sport) {
+              setState(() {
+                _selectedSport = sport;
+                _selectedCategory = null;
+              });
+              _loadCategories();
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCategoryDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -453,7 +551,14 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
                     ],
                   ),
                 )
-              : DropdownButtonFormField<Category>(
+              : _categories.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        'No hay categorías para este deporte. Cargalas en Gestión de Equipos > Categorías.',
+                      ),
+                    )
+                  : DropdownButtonFormField<Category>(
                   value: _selectedCategory,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.category, size: 20),

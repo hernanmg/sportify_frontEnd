@@ -13,14 +13,27 @@ class DioClient {
   ));
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
+  static bool _isPublicAuthPath(String path) {
+    final p = path.split('?').first;
+    const public = <String>{
+      '/auth/login',
+      '/auth/register',
+      '/auth/refresh',
+      '/auth/google/token',
+    };
+    return public.contains(p);
+  }
+
   static void initialize() {
     // Agregar el interceptor
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        // Adjuntar token en cada solicitud
-        final accessToken = await _storage.read(key: 'authToken');
-        if (accessToken != null) {
-          options.headers['Authorization'] = 'Bearer $accessToken';
+        // No mezclar Bearer con login/register (tokens viejos en el dispositivo)
+        if (!_isPublicAuthPath(options.path)) {
+          final accessToken = await _storage.read(key: 'authToken');
+          if (accessToken != null) {
+            options.headers['Authorization'] = 'Bearer $accessToken';
+          }
         }
         return handler.next(options);
       },

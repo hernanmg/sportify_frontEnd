@@ -131,7 +131,7 @@ class AuthService {
 
       // Usar Dio en lugar de http directo para consistencia
       final response = await _dio.post('/auth/login', data: {
-        'email': email, // Campo correcto según el backend
+        'email': email.trim(),
         'password': password,
       });
 
@@ -162,6 +162,13 @@ class AuthService {
         print('❌ Error de autenticación: ${response.data}');
         return false;
       }
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      print('💥 Error en autenticación con Email: $e');
+      if (data != null) {
+        print('📛 Cuerpo del servidor (401/otros): $data');
+      }
+      return false;
     } catch (e) {
       print('💥 Error en autenticación con Email: $e');
       return false;

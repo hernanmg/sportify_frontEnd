@@ -1,17 +1,61 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/models/notification.dart';
+import 'websocket_service.dart';
 
 class NotificationService {
-  final Dio _dio = DioClient.instance;
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal() {
+    _initializeWebSocket();
+  }
 
-  // Stream para notificaciones en tiempo real
+  final Dio _dio = DioClient.instance;
+  final WebSocketService _wsService = WebSocketService();
+  static bool _wsListenersRegistered = false;
   final StreamController<List<NotificationModel>> _notificationsController =
       StreamController<List<NotificationModel>>.broadcast();
 
+  // Stream para notificaciones individuales en tiempo real
+  final StreamController<NotificationModel> _newNotificationController =
+      StreamController<NotificationModel>.broadcast();
+
   Stream<List<NotificationModel>> get notificationsStream =>
       _notificationsController.stream;
+
+  Stream<NotificationModel> get newNotificationStream =>
+      _newNotificationController.stream;
+
+  void _initializeWebSocket() {
+    _wsService.connect();
+    if (_wsListenersRegistered) return;
+    _wsListenersRegistered = true;
+
+    _wsService.onNotificationReceived((data) {
+      debugPrint('🔔 Nueva notificación via WebSocket: ${data['title']}');
+      
+      try {
+        final notification = NotificationModel.fromJson(data);
+        _newNotificationController.add(notification);
+        
+        // Refrescar lista de notificaciones
+        getMyNotifications();
+      } catch (e) {
+        debugPrint('❌ Error procesando notificación WebSocket: $e');
+      }
+    });
+
+    // Manejar conexión WebSocket
+    _wsService.onConnected((data) {
+      debugPrint('✅ WebSocket conectado para notificaciones');
+    });
+
+    _wsService.onError((data) {
+      debugPrint('❌ Error WebSocket notificaciones: ${data['message']}');
+    });
+  }
 
   // Obtener notificaciones del usuario
   Future<List<NotificationModel>> getMyNotifications({int limit = 50}) async {
@@ -234,9 +278,13 @@ class NotificationService {
     return grouped;
   }
 
-  // Limpiar recursos
   void dispose() {
-    _notificationsController.close();
+    // NotificationService es singleton; no desconectar WS al salir de una pantalla.
+  }
+
+  void disconnectOnLogout() {
+    _wsService.disconnect();
+    _wsListenersRegistered = false;
   }
 
   // Legacy compatibility

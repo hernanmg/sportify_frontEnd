@@ -28,8 +28,7 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
   Future<void> _loadEvents() async {
     try {
       setState(() => _isLoading = true);
-      final events = await _eventsService.getAllEvents(
-          teamId: 2); // Equipo con jugadores en roster
+      final events = await _eventsService.getAllEvents();
       setState(() {
         _events = events;
         _applyFilter();
@@ -321,6 +320,10 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
         color = Colors.red;
         label = 'Cancelado';
         break;
+      case SportEventStatus.postponed:
+        color = Colors.orange;
+        label = 'Pospuesto';
+        break;
     }
 
     return Container(
@@ -497,6 +500,9 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
       await DebugService.printDebugInfo();
       final authStatus = await DebugService.checkAuthStatus();
       final healthCheck = await DebugService.checkBackendHealth();
+      
+      // Probar Socket.IO
+      final socketTest = await DebugService.testSocketIOConnection();
 
       Navigator.pop(context); // Cerrar dialog de carga
 
@@ -514,6 +520,11 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
                 const SizedBox(height: 8),
                 Text(
                     'Autenticación: ${authStatus['isAuthenticated'] ? '✅ Válida' : '❌ Inválida'}'),
+                const SizedBox(height: 8),
+                Text(
+                    'Socket.IO: ${socketTest['isConnected'] ? '✅ Conectado' : '❌ Desconectado'}'),
+                if (socketTest['socketId'] != null)
+                  Text('Socket ID: ${socketTest['socketId']}'),
                 const SizedBox(height: 8),
                 if (authStatus['token'] != null)
                   Text('Token: ${authStatus['token']}'),

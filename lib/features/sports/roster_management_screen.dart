@@ -240,6 +240,7 @@ class _RosterManagementScreenState extends State<RosterManagementScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButton<String>(
+                        isExpanded: true,
                         value: _selectedSeason,
                         dropdownColor: Colors.green.shade700,
                         style: const TextStyle(color: Colors.white),
@@ -293,10 +294,11 @@ class _RosterManagementScreenState extends State<RosterManagementScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButton<String>(
+                        isExpanded: true,
                         value: _filterStatus,
                         dropdownColor: Colors.green.shade700,
                         style:
-                            const TextStyle(color: Colors.white, fontSize: 14),
+                            const TextStyle(color: Colors.white, fontSize: 13),
                         underline: Container(),
                         items: const [
                           DropdownMenuItem(value: 'all', child: Text('Todos')),
@@ -308,10 +310,10 @@ class _RosterManagementScreenState extends State<RosterManagementScreen> {
                               value: 'disabled', child: Text('Inactivos')),
                           DropdownMenuItem(
                               value: 'medical_pending',
-                              child: Text('Apto Pendiente')),
+                              child: Text('Apto pend.')),
                           DropdownMenuItem(
                               value: 'medical_expired',
-                              child: Text('Apto Vencido')),
+                              child: Text('Apto venc.')),
                         ],
                         onChanged: (value) {
                           if (value != null) {

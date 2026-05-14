@@ -1,10 +1,15 @@
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 
+import 'platform_is_android.dart';
+
 class AppConfig {
   // URL base según plataforma
   static const String _defaultWebUrlDev = 'http://localhost:3000';
   static const String _defaultWebUrlProd = 'https://app.tudominio.com';
-  static const String _defaultAndroidUrlDev = 'http://localhost:3000';
+  /// iOS simulator / escritorio: el host es localhost.
+  static const String _defaultMobileDebugLocalhost = 'http://localhost:3000';
+  /// Emulador Android: localhost sería el propio emulador; 10.0.2.2 es el PC anfitrión.
+  static const String _defaultAndroidEmulatorDev = 'http://10.0.2.2:3000';
   static const String _defaultAndroidUrlProd = 'https://api.tudominio.com';
 
   // Dart-define para API y GOOGLE_CLIENT_ID
@@ -20,9 +25,13 @@ class AppConfig {
 
     if (kIsWeb) {
       return kDebugMode ? _defaultWebUrlDev : _defaultWebUrlProd;
-    } else {
-      return kDebugMode ? _defaultAndroidUrlDev : _defaultAndroidUrlProd;
     }
+    if (kDebugMode) {
+      return platformIsAndroid
+          ? _defaultAndroidEmulatorDev
+          : _defaultMobileDebugLocalhost;
+    }
+    return _defaultAndroidUrlProd;
   }
 
   /// Devuelve Google Client ID

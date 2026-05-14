@@ -1,10 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
+import 'websocket_service.dart';
 
 class DebugService {
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
   static final Dio _dio = DioClient.instance;
+  static final WebSocketService _wsService = WebSocketService();
 
   static Future<Map<String, dynamic>> checkAuthStatus() async {
     try {
@@ -199,5 +201,89 @@ class DebugService {
     }
 
     print('==================');
+  }
+
+  // Test Socket.IO Connection
+  static Future<Map<String, dynamic>> testSocketIOConnection() async {
+    try {
+      print('🔌 Probando conexión Socket.IO...');
+      
+      // Verificar estado inicial
+      final initialInfo = _wsService.getConnectionInfo();
+      print('📊 Estado inicial: $initialInfo');
+
+      // Conectar
+      await _wsService.connect();
+      
+      // Esperar un momento para que se establezca la conexión
+      await Future.delayed(const Duration(seconds: 3));
+      
+      // Verificar estado después de conectar
+      final connectedInfo = _wsService.getConnectionInfo();
+      print('📊 Estado después de conectar: $connectedInfo');
+
+      return {
+        'success': _wsService.isConnected,
+        'socketId': connectedInfo['socketId'],
+        'userId': connectedInfo['userId'],
+        'isConnected': connectedInfo['isConnected'],
+        'message': _wsService.isConnected 
+            ? '✅ Socket.IO conectado exitosamente' 
+            : '❌ Socket.IO no pudo conectarse',
+      };
+    } catch (e) {
+      print('❌ Error probando Socket.IO: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+        'message': 'Error al probar Socket.IO',
+      };
+    }
+  }
+
+  // Test recepción de notificaciones via Socket.IO
+  static Future<Map<String, dynamic>> testSocketIONotifications() async {
+    try {
+      print('🔔 Probando recepción de notificaciones via Socket.IO...');
+      
+      bool notificationReceived = false;
+      Map<String, dynamic>? receivedNotification;
+
+      // Configurar listener
+      _wsService.onNotificationReceived((data) {
+        print('🎉 ¡Notificación recibida via Socket.IO!');
+        print('📨 Datos: $data');
+        notificationReceived = true;
+        receivedNotification = data;
+      });
+
+      // Conectar si no está conectado
+      if (!_wsService.isConnected) {
+        await _wsService.connect();
+        await Future.delayed(const Duration(seconds: 3));
+      }
+
+      print('⏳ Esperando notificaciones durante 10 segundos...');
+      print('💡 Crea un evento desde la app para probar');
+      
+      // Esperar notificaciones
+      await Future.delayed(const Duration(seconds: 10));
+
+      return {
+        'success': notificationReceived,
+        'notificationReceived': notificationReceived,
+        'notification': receivedNotification,
+        'message': notificationReceived 
+            ? '✅ Notificación recibida correctamente' 
+            : '⏰ No se recibieron notificaciones (timeout)',
+      };
+    } catch (e) {
+      print('❌ Error probando notificaciones Socket.IO: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+        'message': 'Error al probar notificaciones',
+      };
+    }
   }
 }

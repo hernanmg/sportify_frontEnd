@@ -4,33 +4,37 @@ publish_to: 'none'
 version: 0.1.0
 
 environment:
-  sdk: '>=3.1.0 <4.0.0'
+  sdk: '>=3.3.0 <4.0.0' # Subimos el mínimo para Dart 3
 
 dependencies:
   flutter:
     sdk: flutter
-  
   flutter_localizations:
     sdk: flutter
 
   english_words: ^4.0.0
-  provider: ^6.0.0
-  http: ^1.0.0        # Comunicación HTTP con el backend en NestJS
-  flutter_bloc: ^8.1.2  # Opcional, para manejar el estado de la app
-  google_sign_in: ^6.1.0
-  flutter_facebook_auth: ^7.0.0
-  shared_preferences: ^2.2.3
-  font_awesome_flutter: ^10.1.0
+  provider: ^6.1.1
+  http: ^1.2.2
+  flutter_bloc: ^8.1.6
+  google_sign_in: ^6.2.1        # Actualizado para nuevos Gradle
+  flutter_facebook_auth: ^7.1.1   # Actualizado para nuevos Gradle
+  shared_preferences: ^2.3.2     # Versión que corrige el error de Android
+  font_awesome_flutter: ^10.7.0
   flutter_launcher_icons: ^0.13.1
-  fl_chart: ^0.68.0
-  csv: ^5.0.0
+  fl_chart: ^0.69.0
+  csv: ^6.0.0
   pdf: ^3.11.1
-  flutter_secure_storage: ^9.2.3
+  flutter_secure_storage: ^9.2.2
   dio: ^5.7.0
+  socket_io_client: ^3.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+dependency_overrides:
+  win32: ^5.10.0
+  path_provider_android: ^2.2.12
+  
 flutter_icons:
   android: true
   ios: true

@@ -421,6 +421,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         color = Colors.red;
         label = 'Cancelado';
         break;
+      case SportEventStatus.postponed:
+        color = Colors.orange;
+        label = 'Pospuesto';
+        break;
     }
 
     return Container(
