@@ -29,6 +29,7 @@ import 'package:sportify_amateur/features/roles/roles_screen.dart';
 import 'package:sportify_amateur/features/users/users_form_screen.dart';
 import 'package:sportify_amateur/features/users/users_screen.dart';
 import 'package:sportify_amateur/features/notifications/notification_screen.dart';
+import 'package:sportify_amateur/features/finance/finance_hub_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,6 +79,7 @@ class MainApp extends StatelessWidget {
         '/sports/roster': (context) => const SportsManagementScreen(),
         '/teams': (context) => const TeamsManagementScreen(),
         '/notifications': (context) => const NotificationsScreen(),
+        '/finances': (context) => const FinanceHubScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/secondary': (context) => const SecondaryHomeScreen(),
         '/roles': (context) => const RolesScreen(),

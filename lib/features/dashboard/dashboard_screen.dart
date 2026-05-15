@@ -52,7 +52,7 @@ class DashboardScreen extends StatelessWidget {
           'description': 'Controla ingresos, gastos y pagos',
           'requiredRole': 'user',
           'color': Colors.green,
-          'route': '/game-stats',
+          'route': '/finances',
         },
         {
           'title': 'Gestión de Asistencia y Horarios',
