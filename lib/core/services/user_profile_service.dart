@@ -92,9 +92,9 @@ class UserProfileService {
   }
 
   Future<void> completeOnboarding() async {
-    // Marcar el onboarding como completado
     await updateProfile({
       'estadoRegistro': 'completed',
+      'profileCompletion': 100,
     });
   }
 }

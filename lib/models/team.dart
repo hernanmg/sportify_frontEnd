@@ -4,6 +4,8 @@ class Team {
   final String? description;
   final String? sport;
   final String? category;
+  final List<String> categoryNames;
+  final List<int> categoryIds;
   final int? sportId;
   final int? categoryId;
   final String? colors;
@@ -17,6 +19,8 @@ class Team {
     this.description,
     this.sport,
     this.category,
+    this.categoryNames = const [],
+    this.categoryIds = const [],
     this.sportId,
     this.categoryId,
     this.colors,
@@ -26,17 +30,42 @@ class Team {
   });
 
   factory Team.fromJson(Map<String, dynamic> json) {
+    final categoriesList = json['categories'] as List<dynamic>?;
+    final namesFromApi = (json['categoryNames'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        (categoriesList
+                ?.map((c) => c is Map ? c['name']?.toString() : c.toString())
+                .whereType<String>()
+                .toList() ??
+            []);
+    final idsFromApi = (json['categoryIds'] as List<dynamic>?)
+            ?.map((e) => e is int ? e : int.tryParse(e.toString()))
+            .whereType<int>()
+            .toList() ??
+        (categoriesList
+                ?.map((c) => c is Map ? c['id'] as int? : null)
+                .whereType<int>()
+                .toList() ??
+            []);
+
     return Team(
       id: json['id'],
       name: json['name'],
       description: json['description'],
       sport:
           json['sport']?['name'] ?? json['sport'], // Puede ser objeto o string
-      category: json['category']?['name'] ??
-          json['category'], // Puede ser objeto o string
+      category: namesFromApi.isNotEmpty
+          ? namesFromApi.join(', ')
+          : (json['category']?['name'] ?? json['category']?.toString()),
+      categoryNames: namesFromApi,
+      categoryIds: idsFromApi,
       sportId: json['sportId'] ?? json['sport_id'] ?? json['sport']?['id'],
-      categoryId:
-          json['categoryId'] ?? json['category_id'] ?? json['category']?['id'],
+      categoryId: idsFromApi.isNotEmpty
+          ? idsFromApi.first
+          : (json['categoryId'] ??
+              json['category_id'] ??
+              json['category']?['id']),
       colors: json['colors'],
       foundedYear: json['foundedYear'] ?? json['founded_year'],
       createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
@@ -95,7 +124,10 @@ class Team {
   }
 
   String get sportName => sport ?? 'Sin deporte';
-  String get categoryName => category ?? 'Sin categoría';
+  String get categoryName =>
+      categoryNames.isNotEmpty
+          ? categoryNames.join(', ')
+          : (category ?? 'Sin categoría');
 
   String get shortInfo {
     final parts = <String>[];

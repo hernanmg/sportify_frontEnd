@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 
 class SportEventsService {
@@ -265,13 +266,17 @@ class SportEventsService {
 
   Future<EventParticipant> confirmParticipation(int eventId,
       {String? notes}) async {
-    return await updateParticipantResponse(eventId, 0, 'confirmed',
+    final userIdStr = await AuthStorageService().getUserId();
+    final userId = int.parse(userIdStr ?? '0');
+    return await updateParticipantResponse(eventId, userId, 'confirmed',
         notes: notes);
   }
 
   Future<EventParticipant> declineParticipation(int eventId,
       {String? notes}) async {
-    return await updateParticipantResponse(eventId, 0, 'declined',
+    final userIdStr = await AuthStorageService().getUserId();
+    final userId = int.parse(userIdStr ?? '0');
+    return await updateParticipantResponse(eventId, userId, 'declined',
         notes: notes);
   }
 

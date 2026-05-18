@@ -152,21 +152,46 @@ class PlayerRoster {
 // Necesitamos importar estos modelos
 class Player {
   final int id;
+  final int? userId;
   final String name;
   final String? email;
 
-  Player({required this.id, required this.name, this.email});
+  Player({
+    required this.id,
+    this.userId,
+    required this.name,
+    this.email,
+  });
 
   factory Player.fromJson(Map<String, dynamic> json) {
     final id = json['id'] ?? 0;
+    final user = json['user'];
     return Player(
       id: id,
-      name: json['user']?['username'] ?? json['name'] ?? 'Jugador $id',
-      email: json['user']?['email'] ?? json['email'],
+      userId: json['user_id'] as int? ??
+          (user is Map ? user['id'] as int? : null),
+      name: user is Map
+          ? [user['firstName'], user['lastName']]
+                  .where((p) => p != null && p.toString().isNotEmpty)
+                  .join(' ')
+                  .trim()
+                  .isNotEmpty
+              ? [user['firstName'], user['lastName']]
+                  .where((p) => p != null && p.toString().isNotEmpty)
+                  .map((p) => p.toString())
+                  .join(' ')
+              : (user['username']?.toString() ?? 'Jugador $id')
+          : (json['name']?.toString() ?? 'Jugador $id'),
+      email: user is Map ? user['email'] as String? : json['email'] as String?,
     );
   }
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'email': email};
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'userId': userId,
+        'name': name,
+        'email': email,
+      };
 }
 
 // Usar Team del servicio importado

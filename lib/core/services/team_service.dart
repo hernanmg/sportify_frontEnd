@@ -1,9 +1,77 @@
 import 'package:dio/dio.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/models/team.dart';
+import 'package:sportify_amateur/models/my_team_option.dart';
 
 class TeamService {
   final Dio _dio = DioClient.instance;
+
+  static String errorMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map && data['message'] != null) {
+        final message = data['message'];
+        if (message is List) {
+          return message.map((e) => e.toString()).join('\n');
+        }
+        return message.toString();
+      }
+    }
+    return error.toString();
+  }
+
+  Future<Map<String, dynamic>> completeOnboarding(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post('/teams/onboarding', data: payload);
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> joinWithCode(String inviteCode) async {
+    final response = await _dio.post('/teams/join', data: {
+      'inviteCode': inviteCode.trim().toUpperCase(),
+    });
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> previewInvite(String code) async {
+    final response = await _dio.get('/teams/invites/${code.trim().toUpperCase()}');
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> createTeamInvite(
+    int teamId, {
+    List<int>? categoryIds,
+  }) async {
+    final response = await _dio.post(
+      '/teams/$teamId/invites',
+      data: categoryIds != null ? {'categoryIds': categoryIds} : {},
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<List<Map<String, dynamic>>> getTeamSocialGuests(int teamId) async {
+    final response = await _dio.get('/teams/$teamId/social-guests');
+    final data = response.data as List<dynamic>;
+    return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<List<MyTeamOption>> getMyTeams() async {
+    try {
+      final response = await _dio.get('/teams/mine');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        return data
+            .map((json) => MyTeamOption.fromJson(
+                  Map<String, dynamic>.from(json as Map),
+                ))
+            .toList();
+      }
+      throw Exception('Error al obtener tus equipos');
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
 
   // Obtener todos los equipos
   Future<List<Team>> getAllTeams() async {
@@ -50,6 +118,17 @@ class TeamService {
     } catch (e) {
       throw Exception('Error de conexión: $e');
     }
+  }
+
+  Future<Team> setTeamCategories(int teamId, List<int> categoryIds) async {
+    final response = await _dio.patch(
+      '/teams/$teamId/categories',
+      data: {'categoryIds': categoryIds},
+    );
+    if (response.statusCode == 200) {
+      return Team.fromJson(Map<String, dynamic>.from(response.data as Map));
+    }
+    throw Exception('Error al actualizar categorías del equipo');
   }
 
   // Crear nuevo equipo

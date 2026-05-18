@@ -36,7 +36,7 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
 
   List<Sport> _sports = [];
   Sport? _selectedSport;
-  Category? _selectedCategory;
+  final Set<int> _selectedCategoryIds = {};
   List<Category> _categories = [];
   bool _isLoading = false;
   bool _isLoadingSports = false;
@@ -91,7 +91,7 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
     if (_selectedSport == null) {
       setState(() {
         _categories = [];
-        _selectedCategory = null;
+        _selectedCategoryIds.clear();
       });
       return;
     }
@@ -102,17 +102,16 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
           await _categoryService.getCategoriesBySport(_selectedSport!.id);
       setState(() {
         _categories = categories;
-        if (widget.team?.categoryId != null) {
-          try {
-            _selectedCategory = categories
-                .firstWhere((cat) => cat.id == widget.team!.categoryId);
-          } catch (_) {
-            _selectedCategory =
-                categories.isNotEmpty ? categories.first : null;
+        _selectedCategoryIds.clear();
+        if (widget.team != null) {
+          if (widget.team!.categoryIds.isNotEmpty) {
+            _selectedCategoryIds.addAll(widget.team!.categoryIds);
+          } else if (widget.team!.categoryId != null) {
+            _selectedCategoryIds.add(widget.team!.categoryId!);
           }
-        } else {
-          _selectedCategory =
-              categories.isNotEmpty ? categories.first : null;
+        }
+        if (_selectedCategoryIds.isEmpty && categories.isNotEmpty) {
+          _selectedCategoryIds.add(categories.first.id);
         }
       });
     } catch (e) {
@@ -129,13 +128,19 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
       return;
     }
 
+    if (_selectedCategoryIds.isEmpty) {
+      _showError('Seleccioná al menos una categoría para el equipo');
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
       final teamData = {
         'name': _nameController.text.trim(),
         'sport_id': _selectedSport!.id,
-        'category_id': _selectedCategory?.id,
+        'category_id': _selectedCategoryIds.first,
+        'categoryIds': _selectedCategoryIds.toList(),
         'description': _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
@@ -149,12 +154,18 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
 
       Team savedTeam;
       if (widget.team != null) {
-        // Actualizar equipo existente
         savedTeam = await _teamService.updateTeam(widget.team!.id, teamData);
+        await _teamService.setTeamCategories(
+          savedTeam.id,
+          _selectedCategoryIds.toList(),
+        );
         _showSuccess('Equipo actualizado exitosamente');
       } else {
-        // Crear nuevo equipo
         savedTeam = await _teamService.createTeam(teamData);
+        await _teamService.setTeamCategories(
+          savedTeam.id,
+          _selectedCategoryIds.toList(),
+        );
         _showSuccess('Equipo creado exitosamente');
       }
 
@@ -507,7 +518,7 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
             onChanged: (sport) {
               setState(() {
                 _selectedSport = sport;
-                _selectedCategory = null;
+                _selectedCategoryIds.clear();
               });
               _loadCategories();
             },
@@ -522,63 +533,64 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Categoría',
+          'Categorías del equipo',
           style: TextStyle(
             fontSize: 12,
             color: Colors.grey[600],
             fontWeight: FontWeight.w500,
           ),
         ),
+        const SizedBox(height: 4),
+        Text(
+          'Un solo equipo (ej. ZFC) puede jugar +35 y +40',
+          style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+        ),
         const SizedBox(height: 8),
         Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey[300]!),
             color: Colors.white,
           ),
           child: _isLoadingCategories
-              ? const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      SizedBox(width: 12),
-                      Text('Cargando categorías...'),
-                    ],
-                  ),
+              ? const Row(
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 12),
+                    Text('Cargando categorías...'),
+                  ],
                 )
               : _categories.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text(
-                        'No hay categorías para este deporte. Cargalas en Gestión de Equipos > Categorías.',
-                      ),
+                  ? const Text(
+                      'No hay categorías para este deporte. Cargalas en Gestión de Equipos > Categorías.',
                     )
-                  : DropdownButtonFormField<Category>(
-                  value: _selectedCategory,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.category, size: 20),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16),
-                  ),
-                  hint: const Text('Selecciona una categoría'),
-                  items: _categories.map((category) {
-                    return DropdownMenuItem<Category>(
-                      value: category,
-                      child: Text(category.displayName),
-                    );
-                  }).toList(),
-                  onChanged: (Category? category) {
-                    setState(() {
-                      _selectedCategory = category;
-                    });
-                  },
-                ),
+                  : Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _categories.map((category) {
+                        final selected =
+                            _selectedCategoryIds.contains(category.id);
+                        return FilterChip(
+                          label: Text(category.displayName),
+                          selected: selected,
+                          onSelected: (v) {
+                            setState(() {
+                              if (v) {
+                                _selectedCategoryIds.add(category.id);
+                              } else {
+                                _selectedCategoryIds.remove(category.id);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
         ),
       ],
     );

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:sportify_amateur/features/onboarding/widgets/team_autocomplete.dart';
-import 'package:sportify_amateur/models/team.dart';
-import 'package:sportify_amateur/models/role.dart';
-import 'package:sportify_amateur/core/services/role_service.dart';
+import 'package:flutter/services.dart';
+import 'package:sportify_amateur/core/services/category_service.dart';
+import 'package:sportify_amateur/core/services/sport_service.dart';
+import 'package:sportify_amateur/core/services/team_service.dart';
+import 'package:sportify_amateur/models/category.dart';
+import 'package:sportify_amateur/models/sport.dart';
+
+enum TeamSetupMode { create, join, skip }
 
 class InstitutionalInfoStep extends StatefulWidget {
   final Map<String, dynamic> initialData;
@@ -23,420 +27,361 @@ class InstitutionalInfoStep extends StatefulWidget {
 }
 
 class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
-  bool _hasTeam = false;
-  String _selectedRole = 'player'; // Valor por defecto
-  Team? _selectedTeam;
-  List<Role> _availableRoles = [];
-  bool _loadingRoles = true;
-  final RoleService _roleService = RoleService();
+  TeamSetupMode _mode = TeamSetupMode.skip;
+  final _teamNameController = TextEditingController();
+  final _inviteCodeController = TextEditingController();
+  final SportService _sportService = SportService();
+  final CategoryService _categoryService = CategoryService();
+  final TeamService _teamService = TeamService();
+
+  List<Sport> _sports = [];
+  Sport? _selectedSport;
+  List<Category> _categories = [];
+  final Set<int> _selectedCategoryIds = {};
+  bool _loadingSports = true;
+  bool _loadingCategories = false;
+  String? _invitePreview;
+  bool _previewLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _hasTeam = widget.initialData['hasTeam'] ?? false;
-    _selectedRole = widget.initialData['role'] ?? 'player';
-    if (widget.initialData['selectedTeam'] != null) {
-      _selectedTeam = Team.fromJson(widget.initialData['selectedTeam']);
-    }
-    _loadRoles();
+    final mode = widget.initialData['onboardingMode'] as String?;
+    if (mode == 'create') _mode = TeamSetupMode.create;
+    if (mode == 'join') _mode = TeamSetupMode.join;
+    _teamNameController.text = widget.initialData['teamName']?.toString() ?? '';
+    _inviteCodeController.text =
+        widget.initialData['inviteCode']?.toString() ?? '';
+    _loadSports();
   }
 
-  Future<void> _loadRoles() async {
+  @override
+  void dispose() {
+    _teamNameController.dispose();
+    _inviteCodeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSports() async {
+    setState(() => _loadingSports = true);
     try {
-      // Cargar solo roles de equipo para el onboarding
-      final roles = await _roleService.getTeamRoles();
+      final sports = await _sportService.getAllSports();
       setState(() {
-        _availableRoles = roles;
-        _loadingRoles = false;
-        // Si el rol seleccionado no está en la lista, usar el primero disponible
-        if (roles.isNotEmpty && !roles.any((r) => r.name == _selectedRole)) {
-          _selectedRole = roles.first.name;
-        }
+        _sports = sports;
+        _selectedSport = sports.isNotEmpty ? sports.first : null;
+      });
+      if (_selectedSport != null) await _loadCategories();
+    } finally {
+      if (mounted) setState(() => _loadingSports = false);
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    if (_selectedSport == null) return;
+    setState(() => _loadingCategories = true);
+    try {
+      final cats =
+          await _categoryService.getCategoriesBySport(_selectedSport!.id);
+      setState(() {
+        _categories = cats;
+        _selectedCategoryIds.removeWhere(
+          (id) => !cats.any((c) => c.id == id),
+        );
+      });
+    } finally {
+      if (mounted) setState(() => _loadingCategories = false);
+    }
+  }
+
+  Future<void> _previewInvite() async {
+    final code = _inviteCodeController.text.trim();
+    if (code.length < 4) return;
+    setState(() {
+      _previewLoading = true;
+      _invitePreview = null;
+    });
+    try {
+      final data = await _teamService.previewInvite(code);
+      setState(() {
+        _invitePreview =
+            '${data['teamName']} — ${(data['categoryNames'] as List?)?.join(', ') ?? 'Sin categoría'}';
       });
     } catch (e) {
-      print('Error cargando roles: $e');
-      setState(() {
-        _loadingRoles = false;
-        // Fallback a roles hardcodeados si falla la carga
-        _availableRoles = [
-          Role(
-            id: 4,
-            name: 'player',
-            description: 'Jugador activo de un equipo',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-          Role(
-            id: 3,
-            name: 'team_captain',
-            description: 'Capitán de equipo',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          ),
-        ];
-      });
+      setState(() => _invitePreview = 'Código no válido');
+    } finally {
+      if (mounted) setState(() => _previewLoading = false);
     }
   }
 
   void _handleNext() {
-    // Guardamos los datos institucionales en el wizard
-    // Estos datos NO van al backend User, solo se almacenan localmente
-    final institutionalData = <String, dynamic>{
-      'hasTeam': _hasTeam,
-      'role': _selectedRole,
-      'selectedTeam': _selectedTeam?.toJson(),
-      'teamId': _selectedTeam?.id,
-      'teamName': _selectedTeam?.name,
-    };
+    if (_mode == TeamSetupMode.create) {
+      if (_teamNameController.text.trim().length < 2) {
+        _snack('Ingresá el nombre del equipo');
+        return;
+      }
+      if (_selectedSport == null) {
+        _snack('Seleccioná un deporte');
+        return;
+      }
+      if (_selectedCategoryIds.isEmpty) {
+        _snack('Seleccioná al menos una categoría');
+        return;
+      }
+    }
+    if (_mode == TeamSetupMode.join &&
+        _inviteCodeController.text.trim().length < 4) {
+      _snack('Ingresá el código de invitación');
+      return;
+    }
 
-    // Pasamos los datos institucionales
-    // El wizard filtrará automáticamente qué campos van al backend
-    widget.onNext(institutionalData);
+    widget.onNext({
+      'onboardingMode': _mode == TeamSetupMode.create
+          ? 'create'
+          : _mode == TeamSetupMode.join
+              ? 'join'
+              : 'skip',
+      'teamName': _teamNameController.text.trim(),
+      'sportId': _selectedSport?.id,
+      'categoryIds': _selectedCategoryIds.toList(),
+      'inviteCode': _inviteCodeController.text.trim().toUpperCase(),
+    });
+  }
+
+  void _snack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(20),
-            margin: const EdgeInsets.only(bottom: 24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.orange.shade50, Colors.orange.shade100],
+          _header(),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '¿Cómo querés empezar?',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  _modeTile(
+                    TeamSetupMode.create,
+                    'Administro / creo un equipo',
+                    'Quedás como encargado y recibís un código para invitar al plantel',
+                    Icons.shield,
+                  ),
+                  _modeTile(
+                    TeamSetupMode.join,
+                    'Me uno con código de invitación',
+                    'Tu capitán te comparte un código del equipo',
+                    Icons.vpn_key,
+                  ),
+                  _modeTile(
+                    TeamSetupMode.skip,
+                    'Lo configuro después',
+                    'Podés crear o unirte a un equipo más tarde',
+                    Icons.schedule,
+                  ),
+                  if (_mode == TeamSetupMode.create) ...[
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: _teamNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del equipo',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (_loadingSports)
+                      const LinearProgressIndicator()
+                    else
+                      DropdownButtonFormField<Sport>(
+                        value: _selectedSport,
+                        decoration: const InputDecoration(
+                          labelText: 'Deporte',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _sports
+                            .map((s) => DropdownMenuItem(
+                                  value: s,
+                                  child: Text(s.name),
+                                ))
+                            .toList(),
+                        onChanged: (s) async {
+                          setState(() => _selectedSport = s);
+                          await _loadCategories();
+                        },
+                      ),
+                    const SizedBox(height: 12),
+                    const Text('Categorías del equipo'),
+                    if (_loadingCategories)
+                      const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(),
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        children: _categories.map((cat) {
+                          final selected =
+                              _selectedCategoryIds.contains(cat.id);
+                          return FilterChip(
+                            label: Text(cat.name),
+                            selected: selected,
+                            onSelected: (v) {
+                              setState(() {
+                                if (v) {
+                                  _selectedCategoryIds.add(cat.id);
+                                } else {
+                                  _selectedCategoryIds.remove(cat.id);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                  ],
+                  if (_mode == TeamSetupMode.join) ...[
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: _inviteCodeController,
+                      decoration: InputDecoration(
+                        labelText: 'Código de invitación',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: _previewLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.search),
+                          onPressed: _previewInvite,
+                        ),
+                      ),
+                      textCapitalization: TextCapitalization.characters,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                      ],
+                    ),
+                    if (_invitePreview != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          _invitePreview!,
+                          style: TextStyle(
+                            color: _invitePreview!.contains('no válido')
+                                ? Colors.red
+                                : Colors.green.shade700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
               ),
-              borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
+          ),
+          _bottomButtons(),
+        ],
+      ),
+    );
+  }
+
+  Widget _header() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.orange.shade50, Colors.orange.shade100],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.groups, color: Colors.orange, size: 32),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.groups,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                Text(
+                  'Tu equipo',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Información institucional',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '¿Formas parte de algún equipo o club?',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
+                SizedBox(height: 4),
+                Text(
+                  'Creá el club o unite con el código que te pase el encargado',
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
                 ),
               ],
             ),
           ),
-
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // ¿Tienes equipo?
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          '¿Perteneces a algún equipo?',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: RadioListTile<bool>(
-                                title: const Text('Sí'),
-                                value: true,
-                                groupValue: _hasTeam,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _hasTeam = value!;
-                                  });
-                                },
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                            Expanded(
-                              child: RadioListTile<bool>(
-                                title: const Text('No'),
-                                value: false,
-                                groupValue: _hasTeam,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _hasTeam = value!;
-                                  });
-                                },
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  if (_hasTeam) ...[
-                    const SizedBox(height: 20),
-
-                    // Búsqueda/selección de equipo
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '¿A qué equipo perteneces?',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TeamAutocomplete(
-                            hintText: 'Buscar o crear equipo',
-                            onTeamSelected: (team) {
-                              setState(() {
-                                _selectedTeam = team;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Rol en el equipo
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '¿Cuál es tu rol principal?',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _loadingRoles
-                              ? const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                )
-                              : DropdownButtonFormField<String>(
-                                  value: _selectedRole,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.grey[50],
-                                  ),
-                                  items: _availableRoles.map((role) {
-                                    return DropdownMenuItem(
-                                      value: role.name,
-                                      child: Text(
-                                          RoleService.getRoleDisplayName(
-                                              role.name)),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _selectedRole = value!;
-                                    });
-                                  },
-                                ),
-                          if (!_loadingRoles && _availableRoles.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(
-                                RoleService.getRoleDescription(_selectedRole),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 32),
-
-                  // Info sobre equipos múltiples
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.blue.shade700),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '¡Equipos múltiples!',
-                                style: TextStyle(
-                                  color: Colors.blue.shade800,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Podrás unirte a múltiples equipos y cambiar entre ellos fácilmente desde el dashboard.',
-                                style: TextStyle(
-                                  color: Colors.blue.shade700,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Bottom buttons
-          Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 50,
-                      child: OutlinedButton(
-                        onPressed: widget.onPrevious,
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.grey),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.arrow_back, size: 20),
-                            SizedBox(width: 8),
-                            Text('Anterior'),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _handleNext,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Continuar',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward, size: 20),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                height: 50,
-                child: TextButton(
-                  onPressed: widget.onSkip,
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.grey[600],
-                  ),
-                  child: const Text(
-                    'Saltar este paso',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
       ),
+    );
+  }
+
+  Widget _modeTile(
+    TeamSetupMode mode,
+    String title,
+    String subtitle,
+    IconData icon,
+  ) {
+    final selected = _mode == mode;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      color: selected ? Colors.orange.shade50 : null,
+      child: ListTile(
+        leading: Icon(icon, color: selected ? Colors.orange : Colors.grey),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+        trailing: Radio<TeamSetupMode>(
+          value: mode,
+          groupValue: _mode,
+          onChanged: (v) => setState(() => _mode = v!),
+        ),
+        onTap: () => setState(() => _mode = mode),
+      ),
+    );
+  }
+
+  Widget _bottomButtons() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: widget.onPrevious,
+                child: const Text('Anterior'),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton(
+                onPressed: _handleNext,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Continuar'),
+              ),
+            ),
+          ],
+        ),
+        TextButton(onPressed: widget.onSkip, child: const Text('Saltar este paso')),
+      ],
     );
   }
 }

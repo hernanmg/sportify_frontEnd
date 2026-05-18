@@ -15,6 +15,26 @@ enum SportEventType {
   }
 }
 
+double? _parseDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
+}
+
+String? _userNameFromParticipantJson(dynamic user) {
+  if (user is! Map) return null;
+  final map = Map<String, dynamic>.from(user);
+  final first = map['firstName'] ?? map['first_name'];
+  final last = map['lastName'] ?? map['last_name'];
+  final combined = [first, last]
+      .where((p) => p != null && p.toString().trim().isNotEmpty)
+      .map((p) => p.toString())
+      .join(' ')
+      .trim();
+  if (combined.isNotEmpty) return combined;
+  return map['username']?.toString();
+}
+
 enum SportEventStatus {
   draft('draft'),
   scheduled('scheduled'),
@@ -84,6 +104,9 @@ class EventParticipant {
   final String? playingPosition;
   final bool? attended;
   final String? attendanceNotes;
+  final bool isConvoked;
+  final String? eligibilityStatus;
+  final String? eligibilityDetail;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -102,6 +125,9 @@ class EventParticipant {
     this.playingPosition,
     this.attended,
     this.attendanceNotes,
+    this.isConvoked = true,
+    this.eligibilityStatus,
+    this.eligibilityDetail,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -111,7 +137,9 @@ class EventParticipant {
       id: json['id'],
       eventId: json['eventId'] ?? json['event_id'],
       userId: json['userId'] ?? json['user_id'],
-      userName: json['user']?['name'] ?? json['userName'] ?? 'Usuario',
+      userName: _userNameFromParticipantJson(json['user']) ??
+          json['userName'] as String? ??
+          'Usuario',
       userEmail: json['user']?['email'] ?? json['userEmail'],
       status: ParticipantStatus.fromString(json['status'] ?? 'pending'),
       role: ParticipantRole.fromString(json['role'] ?? 'player'),
@@ -121,13 +149,17 @@ class EventParticipant {
               ? DateTime.parse(json['response_date'])
               : null,
       notes: json['notes'],
-      expenseShare:
-          json['expenseShare']?.toDouble() ?? json['expense_share']?.toDouble(),
+      expenseShare: _parseDouble(json['expenseShare'] ?? json['expense_share']),
       hasPaidExpenses:
           json['hasPaidExpenses'] ?? json['has_paid_expenses'] ?? false,
       playingPosition: json['playingPosition'] ?? json['playing_position'],
       attended: json['attended'],
       attendanceNotes: json['attendanceNotes'] ?? json['attendance_notes'],
+      isConvoked: json['isConvoked'] ?? json['is_convoked'] ?? true,
+      eligibilityStatus:
+          json['eligibilityStatus'] ?? json['eligibility_status'],
+      eligibilityDetail:
+          json['eligibilityDetail'] ?? json['eligibility_detail'],
       createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
       updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at']),
     );
@@ -186,6 +218,7 @@ class SportEvent {
   final DateTime eventDate;
   final int? durationMinutes;
   final String? location;
+  final String? courtNumber;
   final int teamId;
   final String? teamName;
   final int createdBy;
@@ -209,6 +242,7 @@ class SportEvent {
   final String? notes;
   final Map<String, dynamic>? metadata;
   final List<EventParticipant> participants;
+  final String? myParticipationStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -221,6 +255,7 @@ class SportEvent {
     required this.eventDate,
     this.durationMinutes,
     this.location,
+    this.courtNumber,
     required this.teamId,
     this.teamName,
     required this.createdBy,
@@ -237,6 +272,7 @@ class SportEvent {
     this.notes,
     this.metadata,
     required this.participants,
+    this.myParticipationStatus,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -251,6 +287,7 @@ class SportEvent {
       eventDate: DateTime.parse(json['eventDate'] ?? json['event_date']),
       durationMinutes: json['durationMinutes'] ?? json['duration_minutes'],
       location: json['location'],
+      courtNumber: json['courtNumber'] ?? json['court_number'],
       teamId: json['teamId'] ?? json['team_id'],
       teamName: json['team']?['name'] ?? json['teamName'],
       createdBy: json['createdBy'] ?? json['created_by'],
@@ -260,8 +297,7 @@ class SportEvent {
       isOfficialMatch:
           json['isOfficialMatch'] ?? json['is_official_match'] ?? false,
       hasExpenses: json['hasExpenses'] ?? json['has_expenses'] ?? false,
-      estimatedCost: json['estimatedCost']?.toDouble() ??
-          json['estimated_cost']?.toDouble(),
+      estimatedCost: _parseDouble(json['estimatedCost'] ?? json['estimated_cost']),
       maxParticipants: json['maxParticipants'] ?? json['max_participants'],
       requiresConfirmation:
           json['requiresConfirmation'] ?? json['requires_confirmation'] ?? true,
@@ -282,6 +318,7 @@ class SportEvent {
               .map((p) => EventParticipant.fromJson(p))
               .toList()
           : [],
+      myParticipationStatus: json['myParticipation']?['status'] as String?,
       createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
       updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at']),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
+import 'package:sportify_amateur/features/sports/social_event_expenses_screen.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final SportEvent event;
@@ -187,9 +188,20 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             const SizedBox(height: 16),
             _buildMatchDetails(),
           ],
-          if (_event.type == SportEventType.social && _event.hasExpenses) ...[
+          if (_event.type == SportEventType.social) ...[
             const SizedBox(height: 16),
-            _buildSocialDetails(),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _openSocialExpenses,
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: const Text('Gastos del evento'),
+              ),
+            ),
+            if (_event.hasExpenses) ...[
+              const SizedBox(height: 16),
+              _buildSocialDetails(),
+            ],
           ],
           if (_event.notes != null) ...[
             const SizedBox(height: 16),
@@ -495,6 +507,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       case ParticipantStatus.noResponse:
         return Icons.help;
     }
+  }
+
+  void _openSocialExpenses() {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => SocialEventExpensesScreen(
+          eventId: _event.id,
+          eventTitle: _event.title,
+        ),
+      ),
+    );
   }
 
   void _editEvent() async {

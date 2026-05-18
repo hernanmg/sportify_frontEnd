@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
+import 'package:sportify_amateur/core/services/roster_service.dart';
+import 'package:sportify_amateur/core/services/event_expenses_service.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
-import 'package:sportify_amateur/models/team.dart';
+import 'package:sportify_amateur/models/my_team_option.dart';
+import 'package:sportify_amateur/features/sports/social_event_expenses_screen.dart';
 
 class EventFormScreen extends StatefulWidget {
   final SportEvent? event;
@@ -17,9 +20,18 @@ class _EventFormScreenState extends State<EventFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final SportEventsService _eventsService = SportEventsService();
   final TeamService _teamService = TeamService();
+  final RosterService _rosterService = RosterService();
+  final EventExpensesService _eventExpensesService = EventExpensesService();
 
-  List<Team> _teams = [];
-  Team? _selectedTeam;
+  List<MyTeamOption> _myTeams = [];
+  MyTeamOption? _selectedTeam;
+  final Set<int> _selectedCategoryIds = {};
+  final Set<int> _selectedInviteeUserIds = {};
+  List<_InviteeOption> _inviteeOptions = [];
+  bool _loadingInvitees = false;
+  bool _inviteAllTeam = true;
+
+  final List<_ExternalGuestLine> _externalGuestLines = [_ExternalGuestLine()];
 
   // Controllers
   final _titleController = TextEditingController();
@@ -54,23 +66,109 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   Future<void> _loadTeams() async {
     try {
-      final teams = await _teamService.getAllTeams();
-      Team? selected;
-      if (widget.event != null) {
-        try {
-          selected = teams.firstWhere((t) => t.id == widget.event!.teamId);
-        } catch (_) {
-          selected = teams.isNotEmpty ? teams.first : null;
-        }
-      } else {
-        selected = teams.isNotEmpty ? teams.first : null;
+      var teams = await _teamService.getMyTeams();
+      if (teams.isEmpty) {
+        final all = await _teamService.getAllTeams();
+        teams = all
+            .map(
+              (t) => MyTeamOption(
+                teamId: t.id,
+                name: t.name,
+                categories: t.category != null ? [t.category!] : [],
+                team: t,
+              ),
+            )
+            .toList();
       }
+      teams = MyTeamOption.dedupeByTeamId(teams);
+      final MyTeamOption? selected = widget.event != null
+          ? MyTeamOption.findInList(teams, widget.event!.teamId)
+          : null;
+      final resolved = selected ?? (teams.isNotEmpty ? teams.first : null);
       setState(() {
-        _teams = teams;
-        _selectedTeam = selected;
+        _myTeams = teams;
+        _selectedTeam = resolved;
+        if (resolved != null) {
+          _selectedCategoryIds
+            ..clear()
+            ..addAll(resolved.categoryIds);
+        }
       });
+      if (_selectedType == SportEventType.social) {
+        await _loadInvitees();
+      }
     } catch (_) {
       // El formulario mostrará aviso si no hay equipos
+    }
+  }
+
+  Future<void> _onTeamChanged(MyTeamOption? team) async {
+    setState(() {
+      _selectedTeam = team;
+      _selectedCategoryIds.clear();
+      if (team != null) {
+        _selectedCategoryIds.addAll(team.categoryIds);
+      }
+    });
+    if (_selectedType == SportEventType.social && team != null) {
+      await _loadInvitees();
+    }
+  }
+
+  Future<void> _loadInvitees() async {
+    final team = _selectedTeam;
+    if (team == null) return;
+    setState(() => _loadingInvitees = true);
+    try {
+      final season = RosterService.getSeasons().first;
+      final categoryFilter = _selectedCategoryIds.isEmpty
+          ? team.categoryIds
+          : _selectedCategoryIds.toList();
+      final roster = await _rosterService.getRosterByTeam(
+        team.teamId,
+        season: season,
+        categoryIds:
+            categoryFilter.isEmpty ? null : categoryFilter,
+      );
+      final guests = await _teamService.getTeamSocialGuests(team.teamId);
+
+      final options = <_InviteeOption>[];
+      final seenUsers = <int>{};
+
+      for (final row in roster) {
+        final userId = row.player?.userId;
+        if (userId == null || seenUsers.contains(userId)) continue;
+        seenUsers.add(userId);
+        final name = row.player?.name ?? 'Jugador #$userId';
+        options.add(_InviteeOption(
+          userId: userId,
+          label: '$name · ${row.category}',
+          isGuest: false,
+        ));
+      }
+
+      for (final g in guests) {
+        final userId = g['userId'] as int?;
+        if (userId == null || seenUsers.contains(userId)) continue;
+        seenUsers.add(userId);
+        options.add(_InviteeOption(
+          userId: userId,
+          label: '${g['displayName']} (invitado)',
+          isGuest: true,
+        ));
+      }
+
+      setState(() {
+        _inviteeOptions = options;
+        _selectedInviteeUserIds
+          ..clear()
+          ..addAll(options.map((o) => o.userId));
+        _inviteAllTeam = true;
+      });
+    } catch (_) {
+      setState(() => _inviteeOptions = []);
+    } finally {
+      if (mounted) setState(() => _loadingInvitees = false);
     }
   }
 
@@ -106,6 +204,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _notesController.dispose();
     _maxParticipantsController.dispose();
     _estimatedCostController.dispose();
+    for (final g in _externalGuestLines) {
+      g.dispose();
+    }
     super.dispose();
   }
 
@@ -168,24 +269,30 @@ class _EventFormScreenState extends State<EventFormScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            if (_teams.isEmpty)
-              const Text('No hay equipos cargados. Creá uno en Gestión de Equipos.')
+            if (_myTeams.isEmpty)
+              const Text(
+                'No tenés equipos asignados. Pedí al administrador que te agregue a la lista de buena fe.',
+              )
             else
-              DropdownButtonFormField<Team>(
-                value: _selectedTeam,
+              DropdownButtonFormField<MyTeamOption>(
+                value: _selectedTeam != null &&
+                        _myTeams.any((t) => t.teamId == _selectedTeam!.teamId)
+                    ? _selectedTeam
+                    : null,
                 decoration: const InputDecoration(
                   labelText: 'Equipo *',
                   border: OutlineInputBorder(),
+                  helperText: 'Solo equipos donde estás en la lista de buena fe',
                 ),
-                items: _teams
+                items: _myTeams
                     .map(
                       (team) => DropdownMenuItem(
                         value: team,
-                        child: Text(team.name),
+                        child: Text(team.displayLabel),
                       ),
                     )
                     .toList(),
-                onChanged: (team) => setState(() => _selectedTeam = team),
+                onChanged: _onTeamChanged,
                 validator: (value) =>
                     value == null ? 'Seleccioná un equipo' : null,
               ),
@@ -214,6 +321,14 @@ class _EventFormScreenState extends State<EventFormScreen> {
                   if (_selectedType != SportEventType.social) {
                     _hasExpenses = false;
                     _estimatedCostController.clear();
+                    for (final g in _externalGuestLines) {
+                      g.dispose();
+                    }
+                    _externalGuestLines
+                      ..clear()
+                      ..add(_ExternalGuestLine());
+                  } else {
+                    _loadInvitees();
                   }
                 });
               },
@@ -387,7 +502,128 @@ class _EventFormScreenState extends State<EventFormScreen> {
   }
 
   Widget _buildSocialSection() {
-    return Card(
+    final team = _selectedTeam;
+    return Column(
+      children: [
+        if (team != null && team.categoryIds.isNotEmpty) ...[
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Categorías a convocar',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: List.generate(team.categoryIds.length, (i) {
+                      final id = team.categoryIds[i];
+                      final name = i < team.categories.length
+                          ? team.categories[i]
+                          : 'Cat $id';
+                      final selected = _selectedCategoryIds.contains(id);
+                      return FilterChip(
+                        label: Text(name),
+                        selected: selected,
+                        onSelected: (v) async {
+                          setState(() {
+                            if (v) {
+                              _selectedCategoryIds.add(id);
+                            } else {
+                              _selectedCategoryIds.remove(id);
+                            }
+                          });
+                          await _loadInvitees();
+                        },
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'A quién invitar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _inviteeOptions.isEmpty
+                          ? null
+                          : () {
+                              setState(() {
+                                if (_inviteAllTeam) {
+                                  _selectedInviteeUserIds.clear();
+                                  _inviteAllTeam = false;
+                                } else {
+                                  _selectedInviteeUserIds.addAll(
+                                    _inviteeOptions.map((o) => o.userId),
+                                  );
+                                  _inviteAllTeam = true;
+                                }
+                              });
+                            },
+                      child: Text(_inviteAllTeam ? 'Ninguno' : 'Todos'),
+                    ),
+                  ],
+                ),
+                if (_loadingInvitees)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_inviteeOptions.isEmpty)
+                  const Text(
+                    'No hay jugadores en las categorías elegidas. Agregalos en lista de buena fe.',
+                    style: TextStyle(color: Colors.grey),
+                  )
+                else
+                  ..._inviteeOptions.map((opt) {
+                    return CheckboxListTile(
+                      dense: true,
+                      value: _selectedInviteeUserIds.contains(opt.userId),
+                      title: Text(opt.label),
+                      subtitle: opt.isGuest
+                          ? const Text('Fuera del equipo')
+                          : null,
+                      onChanged: (v) {
+                        setState(() {
+                          if (v == true) {
+                            _selectedInviteeUserIds.add(opt.userId);
+                          } else {
+                            _selectedInviteeUserIds.remove(opt.userId);
+                          }
+                          _inviteAllTeam = _selectedInviteeUserIds.length ==
+                              _inviteeOptions.length;
+                        });
+                      },
+                    );
+                  }),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildExternalGuestsCard(),
+        const SizedBox(height: 16),
+        Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -400,7 +636,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
             const SizedBox(height: 16),
             SwitchListTile(
               title: const Text('Tiene gastos compartidos'),
-              subtitle: const Text('Los participantes dividirán los gastos'),
+              subtitle: const Text(
+                'Después de crear el evento podés cargar gastos (cada uno suma lo que pagó)',
+              ),
               value: _hasExpenses,
               onChanged: (value) {
                 setState(() {
@@ -422,13 +660,112 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (_hasExpenses && (value == null || value.isEmpty)) {
-                    return 'Ingresa un costo estimado';
+                  if (value != null &&
+                      value.isNotEmpty &&
+                      double.tryParse(value) == null) {
+                    return 'Monto inválido';
                   }
                   return null;
                 },
               ),
             ],
+          ],
+        ),
+      ),
+    ),
+      ],
+    );
+  }
+
+  Widget _buildExternalGuestsCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Invitados externos (sin cuenta en la app)',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Para familiares u otras personas que no están en el equipo. '
+              'Se registran como invitados del evento para gastos y cupos.',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 12),
+            ...List.generate(_externalGuestLines.length, (i) {
+              final line = _externalGuestLines[i];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: line.name,
+                            decoration: const InputDecoration(
+                              labelText: 'Nombre',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: line.phone,
+                            decoration: const InputDecoration(
+                              labelText: 'Teléfono',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            keyboardType: TextInputType.phone,
+                          ),
+                        ),
+                        if (_externalGuestLines.length > 1)
+                          IconButton(
+                            onPressed: () {
+                              setState(() {
+                                line.dispose();
+                                _externalGuestLines.removeAt(i);
+                              });
+                            },
+                            icon: const Icon(Icons.remove_circle_outline),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: line.email,
+                      decoration: const InputDecoration(
+                        labelText: 'Email (opcional)',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        prefixIcon: Icon(Icons.email_outlined, size: 20),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                  ],
+                ),
+              );
+            }),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _externalGuestLines.add(_ExternalGuestLine());
+                  });
+                },
+                icon: const Icon(Icons.person_add_alt_1),
+                label: const Text('Agregar otro invitado externo'),
+              ),
+            ),
           ],
         ),
       ),
@@ -612,7 +949,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         'eventDate': eventDateTime.toIso8601String(),
         'location':
             _locationController.text.isEmpty ? null : _locationController.text,
-        'teamId': _selectedTeam!.id,
+        'teamId': _selectedTeam!.teamId,
         'durationMinutes': _durationController.text.isEmpty
             ? null
             : int.tryParse(_durationController.text),
@@ -639,18 +976,82 @@ class _EventFormScreenState extends State<EventFormScreen> {
           'estimatedCost': _estimatedCostController.text.isEmpty
               ? null
               : double.tryParse(_estimatedCostController.text),
+          'autoInviteParticipants': false,
+          if (_selectedInviteeUserIds.isNotEmpty)
+            'participantIds': _selectedInviteeUserIds.toList(),
+          if (_selectedCategoryIds.isNotEmpty)
+            'categoryIds': _selectedCategoryIds.toList(),
         },
       };
 
+      if (_selectedType == SportEventType.social) {
+        final hasGuestUsers = _selectedInviteeUserIds.isNotEmpty;
+        final extNames = _externalGuestLines
+            .map((g) => g.name.text.trim())
+            .where((n) => n.isNotEmpty);
+        final hasExternal = extNames.isNotEmpty;
+        if (!hasGuestUsers && !hasExternal) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Seleccioná al menos un invitado del plantel o cargá un invitado externo con nombre.',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          setState(() => _isLoading = false);
+          return;
+        }
+      }
+
       if (widget.event == null) {
-        await _eventsService.createEvent(eventData);
+        final created = await _eventsService.createEvent(eventData);
+        if (!mounted) return;
+
+        if (_selectedType == SportEventType.social) {
+          for (final g in _externalGuestLines) {
+            final name = g.name.text.trim();
+            if (name.isEmpty) continue;
+            try {
+              await _eventExpensesService.addSocialGuest(
+                eventId: created.id,
+                displayName: name,
+                phone: g.phone.text.trim().isEmpty ? null : g.phone.text.trim(),
+                email: g.email.text.trim().isEmpty ? null : g.email.text.trim(),
+              );
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('No se pudo registrar un invitado externo: $e'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+            }
+          }
+
+          if (!mounted) return;
+          Navigator.pop(context, true);
+          await Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (context) => SocialEventExpensesScreen(
+                eventId: created.id,
+                eventTitle: created.title,
+              ),
+            ),
+          );
+          return;
+        }
       } else {
         await _eventsService.updateEvent(widget.event!.id, eventData);
       }
 
       if (mounted) {
-        Navigator.pop(
-            context, true); // Retornar true para indicar que se guardó
+        Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(widget.event == null
@@ -690,4 +1091,28 @@ class _EventFormScreenState extends State<EventFormScreen> {
         return 'Reunión';
     }
   }
+}
+
+class _ExternalGuestLine {
+  final TextEditingController name = TextEditingController();
+  final TextEditingController phone = TextEditingController();
+  final TextEditingController email = TextEditingController();
+
+  void dispose() {
+    name.dispose();
+    phone.dispose();
+    email.dispose();
+  }
+}
+
+class _InviteeOption {
+  final int userId;
+  final String label;
+  final bool isGuest;
+
+  _InviteeOption({
+    required this.userId,
+    required this.label,
+    this.isGuest = false,
+  });
 }

@@ -2,7 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:sportify_amateur/features/sports/roster_management_screen.dart';
 import 'package:sportify_amateur/features/sports/events_management_screen.dart';
 import 'package:sportify_amateur/features/sports/convocations_screen.dart';
+import 'package:sportify_amateur/features/sports/player_status_screen.dart';
+import 'package:sportify_amateur/features/sports/convocation_form_screen.dart';
+import 'package:sportify_amateur/features/sports/event_form_screen.dart';
+import 'package:sportify_amateur/features/sports/roster_form_improved_screen.dart';
+import 'package:sportify_amateur/features/teams/join_team_screen.dart';
+import 'package:sportify_amateur/features/teams/team_invite_screen.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
+import 'package:sportify_amateur/core/services/roster_service.dart';
+import 'package:sportify_amateur/core/services/team_service.dart';
+import 'package:sportify_amateur/models/my_team_option.dart';
 
 class SportsManagementScreen extends StatefulWidget {
   const SportsManagementScreen({Key? key}) : super(key: key);
@@ -15,11 +24,21 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final NotificationService _notificationService = NotificationService();
+  final GlobalKey<RosterManagementScreenState> _rosterListKey =
+      GlobalKey<RosterManagementScreenState>();
+  final GlobalKey<ConvocationsScreenState> _convocationsKey =
+      GlobalKey<ConvocationsScreenState>();
+  final GlobalKey<PlayerStatusScreenState> _playerStatusKey =
+      GlobalKey<PlayerStatusScreenState>();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (!mounted) return;
+      setState(() {});
+    });
   }
 
   @override
@@ -53,6 +72,10 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
             Tab(
               icon: Icon(Icons.sports_soccer, size: 20),
               text: 'Convocatorias',
+            ),
+            Tab(
+              icon: Icon(Icons.health_and_safety, size: 20),
+              text: 'Estado Jugadores',
             ),
           ],
         ),
@@ -93,16 +116,33 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+              const PopupMenuItem(
+                value: 'join_team',
+                child: ListTile(
+                  leading: Icon(Icons.vpn_key),
+                  title: Text('Unirme con código'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'invite_team',
+                child: ListTile(
+                  leading: Icon(Icons.share),
+                  title: Text('Invitar al equipo'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
             ],
           ),
         ],
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          RosterManagementScreen(),
-          EventsManagementScreen(),
-          ConvocationsScreen(),
+        children: [
+          RosterManagementScreen(key: _rosterListKey),
+          const EventsManagementScreen(),
+          ConvocationsScreen(key: _convocationsKey),
+          PlayerStatusScreen(key: _playerStatusKey),
         ],
       ),
       floatingActionButton: _buildFloatingActionButton(),
@@ -129,6 +169,8 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
           tooltip: 'Nueva Convocatoria',
           child: const Icon(Icons.sports_soccer),
         );
+      case 3: // Estado jugadores — sin FAB (gestión en la pantalla)
+        return null;
       default:
         return null;
     }
@@ -148,6 +190,15 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
           break;
         case 'social_event':
           await _createSocialEvent();
+          break;
+        case 'join_team':
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const JoinTeamScreen()),
+          );
+          break;
+        case 'invite_team':
+          await _openTeamInvite();
           break;
       }
     } catch (e) {
@@ -304,29 +355,108 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
     }
   }
 
-  void _addToRoster() {
-    // Esta funcionalidad ya está implementada en RosterManagementScreen
-    // Se podría navegar directamente al formulario o delegar a la tab actual
+  Future<void> _openTeamInvite() async {
+    try {
+      final teams = await TeamService().getMyTeams();
+      final adminTeams =
+          teams.where((t) => t.isTeamAdmin).toList();
+      if (!mounted) return;
+      if (adminTeams.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Solo el encargado del equipo puede generar invitaciones. Creá un equipo en el onboarding.',
+            ),
+          ),
+        );
+        return;
+      }
+      MyTeamOption selected = adminTeams.first;
+      if (adminTeams.length > 1) {
+        final picked = await showModalBottomSheet<MyTeamOption>(
+          context: context,
+          builder: (ctx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: adminTeams
+                  .map(
+                    (t) => ListTile(
+                      title: Text(t.name),
+                      onTap: () => Navigator.pop(ctx, t),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        );
+        if (picked == null) return;
+        selected = picked;
+      }
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TeamInviteScreen(team: selected),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
-  void _createEvent() {
-    // Navegar al formulario de creación de eventos
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Funcionalidad de eventos en desarrollo'),
-        backgroundColor: Colors.orange,
+  Future<void> _addToRoster() async {
+    final season = RosterService.getSeasons().first;
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RosterFormImprovedScreen(season: season),
       ),
     );
+    if (result == true && mounted) {
+      _rosterListKey.currentState?.reloadRoster();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Jugador agregado a la lista de buena fe'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
-  void _createConvocation() {
-    // Navegar al formulario de creación de convocatorias
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Funcionalidad de convocatorias en desarrollo'),
-        backgroundColor: Colors.orange,
+  Future<void> _createEvent() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const EventFormScreen()),
+    );
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Evento creado'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  Future<void> _createConvocation() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ConvocationFormScreen(),
       ),
     );
+    if (result == true && mounted) {
+      _convocationsKey.currentState?.reload();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Convocatoria guardada'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 }
 

@@ -5,6 +5,20 @@ import 'package:sportify_amateur/models/player_roster.dart';
 class RosterService {
   final Dio _dio = DioClient.instance;
 
+  static String errorMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map) {
+        final message = data['message'];
+        if (message is List) {
+          return message.map((item) => item.toString()).join('\n');
+        }
+        if (message != null) return message.toString();
+      }
+    }
+    return error.toString();
+  }
+
   // Obtener todos los registros de roster
   Future<List<PlayerRoster>> getAllRoster() async {
     try {
@@ -20,11 +34,17 @@ class RosterService {
   }
 
   // Obtener roster por equipo
-  Future<List<PlayerRoster>> getRosterByTeam(int teamId,
-      {String? season}) async {
+  Future<List<PlayerRoster>> getRosterByTeam(
+    int teamId, {
+    String? season,
+    List<int>? categoryIds,
+  }) async {
     try {
       final queryParams = <String, dynamic>{};
       if (season != null) queryParams['season'] = season;
+      if (categoryIds != null && categoryIds.isNotEmpty) {
+        queryParams['categoryIds'] = categoryIds.join(',');
+      }
 
       final response =
           await _dio.get('/roster/team/$teamId', queryParameters: queryParams);
@@ -110,6 +130,8 @@ class RosterService {
         return PlayerRoster.fromJson(data);
       }
       throw Exception('Error al crear registro de roster');
+    } on DioException catch (e) {
+      throw Exception(errorMessage(e));
     } catch (e) {
       throw Exception('Error de conexión: $e');
     }

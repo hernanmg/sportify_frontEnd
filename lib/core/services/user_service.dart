@@ -6,6 +6,16 @@ import 'package:sportify_amateur/models/user.dart';
 class UserService {
   final Dio _dio = DioClient.instance;
 
+  /// Usuarios vinculados a un equipo (plantel/membresía, vía `GET /users/for-team/:id`).
+  Future<List<User>> findForTeam(int teamId) async {
+    final response = await _dio.get('/users/for-team/$teamId');
+    if (response.statusCode == 200) {
+      final List<dynamic> data = response.data;
+      return data.map((json) => User.fromJson(json)).toList();
+    }
+    throw Exception('Error al obtener usuarios del equipo');
+  }
+
   // Obtener todos los usuarios (requiere rol admin)
   Future<List<User>> findAll() async {
     try {

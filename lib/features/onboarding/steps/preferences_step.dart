@@ -75,7 +75,7 @@ class _PreferencesStepState extends State<PreferencesStep> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        '¡Casi terminamos!',
+                        'Preferencias (opcional)',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

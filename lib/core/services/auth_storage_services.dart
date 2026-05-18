@@ -75,6 +75,10 @@ class AuthStorageService {
     return await secureStorage.read(key: 'role');
   }
 
+  Future<void> saveRole(String role) async {
+    await secureStorage.write(key: 'role', value: role);
+  }
+
   // Obtiene el userId guardado
   Future<String?> getUserId() async {
     return await secureStorage.read(key: 'userId');

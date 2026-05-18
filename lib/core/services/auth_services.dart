@@ -216,16 +216,15 @@ class AuthService {
         return {'isAuthenticated': false, 'needsOnboarding': false};
       }
 
-      // Verificar si el perfil necesita onboarding
-      final profileCompletion = await profileService.getProfileCompletion();
-      final completion = profileCompletion['completion'] as int;
+      final profile = await profileService.getProfile();
+      final completion = profile.profileCompletion;
+      final onboardingDone = profile.estadoRegistro == 'completed';
 
       return {
         'isAuthenticated': true,
-        'needsOnboarding':
-            completion < 80, // Si el perfil está menos del 80% completo
+        'needsOnboarding': !onboardingDone && completion < 80,
         'profileCompletion': completion,
-        'missingFields': profileCompletion['missingFields'],
+        'estadoRegistro': profile.estadoRegistro,
       };
     } catch (e) {
       print('Error checking auth status: $e');

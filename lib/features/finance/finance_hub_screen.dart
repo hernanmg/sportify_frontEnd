@@ -32,11 +32,18 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
 
   Future<void> _loadInitialData() async {
     final role = await AuthStorageService().getRole();
-    final isManager = role == 'manager' || role == 'super_admin';
+    final isManager = role == 'manager' ||
+        role == 'super_admin' ||
+        role == 'team_captain' ||
+        role == 'admin';
 
     List<Team> teams = [];
     try {
-      teams = await _teamService.getAllTeams();
+      final mine = await _teamService.getMyTeams();
+      teams = mine.map((o) => o.team).toList();
+      if (teams.isEmpty) {
+        teams = await _teamService.getAllTeams();
+      }
     } catch (_) {
       teams = [];
     }

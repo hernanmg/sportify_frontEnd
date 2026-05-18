@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/services/convocations_service.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
 import 'package:sportify_amateur/models/notification.dart';
 
@@ -479,19 +480,74 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => NotificationDetailSheet(notification: notification),
+      builder: (context) => NotificationDetailSheet(
+        notification: notification,
+        onResponse: () => _loadNotifications(),
+      ),
     );
   }
 }
 
-class NotificationDetailSheet extends StatelessWidget {
+class NotificationDetailSheet extends StatefulWidget {
   final NotificationModel notification;
+  final VoidCallback? onResponse;
 
-  const NotificationDetailSheet({Key? key, required this.notification})
-      : super(key: key);
+  const NotificationDetailSheet({
+    Key? key,
+    required this.notification,
+    this.onResponse,
+  }) : super(key: key);
+
+  @override
+  State<NotificationDetailSheet> createState() =>
+      _NotificationDetailSheetState();
+}
+
+class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
+  final _convocationsService = ConvocationsService();
+  bool _responding = false;
+
+  NotificationModel get notification => widget.notification;
+
+  Future<void> _respond(bool confirm) async {
+    final eventId = notification.convocationEventId;
+    if (eventId == null) return;
+    setState(() => _responding = true);
+    try {
+      if (confirm) {
+        await _convocationsService.confirmParticipation(eventId);
+      } else {
+        await _convocationsService.declineParticipation(eventId);
+      }
+      if (mounted) {
+        Navigator.pop(context);
+        widget.onResponse?.call();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              confirm ? 'Asistencia confirmada' : 'Participación rechazada',
+            ),
+            backgroundColor: confirm ? Colors.green : Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _responding = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final showConvocationActions =
+        notification.isConvocationResponse &&
+        notification.convocationEventId != null;
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -556,6 +612,39 @@ class NotificationDetailSheet extends StatelessWidget {
               _buildPriorityChip(),
             ],
           ),
+          if (showConvocationActions) ...[
+            const SizedBox(height: 16),
+            const Text(
+              '¿Podés asistir al partido?',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _responding ? null : () => _respond(true),
+                    icon: _responding
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check),
+                    label: const Text('Confirmar'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _responding ? null : () => _respond(false),
+                    icon: const Icon(Icons.close),
+                    label: const Text('No puedo'),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
+import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
 import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
@@ -14,6 +15,7 @@ class EventsManagementScreen extends StatefulWidget {
 
 class _EventsManagementScreenState extends State<EventsManagementScreen> {
   final SportEventsService _eventsService = SportEventsService();
+  final TeamService _teamService = TeamService();
   List<SportEvent> _events = [];
   List<SportEvent> _filteredEvents = [];
   bool _isLoading = true;
@@ -28,7 +30,26 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
   Future<void> _loadEvents() async {
     try {
       setState(() => _isLoading = true);
-      final events = await _eventsService.getAllEvents();
+      final myTeams = await _teamService.getMyTeams();
+      final teamIds = myTeams.map((t) => t.teamId).toSet().toList();
+      List<SportEvent> events;
+      if (teamIds.isEmpty) {
+        events = [];
+      } else if (teamIds.length == 1) {
+        events = await _eventsService.getAllEvents(teamId: teamIds.first);
+      } else {
+        final seen = <int>{};
+        events = [];
+        for (final id in teamIds) {
+          try {
+            final list = await _eventsService.getAllEvents(teamId: id);
+            for (final ev in list) {
+              if (seen.add(ev.id)) events.add(ev);
+            }
+          } catch (_) {}
+        }
+        events.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+      }
       setState(() {
         _events = events;
         _applyFilter();

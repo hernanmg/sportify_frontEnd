@@ -4,6 +4,8 @@ import 'package:sportify_amateur/features/onboarding/steps/sports_profile_step.d
 import 'package:sportify_amateur/features/onboarding/steps/institutional_info_step.dart';
 import 'package:sportify_amateur/features/onboarding/steps/preferences_step.dart';
 import 'package:sportify_amateur/core/services/user_profile_service.dart';
+import 'package:sportify_amateur/core/services/team_service.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/models/user_profile.dart';
 
 class OnboardingWizard extends StatefulWidget {
@@ -17,6 +19,7 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
   int currentStep = 0;
   final PageController pageController = PageController();
   final UserProfileService profileService = UserProfileService();
+  final TeamService _teamService = TeamService();
 
   // Data storage for the wizard
   Map<String, dynamic> wizardData = {
@@ -191,12 +194,53 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
     try {
       await profileService.completeOnboarding();
 
-      // Navigate to dashboard
+      final institutional = Map<String, dynamic>.from(
+        wizardData['institutionalInfo'] as Map<String, dynamic>? ?? {},
+      );
+      final mode = institutional['onboardingMode'] as String? ?? 'skip';
+      if (mode != 'skip') {
+        final payload = <String, dynamic>{'mode': mode};
+        if (mode == 'create') {
+          payload['name'] = institutional['teamName'];
+          payload['sportId'] = institutional['sportId'];
+          payload['categoryIds'] = institutional['categoryIds'];
+        } else if (mode == 'join') {
+          payload['inviteCode'] = institutional['inviteCode'];
+        }
+        final result = await _teamService.completeOnboarding(payload);
+        final newRole = result['role'] as String?;
+        if (newRole != null && newRole.isNotEmpty) {
+          await AuthStorageService().saveRole(newRole);
+        }
+        if (mounted && result['inviteCode'] != null) {
+          await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Equipo creado'),
+              content: Text(
+                'Compartí este código con tu plantel:\n\n${result['inviteCode']}',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Entendido'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/dashboard');
       }
     } catch (e) {
-      _showError('Error al finalizar: $e');
+      _showError('Error al finalizar: ${TeamService.errorMessage(e)}');
     } finally {
       setState(() => isLoading = false);
     }

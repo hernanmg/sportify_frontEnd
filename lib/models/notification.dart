@@ -10,7 +10,9 @@ enum NotificationType {
   eventPostponed('event_postponed'),
   eventRescheduled('event_rescheduled'),
   eventCompleted('event_completed'),
-  eventStarted('event_started');
+  eventStarted('event_started'),
+  impedimentCleared('impediment_cleared'),
+  playerEligible('player_eligible');
 
   const NotificationType(this.value);
   final String value;
@@ -168,8 +170,23 @@ class NotificationModel {
         return 'Evento Finalizado';
       case NotificationType.eventStarted:
         return 'Evento Iniciado';
+      case NotificationType.impedimentCleared:
+        return 'Alta médica';
+      case NotificationType.playerEligible:
+        return 'Habilitado';
     }
   }
+
+  int? get convocationEventId {
+    if (sportEventId != null) return sportEventId;
+    final fromData = data?['sportEventId'];
+    if (fromData != null) return int.tryParse('$fromData');
+    return null;
+  }
+
+  bool get isConvocationResponse =>
+      type == NotificationType.matchInvitation ||
+      data?['action'] == 'convocation_response';
 
   String get priorityDisplayName {
     switch (priority) {

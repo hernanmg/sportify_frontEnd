@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/features/dashboard/team_membership_banner.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -79,6 +80,15 @@ class DashboardScreen extends StatelessWidget {
           'route': '/game-stats',
         },
         {
+          'title': 'Mis eventos',
+          'icon': Icons.event_available,
+          'description':
+              'Invitaciones sociales, confirmar asistencia y gastos compartidos',
+          'requiredRole': 'user',
+          'color': Colors.deepPurple,
+          'route': '/my-events',
+        },
+        {
           'title': 'Notificaciones',
           'icon': Icons.notifications,
           'description': 'Ver notificaciones de eventos y convocatorias',
@@ -140,14 +150,9 @@ class DashboardScreen extends StatelessWidget {
             // Super admin puede ver todo
             if (role == 'super_admin') return true;
 
-            // Manager puede ver características de manager y user
-            if (role == 'manager' &&
+            // Manager / capitán del club: gestión deportiva y equipos
+            if ((role == 'manager' || role == 'team_captain') &&
                 (requiredRole == 'manager' || requiredRole == 'user'))
-              return true;
-
-            // Team captain puede ver características de team_captain y user
-            if (role == 'team_captain' &&
-                (requiredRole == 'team_captain' || requiredRole == 'user'))
               return true;
 
             // Player puede ver características de user
@@ -166,7 +171,9 @@ class DashboardScreen extends StatelessWidget {
 
           return ListView(
             padding: const EdgeInsets.all(16.0),
-            children: filteredFeatures.map((feature) {
+            children: [
+              const TeamMembershipBanner(),
+              ...filteredFeatures.map((feature) {
               return Card(
                 elevation: 4,
                 margin: const EdgeInsets.only(bottom: 16),
@@ -199,7 +206,8 @@ class DashboardScreen extends StatelessWidget {
                   },
                 ),
               );
-            }).toList(),
+              }).toList(),
+            ],
           );
         },
       ),

@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
+import 'package:sportify_amateur/models/player_eligibility.dart';
+import 'package:sportify_amateur/models/player_convocation_stats.dart';
 
 class ConvocationStats {
   final int total;
@@ -8,6 +10,7 @@ class ConvocationStats {
   final int pending;
   final int declined;
   final int noResponse;
+  final int convoked;
 
   ConvocationStats({
     required this.total,
@@ -15,6 +18,7 @@ class ConvocationStats {
     required this.pending,
     required this.declined,
     required this.noResponse,
+    this.convoked = 0,
   });
 
   factory ConvocationStats.fromJson(Map<String, dynamic> json) {
@@ -24,6 +28,7 @@ class ConvocationStats {
       pending: json['pending'] ?? 0,
       declined: json['declined'] ?? 0,
       noResponse: json['noResponse'] ?? 0,
+      convoked: json['convoked'] ?? 0,
     );
   }
 
@@ -61,6 +66,36 @@ class ConvocationsService {
     } catch (e) {
       throw Exception('Error de conexión: $e');
     }
+  }
+
+  Future<SportEvent> getConvocation(int id) async {
+    final response = await _dio.get('/convocations/$id');
+    return SportEvent.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  Future<List<PlayerEligibility>> getEligibleRoster(int convocationId) async {
+    final response = await _dio.get('/convocations/$convocationId/eligible-roster');
+    final data = response.data as List<dynamic>;
+    return data
+        .map((e) => PlayerEligibility.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  Future<SportEvent> setSquad(
+    int convocationId, {
+    required List<int> convokedUserIds,
+    List<Map<String, dynamic>>? feeOverrides,
+  }) async {
+    final response = await _dio.put(
+      '/convocations/$convocationId/squad',
+      data: {
+        'convokedUserIds': convokedUserIds,
+        if (feeOverrides != null) 'feeOverrides': feeOverrides,
+      },
+    );
+    return SportEvent.fromJson(Map<String, dynamic>.from(response.data as Map));
   }
 
   Future<SportEvent> createConvocation(
@@ -219,6 +254,19 @@ class ConvocationsService {
     } catch (e) {
       throw Exception('Error de conexión: $e');
     }
+  }
+
+  Future<PlayerConvocationStats> getPlayerHistory({
+    required int teamId,
+    required int userId,
+  }) async {
+    final response = await _dio.get(
+      '/convocations/player-history',
+      queryParameters: {'teamId': teamId, 'userId': userId},
+    );
+    return PlayerConvocationStats.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
   }
 
   Future<List<SportEvent>> getPendingResponses() async {

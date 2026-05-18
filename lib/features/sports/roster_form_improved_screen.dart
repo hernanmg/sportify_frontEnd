@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
+import 'package:sportify_amateur/core/services/sport_positions_service.dart';
+import 'package:sportify_amateur/models/sport_position.dart';
+import 'package:dio/dio.dart';
 import 'package:sportify_amateur/core/services/user_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/player_roster.dart';
@@ -27,6 +30,7 @@ class RosterFormImprovedScreen extends StatefulWidget {
 class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   final _formKey = GlobalKey<FormState>();
   final RosterService _rosterService = RosterService();
+  final SportPositionsService _positionsService = SportPositionsService();
   final UserService _userService = UserService();
   final TeamService _teamService = TeamService();
 
@@ -45,8 +49,9 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   DateTime? _medicalCertificateExpires;
   bool _isEnabled = true;
   String _position = 'player';
+  List<SportPosition> _sportPositions = [];
   String _season = '';
-  String _category = '+35';
+  final Set<String> _selectedCategories = {'+35'};
   String _medicalStatus = 'pending';
   bool _isLoading = false;
   bool _isLoadingData = true;
@@ -55,11 +60,16 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   List<User> _availableUsers = [];
   List<Team> _availableTeams = [];
   List<int> _availableNumbers = [];
+  List<PlayerRoster> _teamRosters = [];
+  /// userId → categorías ya fichadas en equipo/temporada actual.
+  Map<int, Set<String>> _assignedCategoriesByUserId = {};
 
   @override
   void initState() {
     super.initState();
-    _season = widget.season ?? RosterService.getSeasons().first;
+    _season = widget.roster?.season ??
+        widget.season ??
+        RosterService.getSeasons().first;
     _loadInitialData();
   }
 
@@ -67,27 +77,75 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     setState(() => _isLoadingData = true);
 
     try {
-      // Cargar usuarios y equipos en paralelo
-      final futures = await Future.wait([
-        _userService.findAll(),
-        _teamService.getAllTeams(),
-      ]);
-
-      _availableUsers = futures[0] as List<User>;
-      _availableTeams = futures[1] as List<Team>;
-
-      // Si se pasa un teamId, pre-seleccionar el equipo
-      if (widget.teamId != null) {
-        _selectedTeam = _availableTeams.firstWhere(
-          (team) => team.id == widget.teamId,
-          orElse: () => _availableTeams.first,
-        );
-        await _loadAvailableNumbers();
+      List<Team> teams = [];
+      try {
+        final mine = await _teamService.getMyTeams();
+        if (mine.isNotEmpty) {
+          teams = mine.map((o) => o.team).toList();
+        } else {
+          teams = await _teamService.getAllTeams();
+        }
+      } catch (e) {
+        print('Error cargando equipos: $e');
       }
 
-      // Si es edición, cargar datos existentes
+      _availableTeams = teams;
+
+      if (_availableTeams.isEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No tenés equipos asignados. Unite con un código o completá el onboarding.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+
       if (widget.roster != null) {
-        _loadExistingData();
+        try {
+          _selectedTeam = _availableTeams.firstWhere(
+            (team) => team.id == widget.roster!.teamId,
+          );
+        } catch (_) {
+          _selectedTeam =
+              _availableTeams.isNotEmpty ? _availableTeams.first : null;
+        }
+      } else if (widget.teamId != null && _availableTeams.isNotEmpty) {
+        try {
+          _selectedTeam = _availableTeams.firstWhere(
+            (team) => team.id == widget.teamId,
+          );
+        } catch (_) {
+          _selectedTeam = _availableTeams.first;
+        }
+      } else if (_availableTeams.length == 1) {
+        _selectedTeam = _availableTeams.first;
+      }
+
+      if (_selectedTeam != null) {
+        await _refreshTeamContext();
+      } else {
+        _availableUsers = [];
+        _teamRosters = [];
+        _availableNumbers = [];
+      }
+
+      if (widget.roster != null) {
+        _applyExistingRosterData();
+      }
+
+      if (_selectedTeam != null &&
+          _availableUsers.isEmpty &&
+          mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No hay personas vinculadas a este equipo en el sistema. Revisá fichajes o membresía.',
+            ),
+            duration: Duration(seconds: 5),
+          ),
+        );
       }
 
       setState(() => _isLoadingData = false);
@@ -104,20 +162,122 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     }
   }
 
-  void _loadExistingData() {
+  /// Recarga usuarios del equipo, nombres de camiseta y roster (misma temporada).
+  Future<void> _refreshTeamContext() async {
+    final team = _selectedTeam;
+    if (team == null) {
+      setState(() {
+        _availableUsers = [];
+        _teamRosters = [];
+        _availableNumbers = [];
+      });
+      return;
+    }
+
+    try {
+      final sportId = team.sportId;
+      if (sportId != null) {
+        _sportPositions = await _positionsService.getBySportId(sportId);
+        if (!_sportPositions.any((p) => p.code == _position)) {
+          _position = _sportPositions.first.code;
+        }
+      } else {
+        _sportPositions = [];
+      }
+
+      List<User> users = [];
+      try {
+        users = await _userService.findForTeam(team.id);
+      } catch (e) {
+        print('Usuarios por equipo no disponibles: $e');
+      }
+
+      List<PlayerRoster> rosters = [];
+      try {
+        rosters = await _rosterService.getRosterByTeam(
+          team.id,
+          season: _season,
+        );
+      } catch (_) {
+        rosters = [];
+      }
+
+      List<int> numbers = [];
+      try {
+        numbers = await _rosterService.getAvailableJerseyNumbers(
+          team.id,
+          _season,
+        );
+      } catch (e) {
+        print('Error loading available numbers: $e');
+      }
+
+      final byUser = <int, Set<String>>{};
+      for (final row in rosters) {
+        final uid = row.player?.userId;
+        if (uid == null) continue;
+        byUser.putIfAbsent(uid, () => {}).add(row.category);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _availableUsers = users;
+        _teamRosters = rosters;
+        _availableNumbers = numbers;
+        _assignedCategoriesByUserId = byUser;
+        if (widget.roster == null &&
+            _selectedUser != null &&
+            !_eligibleUsersForPicker().any((u) => u.id == _selectedUser!.id)) {
+          _selectedUser = null;
+        }
+      });
+    } catch (e, st) {
+      debugPrint('_refreshTeamContext: $e\n$st');
+      if (mounted) {
+        setState(() {
+          _availableUsers = [];
+          _teamRosters = [];
+          _availableNumbers = [];
+        });
+      }
+    }
+  }
+
+  User _stubUserFromRoster(PlayerRoster roster) {
+    final p = roster.player;
+    final now = DateTime.now();
+    final uid = p?.userId ?? roster.playerId;
+    return User(
+      id: uid,
+      name: p?.name ?? 'Jugador ${roster.playerId}',
+      email: p?.email ?? '',
+      roles: [],
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  void _applyExistingRosterData() {
     final roster = widget.roster!;
 
-    // Buscar el usuario correspondiente
-    _selectedUser = _availableUsers.firstWhere(
-      (user) => user.id == roster.playerId,
-      orElse: () => _availableUsers.first,
-    );
+    try {
+      _selectedTeam = _availableTeams.firstWhere(
+        (team) => team.id == roster.teamId,
+        orElse: () => _availableTeams.first,
+      );
+    } catch (_) {}
 
-    // Buscar el equipo correspondiente
-    _selectedTeam = _availableTeams.firstWhere(
-      (team) => team.id == roster.teamId,
-      orElse: () => _availableTeams.first,
-    );
+    final uid = roster.player?.userId;
+    if (uid != null) {
+      try {
+        _selectedUser =
+            _availableUsers.firstWhere((user) => user.id == uid);
+      } catch (_) {
+        final stub = _stubUserFromRoster(roster);
+        _availableUsers = [..._availableUsers, stub];
+        _selectedUser = stub;
+      }
+    }
 
     _jerseyNumberController.text = roster.jerseyNumber.toString();
     _documentNumberController.text = roster.documentNumber;
@@ -129,8 +289,124 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     _isEnabled = roster.isEnabled;
     _position = roster.position;
     _season = roster.season;
-    _category = roster.category;
+    _selectedCategories
+      ..clear()
+      ..add(roster.category);
     _medicalStatus = roster.medicalStatus;
+  }
+
+  Future<void> _loadTeamRosters() async {
+    if (_selectedTeam == null) return;
+    try {
+      _teamRosters = await _rosterService.getRosterByTeam(
+        _selectedTeam!.id,
+        season: _season,
+      );
+      final byUser = <int, Set<String>>{};
+      for (final row in _teamRosters) {
+        final uid = row.player?.userId;
+        if (uid == null) continue;
+        byUser.putIfAbsent(uid, () => {}).add(row.category);
+      }
+      _assignedCategoriesByUserId = byUser;
+    } catch (_) {
+      _teamRosters = [];
+      _assignedCategoriesByUserId = {};
+    }
+  }
+
+  List<String> get _teamCategoryLabels {
+    final team = _selectedTeam;
+    if (team == null) return [];
+    if (team.categoryNames.isNotEmpty) return team.categoryNames;
+    final fromRoster =
+        _teamRosters.map((r) => r.category).where((c) => c.isNotEmpty).toSet();
+    if (fromRoster.isNotEmpty) return fromRoster.toList();
+    return [];
+  }
+
+  List<String> get _selectableCategoryLabels {
+    final fromTeam = _teamCategoryLabels;
+    if (fromTeam.isNotEmpty) return fromTeam;
+    return RosterService.getCategories();
+  }
+
+  Set<String> _assignedCategoriesFor(int userId) =>
+      _assignedCategoriesByUserId[userId] ?? {};
+
+  bool _isFullyAssigned(int userId) {
+    final assigned = _assignedCategoriesFor(userId);
+    if (assigned.isEmpty) return false;
+    final labels = _teamCategoryLabels;
+    if (labels.isNotEmpty) {
+      return labels.every(assigned.contains);
+    }
+    return _selectableCategoryLabels.every(assigned.contains);
+  }
+
+  List<String> _missingCategoriesFor(int userId) {
+    final assigned = _assignedCategoriesFor(userId);
+    final labels = _selectableCategoryLabels;
+    return labels.where((c) => !assigned.contains(c)).toList();
+  }
+
+  List<User> _eligibleUsersForPicker() {
+    if (widget.roster != null) return _availableUsers;
+    return _availableUsers
+        .where((u) => !_isFullyAssigned(u.id))
+        .toList();
+  }
+
+  String? _userPickerSubtitle(User user) {
+    final assigned = _assignedCategoriesFor(user.id);
+    if (assigned.isEmpty) return null;
+    return 'Ya fichado en: ${assigned.join(', ')}';
+  }
+
+  void _prefillFromSelectedUser() {
+    if (_selectedUser == null) return;
+    final uid = _selectedUser!.id;
+    final matches =
+        _teamRosters.where((r) => r.player?.userId == uid).toList();
+    if (matches.isEmpty) {
+      if (widget.roster == null) {
+        final missing = _missingCategoriesFor(uid);
+        if (missing.isNotEmpty) {
+          setState(() {
+            _selectedCategories
+              ..clear()
+              ..addAll(missing);
+          });
+        }
+      }
+      return;
+    }
+
+    final first = matches.first;
+    if (_documentNumberController.text.isEmpty) {
+      _documentNumberController.text = first.documentNumber;
+    }
+    if (_emergencyContactController.text.isEmpty &&
+        first.emergencyContact != null) {
+      _emergencyContactController.text = first.emergencyContact!;
+    }
+    if (_jerseyNumberController.text.isEmpty) {
+      _jerseyNumberController.text = first.jerseyNumber.toString();
+    }
+    if (widget.roster == null) {
+      final missing = _missingCategoriesFor(uid);
+      setState(() {
+        _selectedCategories
+          ..clear()
+          ..addAll(missing.isNotEmpty ? missing : [first.category]);
+      });
+    } else {
+      _selectedCategories
+        ..clear()
+        ..add(first.category);
+    }
+    _position = first.position;
+    _medicalStatus = first.medicalStatus;
   }
 
   Future<void> _loadAvailableNumbers() async {
@@ -202,10 +478,20 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
       return;
     }
 
+    if (_selectedCategories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seleccioná al menos una categoría'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      final rosterData = {
+      final baseData = {
         'playerId': _selectedUser!.id,
         'teamId': _selectedTeam!.id,
         'jerseyNumber': int.parse(_jerseyNumberController.text),
@@ -219,7 +505,6 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
             ? null
             : _emergencyContactController.text.trim(),
         'season': _season,
-        'category': _category,
         'medicalStatus': _medicalStatus,
         'notes': _notesController.text.trim().isEmpty
             ? null
@@ -227,9 +512,50 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
       };
 
       if (widget.roster == null) {
-        await _rosterService.createRoster(rosterData);
+        final assigned = _assignedCategoriesFor(_selectedUser!.id);
+        final toCreate = _selectedCategories
+            .where((c) => !assigned.contains(c))
+            .toList();
+        if (toCreate.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  assigned.isEmpty
+                      ? 'Seleccioná al menos una categoría nueva'
+                      : '${_selectedUser!.name} ya está en ${assigned.join(', ')}. Elegí otra categoría.',
+                ),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        var created = 0;
+        for (final category in toCreate) {
+          try {
+            await _rosterService.createRoster({
+              ...baseData,
+              'category': category,
+            });
+            created++;
+          } catch (e) {
+            final msg = e.toString();
+            if (!msg.contains('ya está registrado')) rethrow;
+          }
+        }
+        if (created == 0) {
+          throw Exception(
+            'El jugador ya está en todas las categorías seleccionadas',
+          );
+        }
       } else {
-        await _rosterService.updateRoster(widget.roster!.id, rosterData);
+        await _rosterService.updateRoster(widget.roster!.id, {
+          ...baseData,
+          'category': _selectedCategories.first,
+        });
       }
 
       if (mounted) {
@@ -250,8 +576,9 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
       if (mounted) {
         String errorMessage = 'Error desconocido';
 
-        // Extraer mensaje de error más específico
-        final errorString = e.toString();
+        final errorString = e is DioException
+            ? RosterService.errorMessage(e)
+            : e.toString();
         if (errorString.contains('Usuario con ID') &&
             errorString.contains('no encontrado')) {
           errorMessage = 'El usuario seleccionado no existe en el sistema';
@@ -337,16 +664,14 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Selección de Usuario
-              _buildSectionTitle('Seleccionar Jugador'),
-              _buildUserSelector(),
-              const SizedBox(height: 24),
-
-              // Selección de Equipo
               _buildSectionTitle('Equipo y Temporada'),
               _buildTeamSelector(),
               const SizedBox(height: 16),
               _buildSeasonSelector(),
+              const SizedBox(height: 24),
+
+              _buildSectionTitle('Seleccionar Jugador'),
+              _buildUserSelector(),
               const SizedBox(height: 24),
 
               // Información del jugador
@@ -388,6 +713,11 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   }
 
   Widget _buildUserSelector() {
+    final pickerUsers = _eligibleUsersForPicker();
+    final assignedSelected = _selectedUser != null
+        ? _assignedCategoriesFor(_selectedUser!.id)
+        : <String>{};
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -412,31 +742,67 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
             ],
           ),
           const SizedBox(height: 12),
+          if (_selectedTeam != null &&
+              _availableUsers.isNotEmpty &&
+              pickerUsers.isEmpty &&
+              widget.roster == null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Todos los integrantes del equipo ya están fichados en todas las categorías de esta temporada.',
+                style: TextStyle(color: Colors.orange.shade800, fontSize: 13),
+              ),
+            ),
           DropdownButtonFormField<User>(
-            value: _selectedUser,
-            decoration: const InputDecoration(
+            value: _selectedUser != null &&
+                    pickerUsers.any((u) => u.id == _selectedUser!.id)
+                ? _selectedUser
+                : null,
+            decoration: InputDecoration(
               labelText: 'Seleccionar Usuario',
-              border: OutlineInputBorder(),
-              helperText: 'Usuario registrado en el sistema',
+              border: const OutlineInputBorder(),
+              helperText: _selectedTeam == null
+                  ? 'Elegí un equipo arriba para ver a quién podés fichar'
+                  : widget.roster == null
+                      ? 'Solo quienes faltan fichar en al menos una categoría'
+                      : 'Personas vinculadas a este equipo',
             ),
             isExpanded: true,
-            items: _availableUsers.map((user) {
+            items: pickerUsers.map((user) {
+              final subtitle = _userPickerSubtitle(user);
               return DropdownMenuItem(
                 value: user,
-                child: Text(
-                  user.email.isNotEmpty
-                      ? '${user.name} (${user.email})'
-                      : user.name,
-                  style: const TextStyle(fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      user.email.isNotEmpty
+                          ? '${user.name} (${user.email})'
+                          : user.name,
+                      style: const TextStyle(fontSize: 14),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (subtitle != null)
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange.shade800,
+                        ),
+                      ),
+                  ],
                 ),
               );
             }).toList(),
-            onChanged: (user) {
-              setState(() {
-                _selectedUser = user;
-              });
-            },
+            onChanged: (_selectedTeam == null || pickerUsers.isEmpty)
+                ? null
+                : (user) {
+                    setState(() {
+                      _selectedUser = user;
+                    });
+                    _prefillFromSelectedUser();
+                  },
             validator: (value) {
               if (value == null) {
                 return 'Debes seleccionar un usuario';
@@ -444,6 +810,23 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
               return null;
             },
           ),
+          if (assignedSelected.isNotEmpty && widget.roster == null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Text(
+                'Ya está en: ${assignedSelected.join(', ')}. '
+                'Solo podés agregar categorías que aún no tenga.',
+                style: TextStyle(fontSize: 13, color: Colors.orange.shade900),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -465,13 +848,14 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
         );
       }).toList(),
       onChanged: widget.teamId == null
-          ? (team) {
+          ? (team) async {
               setState(() {
                 _selectedTeam = team;
+                _selectedUser = null;
               });
-              _loadAvailableNumbers();
+              await _refreshTeamContext();
             }
-          : null, // Deshabilitar si teamId está fijo
+          : null,
       validator: (value) {
         if (value == null) {
           return 'Debes seleccionar un equipo';
@@ -498,38 +882,55 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
                 child: Text(season),
               );
             }).toList(),
-            onChanged: (value) {
+            onChanged: (value) async {
               if (value != null) {
                 setState(() {
                   _season = value;
                 });
-                _loadAvailableNumbers();
+                await _loadTeamRosters();
+                await _loadAvailableNumbers();
+                if (mounted) {
+                  setState(() {});
+                  _prefillFromSelectedUser();
+                }
               }
             },
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: DropdownButtonFormField<String>(
-            value: _category,
+          child: InputDecorator(
             decoration: const InputDecoration(
-              labelText: 'Categoría',
+              labelText: 'Categorías',
               border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.category),
+              helperText: 'Podés elegir varias (+35, +40, etc.)',
             ),
-            items: RosterService.getCategories().map((category) {
-              return DropdownMenuItem(
-                value: category,
-                child: Text(category),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _category = value;
-                });
-              }
-            },
+            child: Wrap(
+              spacing: 8,
+              children: _selectableCategoryLabels.map((category) {
+                final selected = _selectedCategories.contains(category);
+                final alreadyAssigned = _selectedUser != null &&
+                    _assignedCategoriesFor(_selectedUser!.id)
+                        .contains(category);
+                return FilterChip(
+                  label: Text(
+                    alreadyAssigned ? '$category (ya fichado)' : category,
+                  ),
+                  selected: selected,
+                  onSelected: widget.roster != null || alreadyAssigned
+                      ? null
+                      : (v) {
+                          setState(() {
+                            if (v) {
+                              _selectedCategories.add(category);
+                            } else {
+                              _selectedCategories.remove(category);
+                            }
+                          });
+                        },
+                );
+              }).toList(),
+            ),
           ),
         ),
       ],
@@ -574,10 +975,20 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.sports),
                 ),
-                items: RosterService.getPositions().map((position) {
+                items: (_sportPositions.isNotEmpty
+                        ? _sportPositions
+                        : [
+                            SportPosition(
+                              id: 0,
+                              sportId: 0,
+                              code: 'player',
+                              label: 'Jugador',
+                            ),
+                          ])
+                    .map((pos) {
                   return DropdownMenuItem(
-                    value: position,
-                    child: Text(RosterService.getPositionDisplayName(position)),
+                    value: pos.code,
+                    child: Text(pos.label),
                   );
                 }).toList(),
                 onChanged: (value) {

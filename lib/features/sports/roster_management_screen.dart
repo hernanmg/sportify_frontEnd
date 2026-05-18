@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
+import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/player_roster.dart';
 import 'package:sportify_amateur/features/sports/roster_form_improved_screen.dart';
 
@@ -14,11 +15,14 @@ class RosterManagementScreen extends StatefulWidget {
   });
 
   @override
-  State<RosterManagementScreen> createState() => _RosterManagementScreenState();
+  State<RosterManagementScreen> createState() => RosterManagementScreenState();
 }
 
-class _RosterManagementScreenState extends State<RosterManagementScreen> {
+class RosterManagementScreenState extends State<RosterManagementScreen> {
+  /// Recarga el plantel (p. ej. tras agregar desde el FAB de Gestión Deportiva).
+  void reloadRoster() => _loadRoster();
   final RosterService _rosterService = RosterService();
+  final TeamService _teamService = TeamService();
   List<PlayerRoster> _roster = [];
   bool _isLoading = true;
   String _selectedSeason = '';
@@ -40,7 +44,33 @@ class _RosterManagementScreenState extends State<RosterManagementScreen> {
         roster = await _rosterService.getRosterByTeam(widget.teamId!,
             season: _selectedSeason);
       } else {
-        roster = await _rosterService.getRosterBySeason(_selectedSeason);
+        final teams = await _teamService.getMyTeams();
+        if (teams.isEmpty) {
+          roster = [];
+        } else {
+          final seen = <int>{};
+          roster = [];
+          for (final t in teams) {
+            try {
+              final chunk = await _rosterService.getRosterByTeam(
+                t.teamId,
+                season: _selectedSeason,
+              );
+              for (final row in chunk) {
+                if (seen.add(row.id)) {
+                  roster.add(row);
+                }
+              }
+            } catch (_) {
+              // Omitir equipo si falla (permisos o red)
+            }
+          }
+          roster.sort((a, b) {
+            final c = a.teamId.compareTo(b.teamId);
+            if (c != 0) return c;
+            return a.jerseyNumber.compareTo(b.jerseyNumber);
+          });
+        }
       }
       setState(() {
         _roster = roster;
@@ -62,8 +92,9 @@ class _RosterManagementScreenState extends State<RosterManagementScreen> {
           errorMessage = 'Error de formato en los datos recibidos del servidor';
         } else if (e.toString().contains('404')) {
           errorMessage = 'No se encontraron datos de roster';
-        } else if (e.toString().contains('500')) {
-          errorMessage = 'Error interno del servidor';
+        } else if (e.toString().contains('403')) {
+          errorMessage =
+              'No tenés permiso para cargar este roster. Probá cerrar sesión y volver a entrar.';
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
