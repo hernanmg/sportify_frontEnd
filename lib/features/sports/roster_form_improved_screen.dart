@@ -552,10 +552,44 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
           );
         }
       } else {
-        await _rosterService.updateRoster(widget.roster!.id, {
-          ...baseData,
-          'category': _selectedCategories.first,
-        });
+        final assigned = _assignedCategoriesFor(_selectedUser!.id);
+        final currentCategory = widget.roster!.category;
+        var updatedCurrent = false;
+
+        if (_selectedCategories.contains(currentCategory)) {
+          await _rosterService.updateRoster(widget.roster!.id, {
+            ...baseData,
+            'category': currentCategory,
+          });
+          updatedCurrent = true;
+        } else if (_selectedCategories.isNotEmpty) {
+          await _rosterService.updateRoster(widget.roster!.id, {
+            ...baseData,
+            'category': _selectedCategories.first,
+          });
+          updatedCurrent = true;
+        }
+
+        var created = 0;
+        for (final category in _selectedCategories) {
+          if (assigned.contains(category)) continue;
+          try {
+            await _rosterService.createRoster({
+              ...baseData,
+              'category': category,
+            });
+            created++;
+          } catch (e) {
+            final msg = e.toString();
+            if (!msg.contains('ya está registrado')) rethrow;
+          }
+        }
+
+        if (!updatedCurrent && created == 0) {
+          throw Exception(
+            'Seleccioná al menos una categoría (actual o nueva)',
+          );
+        }
       }
 
       if (mounted) {
@@ -768,30 +802,33 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
                       : 'Personas vinculadas a este equipo',
             ),
             isExpanded: true,
+            itemHeight: pickerUsers.any((u) => _userPickerSubtitle(u) != null)
+                ? 64
+                : kMinInteractiveDimension,
+            selectedItemBuilder: (context) {
+              return pickerUsers.map((user) {
+                return Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    user.displayName,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                );
+              }).toList();
+            },
             items: pickerUsers.map((user) {
               final subtitle = _userPickerSubtitle(user);
+              final title = user.email.isNotEmpty
+                  ? '${user.name} (${user.email})'
+                  : user.name;
               return DropdownMenuItem(
                 value: user,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      user.email.isNotEmpty
-                          ? '${user.name} (${user.email})'
-                          : user.name,
-                      style: const TextStyle(fontSize: 14),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (subtitle != null)
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange.shade800,
-                        ),
-                      ),
-                  ],
+                child: Text(
+                  subtitle != null ? '$title\n$subtitle' : title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14, height: 1.25),
                 ),
               );
             }).toList(),
@@ -909,15 +946,23 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
               spacing: 8,
               children: _selectableCategoryLabels.map((category) {
                 final selected = _selectedCategories.contains(category);
-                final alreadyAssigned = _selectedUser != null &&
-                    _assignedCategoriesFor(_selectedUser!.id)
-                        .contains(category);
+                final assigned =
+                    _assignedCategoriesFor(_selectedUser?.id ?? -1);
+                final isCurrentRowCategory =
+                    widget.roster?.category == category;
+                final lockedElsewhere = _selectedUser != null &&
+                    assigned.contains(category) &&
+                    !isCurrentRowCategory;
                 return FilterChip(
                   label: Text(
-                    alreadyAssigned ? '$category (ya fichado)' : category,
+                    lockedElsewhere
+                        ? '$category (ya fichado)'
+                        : isCurrentRowCategory
+                            ? '$category (actual)'
+                            : category,
                   ),
                   selected: selected,
-                  onSelected: widget.roster != null || alreadyAssigned
+                  onSelected: lockedElsewhere
                       ? null
                       : (v) {
                           setState(() {

@@ -7,8 +7,8 @@ class DioClient {
 
   static final Dio _dio = Dio(BaseOptions(
     baseUrl: backendUrl,
-    connectTimeout: Duration(seconds: 5000),
-    receiveTimeout: Duration(seconds: 5000),
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 30),
     headers: {'Content-Type': 'application/json'},
   ));
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
@@ -25,32 +25,45 @@ class DioClient {
   }
 
   static void initialize() {
-    // Agregar el interceptor
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        // No mezclar Bearer con login/register (tokens viejos en el dispositivo)
         if (!_isPublicAuthPath(options.path)) {
           final accessToken = await _storage.read(key: 'authToken');
-          if (accessToken != null) {
+          if (accessToken != null && accessToken.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $accessToken';
           }
         }
         return handler.next(options);
       },
       onError: (error, handler) async {
-        // Si el token ha expirado
-        if (error.response?.statusCode == 401) {
-          final refreshToken = await _storage.read(key: 'refreshToken');
-          if (refreshToken != null) {
-            // Intentar renovar el token
-            final success = await _refreshToken(refreshToken);
-            if (success) {
-              final retryRequest = await _retry(error.requestOptions);
-              return handler.resolve(retryRequest);
-            }
-          }
+        final status = error.response?.statusCode;
+        final path = error.requestOptions.path.split('?').first;
+        final alreadyRetried =
+            error.requestOptions.extra['auth_retry'] == true;
+
+        if (status != 401 ||
+            _isPublicAuthPath(path) ||
+            path == '/auth/refresh' ||
+            alreadyRetried) {
+          return handler.next(error);
         }
-        return handler.next(error);
+
+        final refreshToken = await _storage.read(key: 'refreshToken');
+        if (refreshToken == null || refreshToken.isEmpty) {
+          return handler.next(error);
+        }
+
+        final success = await _refreshToken(refreshToken);
+        if (!success) {
+          return handler.next(error);
+        }
+
+        try {
+          final retryResponse = await _retry(error.requestOptions);
+          return handler.resolve(retryResponse);
+        } catch (e) {
+          return handler.next(error);
+        }
       },
     ));
   }
@@ -65,27 +78,34 @@ class DioClient {
       final newAccessToken = response.data['accessToken'];
       final newRefreshToken = response.data['refreshToken'];
 
-      // Almacenar los nuevos tokens
       await _storage.write(key: 'authToken', value: newAccessToken);
       await _storage.write(key: 'refreshToken', value: newRefreshToken);
       return true;
     } catch (e) {
-      // El refreshToken no es válido
-      await _storage.deleteAll();
+      await _storage.delete(key: 'authToken');
+      await _storage.delete(key: 'refreshToken');
       return false;
     }
   }
 
-  static Future<Response> _retry(RequestOptions requestOptions) async {
-    final options = Options(
-      method: requestOptions.method,
-      headers: requestOptions.headers,
-    );
-    return _dio.request(
+  static Future<Response<dynamic>> _retry(RequestOptions requestOptions) async {
+    final accessToken = await _storage.read(key: 'authToken');
+    final headers = Map<String, dynamic>.from(requestOptions.headers);
+    if (accessToken != null && accessToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $accessToken';
+    }
+
+    return _dio.request<dynamic>(
       requestOptions.path,
       data: requestOptions.data,
       queryParameters: requestOptions.queryParameters,
-      options: options,
+      options: Options(
+        method: requestOptions.method,
+        headers: headers,
+        extra: {...requestOptions.extra, 'auth_retry': true},
+        responseType: requestOptions.responseType,
+        contentType: requestOptions.contentType,
+      ),
     );
   }
 }

@@ -2,23 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/services/notification_service.dart';
 import 'package:sportify_amateur/features/dashboard/team_membership_banner.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final _notificationService = NotificationService();
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationService.startBackgroundSync();
+  }
 
   Future<String?> _getUserRole() async {
     final authStorage = AuthStorageService();
     return await authStorage.getRole();
   }
 
-  List<Map<String, dynamic>> get allFeatures => [
+  static List<Map<String, dynamic>> get allFeatures => [
         {
           'title': 'Gestión Deportiva',
           'icon': Icons.sports_soccer,
           'description':
               'Lista de buena fe, convocatorias y eventos del equipo',
-          'requiredRole': 'manager',
+          'requiredRole': 'user',
           'color': Colors.green,
           'route': '/sports/roster',
         },
@@ -174,23 +188,47 @@ class DashboardScreen extends StatelessWidget {
             children: [
               const TeamMembershipBanner(),
               ...filteredFeatures.map((feature) {
+              final isNotifications = feature['route'] == '/notifications';
               return Card(
                 elevation: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 child: ListTile(
-                  leading: Icon(
-                    feature['icon'],
-                    size: 48,
-                    color: feature['color'],
-                  ),
+                  leading: isNotifications
+                      ? StreamBuilder<int>(
+                          stream: _notificationService.unreadCountStream,
+                          initialData: 0,
+                          builder: (context, snap) {
+                            final count = snap.data ?? 0;
+                            return Badge(
+                              isLabelVisible: count > 0,
+                              label: Text(
+                                count > 99 ? '99+' : '$count',
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                              child: Icon(
+                                feature['icon'],
+                                size: 48,
+                                color: feature['color'],
+                              ),
+                            );
+                          },
+                        )
+                      : Icon(
+                          feature['icon'],
+                          size: 48,
+                          color: feature['color'],
+                        ),
                   title: Text(feature['title']),
                   subtitle: Text(feature['description']),
                   onTap: () {
                     final routeName = feature['route'];
                     if (routeName != null) {
-                      Navigator.pushNamed(context, routeName);
+                      Navigator.pushNamed(context, routeName).then((_) {
+                        if (isNotifications) {
+                          _notificationService.refreshUnreadCount();
+                        }
+                      });
                     } else {
-                      // Manejo para rutas no definidas
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content:
@@ -198,11 +236,6 @@ class DashboardScreen extends StatelessWidget {
                         ),
                       );
                     }
-                    // Navigator.pushNamed(
-                    //     context,
-                    //     feature['title'] == 'Autenticación y Roles'
-                    //         ? '/secondary'
-                    //         : '/game-stats'); // Define la navegación
                   },
                 ),
               );

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 enum NotificationType {
   matchInvitation('match_invitation'),
   trainingReminder('training_reminder'),
@@ -85,6 +87,20 @@ class NotificationModel {
     this.eventTitle,
   });
 
+  static Map<String, dynamic>? _parseData(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
       id: json['id'] is int
@@ -98,8 +114,7 @@ class NotificationModel {
       priority: NotificationPriority.fromString(json['priority'] ?? 'medium'),
       title: json['title'] ?? '',
       message: json['message'] ?? json['body'] ?? '',
-      data:
-          json['data'] != null ? Map<String, dynamic>.from(json['data']) : null,
+      data: _parseData(json['data']),
       isRead: json['isRead'] ?? json['is_read'] ?? false,
       readAt: json['readAt'] != null
           ? DateTime.tryParse(json['readAt'].toString())
@@ -188,6 +203,55 @@ class NotificationModel {
       type == NotificationType.matchInvitation ||
       data?['action'] == 'convocation_response';
 
+  /// Navegación a Gestión deportiva → pestaña Estado jugadores.
+  bool get opensPlayerStatus {
+    if (type == NotificationType.impedimentCleared) return true;
+    final action = data?['action']?.toString();
+    if (action == 'open_player_status') return true;
+    final deepLink = data?['deepLink']?.toString();
+    if (deepLink == '/sports/roster') return true;
+    final t = title.toLowerCase();
+    if (t.contains('impedimento') ||
+        t.contains('lesión') ||
+        t.contains('lesion') ||
+        t.contains('suspensión') ||
+        t.contains('suspension') ||
+        t.contains('alta médica') ||
+        t.contains('habilitado')) {
+      return true;
+    }
+    final m = message.toLowerCase();
+    if (m.contains('lesión') ||
+        m.contains('lesion') ||
+        m.contains('suspensión') ||
+        m.contains('suspension') ||
+        m.contains('impedimento')) {
+      return true;
+    }
+    final details = data?['details'];
+    if (details is List) {
+      for (final item in details) {
+        if (item is Map && item['label']?.toString() == 'Tipo') {
+          final v = item['value']?.toString().toLowerCase() ?? '';
+          if (v.contains('lesión') ||
+              v.contains('lesion') ||
+              v.contains('suspensión') ||
+              v.contains('suspension') ||
+              v.contains('impedimento')) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  int? get navigationTeamId {
+    final fromData = data?['teamId'];
+    if (fromData != null) return int.tryParse('$fromData');
+    return teamId;
+  }
+
   String get priorityDisplayName {
     switch (priority) {
       case NotificationPriority.low:
@@ -226,6 +290,113 @@ class NotificationModel {
 
   bool get isUrgent {
     return priority == NotificationPriority.urgent;
+  }
+
+  /// Claves solo para la app (navegación, FCM). No mostrar al usuario.
+  static const Set<String> _internalDataKeys = {
+    'action',
+    'deepLink',
+    'teamId',
+    'tenantId',
+    'sportEventId',
+    'eventId',
+    'userId',
+    'reportedByUserId',
+    'impedimentType',
+    'playerName',
+    'description',
+    'details',
+    'squadSummary',
+  };
+
+  /// Filas listas para mostrar (español), generadas por el backend en `data.details`.
+  List<({String label, String value})> get userFacingDetails {
+    final rawDetails = data?['details'];
+    if (rawDetails is List) {
+      final rows = <({String label, String value})>[];
+      for (final item in rawDetails) {
+        if (item is! Map) continue;
+        final label = item['label']?.toString();
+        final value = item['value']?.toString();
+        if (label != null &&
+            label.isNotEmpty &&
+            value != null &&
+            value.isNotEmpty) {
+          rows.add((label: label, value: value));
+        }
+      }
+      if (rows.isNotEmpty) return rows;
+    }
+
+    if (data == null) return [];
+    final rows = <({String label, String value})>[];
+    for (final entry in data!.entries) {
+      if (_internalDataKeys.contains(entry.key)) continue;
+      final text = formatDataValue(entry.key, entry.value);
+      if (text.isEmpty) continue;
+      rows.add((label: formatDataKey(entry.key), value: text));
+    }
+    return rows;
+  }
+
+  static String formatDataKey(String key) {
+    switch (key) {
+      case 'matchDate':
+        return 'Fecha del partido';
+      case 'opponent':
+        return 'Rival';
+      case 'location':
+        return 'Ubicación';
+      case 'courtNumber':
+        return 'Cancha';
+      case 'trainingDate':
+        return 'Fecha de entrenamiento';
+      case 'duration':
+        return 'Duración';
+      case 'amount':
+        return 'Monto';
+      case 'dueDate':
+        return 'Fecha límite';
+      case 'concept':
+        return 'Concepto';
+      case 'expiryDate':
+        return 'Fecha de vencimiento';
+      case 'daysUntilExpiry':
+        return 'Días restantes';
+      case 'reportedByName':
+        return 'Registrado por';
+      case 'clearedByName':
+        return 'Dado de alta por';
+      case 'categoryLabel':
+        return 'Categoría';
+      case 'impedimentTypeLabel':
+        return 'Tipo';
+      case 'clinicalDescription':
+        return 'Observaciones';
+      case 'startDate':
+        return 'Desde';
+      case 'endDate':
+        return 'Hasta';
+      default:
+        return key;
+    }
+  }
+
+  static String formatDataValue(String key, dynamic value) {
+    if (value == null) return '';
+    if (key == 'impedimentType') {
+      switch (value.toString()) {
+        case 'injury':
+          return 'Lesión';
+        case 'suspension':
+          return 'Suspensión';
+        case 'other':
+          return 'Otro impedimento';
+        default:
+          return value.toString();
+      }
+    }
+    return value.toString();
   }
 
   // Crear copia con cambios

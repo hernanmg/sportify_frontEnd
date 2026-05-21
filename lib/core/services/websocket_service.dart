@@ -33,8 +33,9 @@ class WebSocketService {
     _isConnecting = true;
     try {
       final token = await AuthStorageService().getToken();
-      if (token == null) {
+      if (token == null || token.isEmpty) {
         debugPrint('🔒 No hay token disponible para Socket.IO');
+        _reconnectTimer?.cancel();
         return;
       }
 

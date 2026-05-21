@@ -14,7 +14,14 @@ import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 
 class SportsManagementScreen extends StatefulWidget {
-  const SportsManagementScreen({Key? key}) : super(key: key);
+  final int initialTabIndex;
+  final int? initialTeamId;
+
+  const SportsManagementScreen({
+    Key? key,
+    this.initialTabIndex = 0,
+    this.initialTeamId,
+  }) : super(key: key);
 
   @override
   _SportsManagementScreenState createState() => _SportsManagementScreenState();
@@ -34,7 +41,8 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    final tab = widget.initialTabIndex.clamp(0, 3);
+    _tabController = TabController(length: 4, vsync: this, initialIndex: tab);
     _tabController.addListener(() {
       if (!mounted) return;
       setState(() {});
@@ -142,7 +150,10 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
           RosterManagementScreen(key: _rosterListKey),
           const EventsManagementScreen(),
           ConvocationsScreen(key: _convocationsKey),
-          PlayerStatusScreen(key: _playerStatusKey),
+          PlayerStatusScreen(
+            key: _playerStatusKey,
+            initialTeamId: widget.initialTeamId,
+          ),
         ],
       ),
       floatingActionButton: _buildFloatingActionButton(),

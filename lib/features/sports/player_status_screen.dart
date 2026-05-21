@@ -7,7 +7,9 @@ import 'package:sportify_amateur/features/sports/player_convocation_stats_screen
 import 'package:sportify_amateur/models/player_eligibility.dart';
 
 class PlayerStatusScreen extends StatefulWidget {
-  const PlayerStatusScreen({super.key});
+  final int? initialTeamId;
+
+  const PlayerStatusScreen({super.key, this.initialTeamId});
 
   @override
   State<PlayerStatusScreen> createState() => PlayerStatusScreenState();
@@ -72,10 +74,11 @@ class PlayerStatusScreenState extends State<PlayerStatusScreen> {
       }
       teams = MyTeamOption.dedupeByTeamId(teams);
       final previousId = _selectedTeam?.teamId;
+      final preferredId = widget.initialTeamId ?? previousId;
       setState(() {
         _teams = teams;
-        _selectedTeam = (previousId != null
-                ? MyTeamOption.findInList(teams, previousId)
+        _selectedTeam = (preferredId != null
+                ? MyTeamOption.findInList(teams, preferredId)
                 : null) ??
             (teams.isNotEmpty ? teams.first : null);
       });

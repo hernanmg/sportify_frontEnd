@@ -50,34 +50,35 @@ class UserProfile {
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(dynamic value) {
+      if (value == null) return null;
+      return DateTime.tryParse(value.toString());
+    }
+
     return UserProfile(
-      id: json['id'],
-      username: json['username'],
-      email: json['email'],
-      firstName: json['firstName'],
-      lastName: json['lastName'],
-      phone: json['phone'],
-      fechaNacimiento: json['fechaNacimiento'] != null
-          ? DateTime.parse(json['fechaNacimiento'])
-          : null,
-      ciudad: json['ciudad'],
-      provincia: json['provincia'],
-      pais: json['pais'],
-      bio: json['bio'],
-      experienciaDeportiva: json['experienciaDeportiva'],
-      avatarUrl: json['avatarUrl'],
-      profileCompletion: json['profileCompletion'] ?? 0,
-      estadoRegistro: json['estadoRegistro'] ?? 'pending',
-      emailVerified: json['emailVerified'] ?? false,
-      phoneVerified: json['phoneVerified'] ?? false,
-      isActive: json['isActive'] ?? true,
-      googleId: json['googleId'],
-      facebookId: json['facebookId'],
-      ultimoLogin: json['ultimoLogin'] != null
-          ? DateTime.parse(json['ultimoLogin'])
-          : null,
-      createdAt: DateTime.parse(json['createdAt']),
-      updatedAt: DateTime.parse(json['updatedAt']),
+      id: json['id'] as int? ?? 0,
+      username: json['username']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      firstName: json['firstName']?.toString(),
+      lastName: json['lastName']?.toString(),
+      phone: json['phone']?.toString(),
+      fechaNacimiento: parseDate(json['fechaNacimiento']),
+      ciudad: json['ciudad']?.toString(),
+      provincia: json['provincia']?.toString(),
+      pais: json['pais']?.toString(),
+      bio: json['bio']?.toString(),
+      experienciaDeportiva: json['experienciaDeportiva']?.toString(),
+      avatarUrl: json['avatarUrl']?.toString(),
+      profileCompletion: (json['profileCompletion'] as num?)?.toInt() ?? 0,
+      estadoRegistro: json['estadoRegistro']?.toString() ?? 'pending',
+      emailVerified: json['emailVerified'] == true,
+      phoneVerified: json['phoneVerified'] == true,
+      isActive: json['isActive'] != false,
+      googleId: json['googleId']?.toString(),
+      facebookId: json['facebookId']?.toString(),
+      ultimoLogin: parseDate(json['ultimoLogin']),
+      createdAt: parseDate(json['createdAt']) ?? DateTime.now(),
+      updatedAt: parseDate(json['updatedAt']) ?? DateTime.now(),
     );
   }
 

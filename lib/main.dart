@@ -1,9 +1,11 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
+import 'package:sportify_amateur/core/services/push_registration_service.dart';
+import 'package:sportify_amateur/firebase_options.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
-import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/features/auth/login.dart';
 import 'package:sportify_amateur/features/auth/user_login.dart';
 import 'package:sportify_amateur/features/auth/register_screen.dart';
@@ -16,6 +18,7 @@ import 'package:sportify_amateur/features/admin/admin_users_screen.dart';
 import 'package:sportify_amateur/features/admin/deleted_users_screen.dart';
 import 'package:sportify_amateur/features/permissions/permissions_screen.dart';
 import 'package:sportify_amateur/features/sports/sports_management_screen.dart';
+import 'package:sportify_amateur/features/sports/sports_management_args.dart';
 import 'package:sportify_amateur/features/teams/teams_management_screen.dart';
 import 'package:sportify_amateur/features/onboarding/onboarding_wizard.dart';
 import 'package:sportify_amateur/features/teams/team_form_screen.dart';
@@ -35,10 +38,12 @@ import 'package:sportify_amateur/features/teams/join_team_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final storageService = AuthStorageService();
-  //print('Base URL: ${AppConfig.apiBaseUrl}');
-  // Inicializar Dio con interceptores
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   DioClient.initialize();
+  // FCM: requiere FCM_VAPID_KEY en web; si falta, solo se omite el token push.
+  await PushRegistrationService.instance.initialize();
   // Limpia el token al iniciar la app (solo para pruebas)
   // await storageService.clearStoredToken();
   runApp(ChangeNotifierProvider(
@@ -78,7 +83,16 @@ class MainApp extends StatelessWidget {
         '/admin/users': (context) => const AdminUsersScreen(),
         '/admin/deleted-users': (context) => const DeletedUsersScreen(),
         '/admin/permissions': (context) => const PermissionsScreen(),
-        '/sports/roster': (context) => const SportsManagementScreen(),
+        '/sports/roster': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is SportsManagementArgs) {
+            return SportsManagementScreen(
+              initialTabIndex: args.initialTabIndex,
+              initialTeamId: args.initialTeamId,
+            );
+          }
+          return const SportsManagementScreen();
+        },
         '/teams': (context) => const TeamsManagementScreen(),
         '/notifications': (context) => const NotificationsScreen(),
         '/my-events': (context) => const MyEventsScreen(),

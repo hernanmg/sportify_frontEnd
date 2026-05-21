@@ -7,6 +7,8 @@ import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:sportify_amateur/core/common/app_config.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/services/notification_service.dart';
+import 'package:sportify_amateur/core/services/push_registration_service.dart';
 import 'package:sportify_amateur/core/services/user_profile_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 
@@ -81,6 +83,9 @@ class AuthService {
 
         print('Tokens guardados exitosamente');
         print('userId: $userId, userName: $userName, role: $role');
+
+        await PushRegistrationService.instance.registerAfterLogin();
+        NotificationService().startBackgroundSync();
 
         return true;
       } else {
@@ -157,6 +162,9 @@ class AuthService {
         print('✅ Tokens guardados exitosamente');
         print('👤 Usuario: $userName, Rol: $role');
 
+        await PushRegistrationService.instance.registerAfterLogin();
+        NotificationService().startBackgroundSync();
+
         return true;
       } else {
         print('❌ Error de autenticación: ${response.data}');
@@ -176,9 +184,8 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    NotificationService().disconnectOnLogout();
     await storageService.logout();
-
-    // Aquí puedes añadir otros pasos para cerrar sesión, como desactivar sesiones activas o limpiar variables en memoria
   }
 
   Future<Map<String, dynamic>> getProfile() async {
@@ -192,9 +199,12 @@ class AuthService {
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else if (response.statusCode == 401) {
-        // Token expirado, intentar renovar
-        await storageService.renewToken();
-        return getProfile(); // Reintentar la solicitud
+        try {
+          await storageService.renewToken();
+          return getProfile();
+        } catch (_) {
+          throw Exception('Sesión expirada');
+        }
       } else {
         throw Exception('Error al obtener el perfil');
       }
@@ -270,6 +280,9 @@ class AuthService {
 
         print('✅ Usuario registrado y tokens guardados exitosamente');
         print('👤 Nuevo usuario: $userName, Rol: $role');
+
+        await PushRegistrationService.instance.registerAfterLogin();
+        NotificationService().startBackgroundSync();
 
         return true;
       } else {

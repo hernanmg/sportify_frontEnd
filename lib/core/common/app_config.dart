@@ -16,6 +16,8 @@ class AppConfig {
   static const String _envApiBaseUrl = String.fromEnvironment('API_BASE_URL');
   static const String _envGoogleClientId =
       String.fromEnvironment('GOOGLE_CLIENT_ID');
+  /// Clave pública VAPID (Web Push) desde Firebase Console → Cloud Messaging.
+  static const String _envFcmVapidKey = String.fromEnvironment('FCM_VAPID_KEY');
 
   /// URL base según entorno
   static String get apiBaseUrl {
@@ -33,6 +35,9 @@ class AppConfig {
     }
     return _defaultAndroidUrlProd;
   }
+
+  /// Clave VAPID para FCM en Flutter Web (obligatoria en web para getToken).
+  static String get fcmVapidKey => _envFcmVapidKey;
 
   /// Devuelve Google Client ID
   static String get googleClientId {

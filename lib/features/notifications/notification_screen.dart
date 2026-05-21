@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/convocations_service.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
+import 'package:sportify_amateur/features/sports/sports_management_args.dart';
 import 'package:sportify_amateur/models/notification.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -43,6 +44,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _notificationService.startBackgroundSync();
     _loadNotifications();
   }
 
@@ -57,11 +59,14 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     try {
       setState(() => _isLoading = true);
       final notifications = await _notificationService.getMyNotifications();
-      setState(() {
-        _notifications = notifications;
-        _applyFilter();
-        _isLoading = false;
-      });
+      await _notificationService.refreshUnreadCount();
+      if (mounted) {
+        setState(() {
+          _notifications = notifications;
+          _applyFilter();
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
@@ -322,6 +327,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         iconData = Icons.medical_services;
         iconColor = Colors.purple;
         break;
+      case NotificationType.impedimentCleared:
+        iconData = Icons.healing;
+        iconColor = Colors.teal;
+        break;
       case NotificationType.socialEvent:
         iconData = Icons.celebration;
         iconColor = Colors.pink;
@@ -331,8 +340,13 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         iconColor = Colors.blue;
         break;
       default:
-        iconData = Icons.notifications;
-        iconColor = Colors.grey;
+        if (notification.opensPlayerStatus) {
+          iconData = Icons.health_and_safety;
+          iconColor = Colors.red.shade700;
+        } else {
+          iconData = Icons.notifications;
+          iconColor = Colors.grey;
+        }
     }
 
     return CircleAvatar(
@@ -509,6 +523,17 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
 
   NotificationModel get notification => widget.notification;
 
+  void _openPlayerStatus() {
+    Navigator.pop(context);
+    Navigator.pushNamed(
+      context,
+      '/sports/roster',
+      arguments: SportsManagementArgs.playerStatus(
+        teamId: notification.navigationTeamId,
+      ),
+    );
+  }
+
   Future<void> _respond(bool confirm) async {
     final eventId = notification.convocationEventId;
     if (eventId == null) return;
@@ -547,6 +572,7 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
     final showConvocationActions =
         notification.isConvocationResponse &&
         notification.convocationEventId != null;
+    final showViewPlayerStatus = notification.opensPlayerStatus;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -591,9 +617,9 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
             style: const TextStyle(fontSize: 16),
           ),
           const SizedBox(height: 16),
-          if (notification.data != null) ...[
+          if (notification.userFacingDetails.isNotEmpty) ...[
             const Text(
-              'Detalles adicionales:',
+              'Detalles',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -612,6 +638,17 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
               _buildPriorityChip(),
             ],
           ),
+          if (showViewPlayerStatus) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: _openPlayerStatus,
+                icon: const Icon(Icons.health_and_safety_outlined),
+                label: const Text('Ver ficha'),
+              ),
+            ),
+          ],
           if (showConvocationActions) ...[
             const SizedBox(height: 16),
             const Text(
@@ -672,13 +709,22 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
         iconData = Icons.medical_services;
         iconColor = Colors.purple;
         break;
+      case NotificationType.impedimentCleared:
+        iconData = Icons.healing;
+        iconColor = Colors.teal;
+        break;
       case NotificationType.socialEvent:
         iconData = Icons.celebration;
         iconColor = Colors.pink;
         break;
       default:
-        iconData = Icons.notifications;
-        iconColor = Colors.grey;
+        if (notification.opensPlayerStatus) {
+          iconData = Icons.health_and_safety;
+          iconColor = Colors.red.shade700;
+        } else {
+          iconData = Icons.notifications;
+          iconColor = Colors.grey;
+        }
     }
 
     return CircleAvatar(
@@ -688,7 +734,8 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
   }
 
   Widget _buildDataDetails() {
-    if (notification.data == null) return const SizedBox();
+    final rows = notification.userFacingDetails;
+    if (rows.isEmpty) return const SizedBox();
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -698,18 +745,18 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: notification.data!.entries.map((entry) {
+        children: rows.map((row) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${_formatKey(entry.key)}: ',
+                  '${row.label}: ',
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 Expanded(
-                  child: Text(entry.value.toString()),
+                  child: Text(row.value),
                 ),
               ],
             ),
@@ -717,33 +764,6 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
         }).toList(),
       ),
     );
-  }
-
-  String _formatKey(String key) {
-    switch (key) {
-      case 'matchDate':
-        return 'Fecha del partido';
-      case 'opponent':
-        return 'Rival';
-      case 'location':
-        return 'Ubicación';
-      case 'trainingDate':
-        return 'Fecha de entrenamiento';
-      case 'duration':
-        return 'Duración';
-      case 'amount':
-        return 'Monto';
-      case 'dueDate':
-        return 'Fecha límite';
-      case 'concept':
-        return 'Concepto';
-      case 'expiryDate':
-        return 'Fecha de vencimiento';
-      case 'daysUntilExpiry':
-        return 'Días restantes';
-      default:
-        return key;
-    }
   }
 
   Widget _buildPriorityChip() {

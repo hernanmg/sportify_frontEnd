@@ -21,12 +21,18 @@ class NotificationService {
   // Stream para notificaciones individuales en tiempo real
   final StreamController<NotificationModel> _newNotificationController =
       StreamController<NotificationModel>.broadcast();
+  final StreamController<int> _unreadCountController =
+      StreamController<int>.broadcast();
+  Timer? _pollTimer;
+  int _lastUnread = 0;
 
   Stream<List<NotificationModel>> get notificationsStream =>
       _notificationsController.stream;
 
   Stream<NotificationModel> get newNotificationStream =>
       _newNotificationController.stream;
+
+  Stream<int> get unreadCountStream => _unreadCountController.stream;
 
   void _initializeWebSocket() {
     _wsService.connect();
@@ -39,9 +45,7 @@ class NotificationService {
       try {
         final notification = NotificationModel.fromJson(data);
         _newNotificationController.add(notification);
-        
-        // Refrescar lista de notificaciones
-        getMyNotifications();
+        refreshUnreadCount();
       } catch (e) {
         debugPrint('❌ Error procesando notificación WebSocket: $e');
       }
@@ -50,6 +54,7 @@ class NotificationService {
     // Manejar conexión WebSocket
     _wsService.onConnected((data) {
       debugPrint('✅ WebSocket conectado para notificaciones');
+      refreshUnreadCount();
     });
 
     _wsService.onError((data) {
@@ -88,13 +93,44 @@ class NotificationService {
     }
   }
 
-  // Obtener contador de no leídas
+  /// Polling suave si el WebSocket no está conectado (Fase C).
+  void startBackgroundSync() {
+    _pollTimer?.cancel();
+    refreshUnreadCount();
+    _pollTimer = Timer.periodic(const Duration(minutes: 2), (_) async {
+      if (!_wsService.isConnected) {
+        await refreshUnreadCount();
+      }
+    });
+  }
+
+  void stopBackgroundSync() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
+
+  Future<int> refreshUnreadCount() async {
+    try {
+      final count = await getUnreadCount();
+      if (count != _lastUnread) {
+        _lastUnread = count;
+        _unreadCountController.add(count);
+      }
+      return count;
+    } catch (_) {
+      return _lastUnread;
+    }
+  }
+
   Future<int> getUnreadCount() async {
     try {
       final response = await _dio.get('/notifications/my/unread-count');
 
       if (response.statusCode == 200) {
-        return response.data['count'] ?? 0;
+        final count = (response.data['count'] as num?)?.toInt() ?? 0;
+        _lastUnread = count;
+        _unreadCountController.add(count);
+        return count;
       }
       throw Exception('Error al obtener contador');
     } catch (e) {
@@ -283,6 +319,9 @@ class NotificationService {
   }
 
   void disconnectOnLogout() {
+    stopBackgroundSync();
+    _lastUnread = 0;
+    _unreadCountController.add(0);
     _wsService.disconnect();
     _wsListenersRegistered = false;
   }
