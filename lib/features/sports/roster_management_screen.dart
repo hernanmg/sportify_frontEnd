@@ -358,9 +358,11 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Estadísticas rápidas
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                // Estadísticas rápidas (Wrap evita overflow en pantallas angostas)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
                   children: [
                     _buildStatChip(
                         'Total', _roster.length.toString(), Icons.people),
@@ -531,14 +533,16 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Icon(
                               _getPositionIcon(player.position),
                               size: 16,
                               color: Colors.grey[600],
                             ),
-                            const SizedBox(width: 4),
                             Text(
                               player.positionDisplayName,
                               style: TextStyle(
@@ -546,19 +550,18 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                                 fontSize: 14,
                               ),
                             ),
-                            const SizedBox(width: 12),
                             Icon(
                               Icons.badge,
                               size: 16,
                               color: Colors.grey[600],
                             ),
-                            const SizedBox(width: 4),
                             Text(
                               player.documentNumber,
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 14,
                               ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),

@@ -184,6 +184,7 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    await PushRegistrationService.instance.unregisterOnLogout();
     NotificationService().disconnectOnLogout();
     await storageService.logout();
   }

@@ -4,6 +4,7 @@ import 'package:sportify_amateur/core/services/convocations_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/convocation_pdf_service.dart';
 import 'package:sportify_amateur/features/sports/convocation_form_screen.dart';
+import 'package:sportify_amateur/features/sports/post_match_screen.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 
@@ -384,6 +385,27 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                                   Icons.picture_as_pdf,
                                                 ),
                                                 label: const Text('PDF'),
+                                              ),
+                                            if (sportEventPostMatchAvailable(c))
+                                              TextButton.icon(
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          PostMatchScreen(
+                                                        eventId: c.id,
+                                                        eventTitle: c.title,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                icon: const Icon(
+                                                  Icons.emoji_events_outlined,
+                                                ),
+                                                label: const Text(
+                                                  'Post-partido',
+                                                ),
                                               ),
                                             if (isDraft)
                                               TextButton.icon(

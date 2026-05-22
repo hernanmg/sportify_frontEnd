@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/finance_service.dart';
+import 'package:sportify_amateur/features/finance/payment_receipt_dialog.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/models/finance.dart';
 
@@ -547,15 +548,31 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),
+                      if (payment.hasReceipt) ...[
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () => PaymentReceiptDialog.show(
+                              context,
+                              paymentId: payment.id,
+                              mimeType: payment.receiptMimeType,
+                            ),
+                            icon: const Icon(Icons.receipt_long),
+                            label: const Text('Ver comprobante'),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 8),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           FilledButton.icon(
                             onPressed: () => _confirmPayment(payment),
                             icon: const Icon(Icons.check, size: 18),
                             label: const Text('Confirmar'),
                           ),
-                          const SizedBox(width: 8),
                           OutlinedButton.icon(
                             onPressed: () => _rejectPayment(payment),
                             icon: const Icon(Icons.close, size: 18),
@@ -606,37 +623,64 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
           else
             ..._balances.map(
               (balance) => Card(
-                child: ListTile(
-                  leading: CircleAvatar(
-                    child: Text(balance.userName.isNotEmpty
-                        ? balance.userName[0].toUpperCase()
-                        : '?'),
-                  ),
-                  title: Text(
-                    balance.jerseyNumber != null
-                        ? '${balance.userName} #${balance.jerseyNumber}'
-                        : balance.userName,
-                  ),
-                  subtitle: Text(
-                    'Cargado ${formatMoney(balance.totalCharged)} · Pagado ${formatMoney(balance.totalPaid)}',
-                  ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        formatMoney(balance.balance),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: balance.balance > 0
-                              ? Colors.red.shade700
-                              : Colors.green.shade700,
+                      CircleAvatar(
+                        child: Text(balance.userName.isNotEmpty
+                            ? balance.userName[0].toUpperCase()
+                            : '?'),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              balance.jerseyNumber != null
+                                  ? '${balance.userName} #${balance.jerseyNumber}'
+                                  : balance.userName,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Cargado ${formatMoney(balance.totalCharged)} · '
+                              'Pagado ${formatMoney(balance.totalPaid)}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
                         ),
                       ),
-                      TextButton(
-                        onPressed: () =>
-                            _showRegisterPaymentDialog(balance),
-                        child: const Text('Cobrar'),
+                      const SizedBox(width: 8),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            formatMoney(balance.balance),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: balance.balance > 0
+                                  ? Colors.red.shade700
+                                  : Colors.green.shade700,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                _showRegisterPaymentDialog(balance),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 0,
+                              ),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text('Cobrar'),
+                          ),
+                        ],
                       ),
                     ],
                   ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:sportify_amateur/core/services/finance_service.dart';
 import 'package:sportify_amateur/models/finance.dart';
 
@@ -61,6 +62,8 @@ class MyAccountTabState extends State<MyAccountTab> {
     final amountController = TextEditingController();
     final notesController = TextEditingController();
     String method = 'transfer';
+    XFile? receiptFile;
+    String? receiptLabel;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -107,7 +110,49 @@ class MyAccountTabState extends State<MyAccountTab> {
                   maxLines: 2,
                   decoration: const InputDecoration(
                     labelText: 'Notas (opcional)',
-                    hintText: 'Ej: comprobante, referencia',
+                    hintText: 'Referencia, CBU, etc.',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final source = await showModalBottomSheet<ImageSource>(
+                      context: context,
+                      builder: (ctx) => SafeArea(
+                        child: Wrap(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.photo_library),
+                              title: const Text('Galería'),
+                              onTap: () =>
+                                  Navigator.pop(ctx, ImageSource.gallery),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.photo_camera),
+                              title: const Text('Cámara'),
+                              onTap: () =>
+                                  Navigator.pop(ctx, ImageSource.camera),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                    if (source == null) return;
+                    final picked = await ImagePicker().pickImage(
+                      source: source,
+                      imageQuality: 85,
+                    );
+                    if (picked != null) {
+                      setDialogState(() {
+                        receiptFile = picked;
+                        receiptLabel = picked.name;
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.attach_file),
+                  label: Text(
+                    receiptLabel ?? 'Adjuntar comprobante (opcional)',
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -149,8 +194,13 @@ class MyAccountTabState extends State<MyAccountTab> {
         amount: amount,
         method: method,
         notes: notes.isEmpty ? null : notes,
+        receipt: receiptFile,
       );
-      _showSnack('Pago enviado. Esperando confirmación del manager.');
+      _showSnack(
+        receiptFile != null
+            ? 'Pago y comprobante enviados. Esperá confirmación del manager.'
+            : 'Pago enviado. Esperando confirmación del manager.',
+      );
       await reload();
     } catch (e) {
       _showSnack(FinanceService.errorMessage(e));

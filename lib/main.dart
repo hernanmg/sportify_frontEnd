@@ -1,9 +1,13 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
+import 'package:sportify_amateur/core/navigation/app_navigator.dart';
 import 'package:sportify_amateur/core/services/push_registration_service.dart';
+import 'package:sportify_amateur/firebase_background.dart';
 import 'package:sportify_amateur/firebase_options.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
 import 'package:sportify_amateur/features/auth/login.dart';
@@ -38,12 +42,17 @@ import 'package:sportify_amateur/features/teams/join_team_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   DioClient.initialize();
-  // FCM: requiere FCM_VAPID_KEY en web; si falta, solo se omite el token push.
-  await PushRegistrationService.instance.initialize();
+  // FCM: no debe bloquear el arranque si no hay sesión o el JWT expiró.
+  try {
+    await PushRegistrationService.instance.initialize();
+  } catch (e) {
+    debugPrint('FCM init: $e');
+  }
   // Limpia el token al iniciar la app (solo para pruebas)
   // await storageService.clearStoredToken();
   runApp(ChangeNotifierProvider(
@@ -59,6 +68,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
+      navigatorKey: AppNavigator.key,
       title: 'Sportify Amateur',
       theme: ThemeData(
         brightness: Brightness.light,

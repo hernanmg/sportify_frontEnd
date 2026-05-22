@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/player_status_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
@@ -423,17 +424,37 @@ class _PlayerStatusSheetState extends State<_PlayerStatusSheet> {
             FilledButton(
               onPressed: () async {
                 final days = int.tryParse(_daysController.text);
-                await _service.createImpediment(
-                  widget.teamId,
-                  userId: p.userId,
-                  impedimentType: _impType,
-                  startDate: DateTime.now().toIso8601String().substring(0, 10),
-                  durationDays: days,
-                  description: _descController.text.trim().isEmpty
-                      ? null
-                      : _descController.text.trim(),
-                );
-                widget.onChanged();
+                try {
+                  await _service.createImpediment(
+                    widget.teamId,
+                    userId: p.userId,
+                    impedimentType: _impType,
+                    startDate:
+                        DateTime.now().toIso8601String().substring(0, 10),
+                    durationDays: days,
+                    description: _descController.text.trim().isEmpty
+                        ? null
+                        : _descController.text.trim(),
+                  );
+                  if (!context.mounted) return;
+                  final myId =
+                      int.tryParse(await AuthStorageService().getUserId() ?? '');
+                  final msg = myId != null && myId == p.userId
+                      ? 'Impedimento guardado. Se notificó al DT/admin del equipo.'
+                      : 'Impedimento guardado. Aviso enviado a ${p.playerName} y al cuerpo técnico.';
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(msg)),
+                  );
+                  widget.onChanged();
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
               child: const Text('Guardar impedimento'),
             ),

@@ -52,6 +52,8 @@ class PlayerPayment {
   final String? createdAt;
   final String? rejectionReason;
   final String? userName;
+  final bool hasReceipt;
+  final String? receiptMimeType;
 
   PlayerPayment({
     required this.id,
@@ -64,6 +66,8 @@ class PlayerPayment {
     this.createdAt,
     this.rejectionReason,
     this.userName,
+    this.hasReceipt = false,
+    this.receiptMimeType,
   });
 
   bool get isPending => status == 'pending_confirmation';
@@ -84,6 +88,8 @@ class PlayerPayment {
       createdAt: json['createdAt']?.toString(),
       rejectionReason: json['rejectionReason'] as String?,
       userName: _userNameFromJson(json['user']),
+      hasReceipt: json['hasReceipt'] == true || json['receiptPath'] != null,
+      receiptMimeType: json['receiptMimeType'] as String?,
     );
   }
 }

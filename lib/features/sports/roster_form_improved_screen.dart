@@ -746,6 +746,34 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     );
   }
 
+  /// Dos campos en fila en pantallas anchas; en columna en móvil/emulador.
+  Widget _responsiveFieldRow(List<Widget> fields, {double breakpoint = 520}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < breakpoint) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < fields.length; i++) ...[
+                if (i > 0) const SizedBox(height: 12),
+                fields[i],
+              ],
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < fields.length; i++) ...[
+              if (i > 0) const SizedBox(width: 12),
+              Expanded(child: fields[i]),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildUserSelector() {
     final pickerUsers = _eligibleUsersForPicker();
     final assignedSelected = _selectedUser != null
@@ -766,11 +794,14 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
             children: [
               Icon(Icons.person, color: Colors.green),
               SizedBox(width: 8),
-              Text(
-                'Usuario del Sistema',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
+              Expanded(
+                child: Text(
+                  'Usuario del Sistema',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -903,150 +934,187 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   }
 
   Widget _buildSeasonSelector() {
-    return Row(
-      children: [
-        Expanded(
-          child: DropdownButtonFormField<String>(
-            value: _season,
-            decoration: const InputDecoration(
-              labelText: 'Temporada',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.calendar_today),
-            ),
-            items: RosterService.getSeasons().map((season) {
-              return DropdownMenuItem(
-                value: season,
-                child: Text(season),
-              );
-            }).toList(),
-            onChanged: (value) async {
-              if (value != null) {
-                setState(() {
-                  _season = value;
-                });
-                await _loadTeamRosters();
-                await _loadAvailableNumbers();
-                if (mounted) {
-                  setState(() {});
-                  _prefillFromSelectedUser();
-                }
-              }
-            },
+    final seasonDropdown = DropdownButtonFormField<String>(
+      value: _season,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Temporada',
+        border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.calendar_today),
+      ),
+      items: RosterService.getSeasons().map((season) {
+        return DropdownMenuItem(
+          value: season,
+          child: Text(
+            season,
+            overflow: TextOverflow.ellipsis,
           ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: InputDecorator(
-            decoration: const InputDecoration(
-              labelText: 'Categorías',
-              border: OutlineInputBorder(),
-              helperText: 'Podés elegir varias (+35, +40, etc.)',
+        );
+      }).toList(),
+      onChanged: (value) async {
+        if (value != null) {
+          setState(() {
+            _season = value;
+          });
+          await _loadTeamRosters();
+          await _loadAvailableNumbers();
+          if (mounted) {
+            setState(() {});
+            _prefillFromSelectedUser();
+          }
+        }
+      },
+    );
+
+    final categoriesBlock = InputDecorator(
+      decoration: const InputDecoration(
+        labelText: 'Categorías',
+        border: OutlineInputBorder(),
+        helperText: 'Podés elegir varias (+35, +40, etc.)',
+      ),
+      child: Wrap(
+        spacing: 8,
+        children: _selectableCategoryLabels.map((category) {
+          final selected = _selectedCategories.contains(category);
+          final assigned = _assignedCategoriesFor(_selectedUser?.id ?? -1);
+          final isCurrentRowCategory = widget.roster?.category == category;
+          final lockedElsewhere = _selectedUser != null &&
+              assigned.contains(category) &&
+              !isCurrentRowCategory;
+          return FilterChip(
+            label: Text(
+              lockedElsewhere
+                  ? '$category (ya fichado)'
+                  : isCurrentRowCategory
+                      ? '$category (actual)'
+                      : category,
             ),
-            child: Wrap(
-              spacing: 8,
-              children: _selectableCategoryLabels.map((category) {
-                final selected = _selectedCategories.contains(category);
-                final assigned =
-                    _assignedCategoriesFor(_selectedUser?.id ?? -1);
-                final isCurrentRowCategory =
-                    widget.roster?.category == category;
-                final lockedElsewhere = _selectedUser != null &&
-                    assigned.contains(category) &&
-                    !isCurrentRowCategory;
-                return FilterChip(
-                  label: Text(
-                    lockedElsewhere
-                        ? '$category (ya fichado)'
-                        : isCurrentRowCategory
-                            ? '$category (actual)'
-                            : category,
-                  ),
-                  selected: selected,
-                  onSelected: lockedElsewhere
-                      ? null
-                      : (v) {
-                          setState(() {
-                            if (v) {
-                              _selectedCategories.add(category);
-                            } else {
-                              _selectedCategories.remove(category);
-                            }
-                          });
-                        },
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-      ],
+            selected: selected,
+            onSelected: lockedElsewhere
+                ? null
+                : (v) {
+                    setState(() {
+                      if (v) {
+                        _selectedCategories.add(category);
+                      } else {
+                        _selectedCategories.remove(category);
+                      }
+                    });
+                  },
+          );
+        }).toList(),
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 520) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              seasonDropdown,
+              const SizedBox(height: 12),
+              categoriesBlock,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 2, child: seasonDropdown),
+            const SizedBox(width: 12),
+            Expanded(flex: 3, child: categoriesBlock),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildPlayerInfo() {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                controller: _jerseyNumberController,
-                decoration: InputDecoration(
-                  labelText: 'Número de Camiseta',
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.sports_soccer),
-                  helperText: _availableNumbers.isNotEmpty
-                      ? 'Disponibles: ${_availableNumbers.take(10).join(', ')}${_availableNumbers.length > 10 ? '...' : ''}'
-                      : null,
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'El número de camiseta es requerido';
-                  }
-                  final number = int.tryParse(value);
-                  if (number == null || number < 1 || number > 99) {
-                    return 'Debe ser un número entre 1 y 99';
-                  }
-                  return null;
-                },
-              ),
+        _responsiveFieldRow([
+          TextFormField(
+            controller: _jerseyNumberController,
+            decoration: InputDecoration(
+              labelText: 'Número de Camiseta',
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.sports_soccer),
+              helperText: _availableNumbers.isNotEmpty
+                  ? 'Disp.: ${_availableNumbers.take(8).join(', ')}${_availableNumbers.length > 8 ? '…' : ''}'
+                  : null,
+              helperMaxLines: 2,
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _position,
-                decoration: const InputDecoration(
-                  labelText: 'Posición',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.sports),
-                ),
-                items: (_sportPositions.isNotEmpty
-                        ? _sportPositions
-                        : [
-                            SportPosition(
-                              id: 0,
-                              sportId: 0,
-                              code: 'player',
-                              label: 'Jugador',
-                            ),
-                          ])
-                    .map((pos) {
-                  return DropdownMenuItem(
-                    value: pos.code,
-                    child: Text(pos.label),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _position = value;
-                    });
-                  }
-                },
-              ),
+            keyboardType: TextInputType.number,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'El número de camiseta es requerido';
+              }
+              final number = int.tryParse(value);
+              if (number == null || number < 1 || number > 99) {
+                return 'Debe ser un número entre 1 y 99';
+              }
+              return null;
+            },
+          ),
+          DropdownButtonFormField<String>(
+            value: _position,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Posición',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.sports),
             ),
-          ],
-        ),
+            items: (_sportPositions.isNotEmpty
+                    ? _sportPositions
+                    : [
+                        SportPosition(
+                          id: 0,
+                          sportId: 0,
+                          code: 'player',
+                          label: 'Jugador',
+                        ),
+                      ])
+                .map((pos) {
+              return DropdownMenuItem(
+                value: pos.code,
+                child: Text(
+                  pos.label,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            selectedItemBuilder: (context) {
+              final list = _sportPositions.isNotEmpty
+                  ? _sportPositions
+                  : [
+                      SportPosition(
+                        id: 0,
+                        sportId: 0,
+                        code: 'player',
+                        label: 'Jugador',
+                      ),
+                    ];
+              return list.map((pos) {
+                return Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    pos.label,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                );
+              }).toList();
+            },
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _position = value;
+                });
+              }
+            },
+          ),
+        ]),
         const SizedBox(height: 16),
         TextFormField(
           controller: _documentNumberController,
@@ -1070,50 +1138,46 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   Widget _buildMedicalInfo() {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: InkWell(
-                onTap: () => _selectDate(context, false),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Fecha del Apto',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.medical_services),
-                  ),
-                  child: Text(
-                    _medicalCertificateDate != null
-                        ? DateFormat('dd/MM/yyyy')
-                            .format(_medicalCertificateDate!)
-                        : 'Seleccionar fecha',
-                  ),
-                ),
+        _responsiveFieldRow([
+          InkWell(
+            onTap: () => _selectDate(context, false),
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Fecha del Apto',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.medical_services),
+              ),
+              child: Text(
+                _medicalCertificateDate != null
+                    ? DateFormat('dd/MM/yyyy')
+                        .format(_medicalCertificateDate!)
+                    : 'Seleccionar fecha',
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: InkWell(
-                onTap: () => _selectDate(context, true),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Fecha de Vencimiento',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.event_busy),
-                  ),
-                  child: Text(
-                    _medicalCertificateExpires != null
-                        ? DateFormat('dd/MM/yyyy')
-                            .format(_medicalCertificateExpires!)
-                        : 'Seleccionar fecha',
-                  ),
-                ),
+          ),
+          InkWell(
+            onTap: () => _selectDate(context, true),
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Fecha de Vencimiento',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.event_busy),
+              ),
+              child: Text(
+                _medicalCertificateExpires != null
+                    ? DateFormat('dd/MM/yyyy')
+                        .format(_medicalCertificateExpires!)
+                    : 'Seleccionar fecha',
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ],
-        ),
+          ),
+        ]),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           value: _medicalStatus,
+          isExpanded: true,
           decoration: const InputDecoration(
             labelText: 'Estado del Apto Médico',
             border: OutlineInputBorder(),
@@ -1122,7 +1186,10 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
           items: RosterService.getMedicalStatuses().map((status) {
             return DropdownMenuItem(
               value: status,
-              child: Text(RosterService.getMedicalStatusDisplayName(status)),
+              child: Text(
+                RosterService.getMedicalStatusDisplayName(status),
+                overflow: TextOverflow.ellipsis,
+              ),
             );
           }).toList(),
           onChanged: (value) {

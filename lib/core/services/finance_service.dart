@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/models/finance.dart';
 
@@ -114,7 +118,29 @@ class FinanceService {
     String method = 'transfer',
     String? notes,
     List<int>? feeChargeIds,
+    XFile? receipt,
   }) async {
+    if (receipt != null) {
+      final bytes = await receipt.readAsBytes();
+      final filename = receipt.name.isNotEmpty ? receipt.name : 'comprobante.jpg';
+      final formData = FormData.fromMap({
+        'teamId': teamId.toString(),
+        'amount': amount.toString(),
+        'method': method,
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+        if (feeChargeIds != null && feeChargeIds.isNotEmpty)
+          'feeChargeIds': jsonEncode(feeChargeIds),
+        'receipt': MultipartFile.fromBytes(bytes, filename: filename),
+      });
+      final response = await _dio.post(
+        '/finance/payments/submit',
+        data: formData,
+      );
+      return PlayerPayment.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+      );
+    }
+
     final response = await _dio.post('/finance/payments/submit', data: {
       'teamId': teamId,
       'amount': amount,
@@ -125,6 +151,21 @@ class FinanceService {
     return PlayerPayment.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );
+  }
+
+  Future<Uint8List?> fetchPaymentReceipt(int paymentId) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        '/finance/payments/$paymentId/receipt',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final data = response.data;
+      if (data == null) return null;
+      return Uint8List.fromList(data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
   }
 
   Future<List<PlayerPayment>> getPendingPayments(int teamId) async {
