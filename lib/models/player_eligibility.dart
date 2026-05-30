@@ -53,6 +53,7 @@ enum EligibilityColor {
 class PlayerEligibility {
   final int userId;
   final String playerName;
+  final String? avatarUrl;
   final int? jerseyNumber;
   final String? position;
   final String? category;
@@ -69,6 +70,7 @@ class PlayerEligibility {
   PlayerEligibility({
     required this.userId,
     required this.playerName,
+    this.avatarUrl,
     this.jerseyNumber,
     this.position,
     this.category,
@@ -108,6 +110,7 @@ class PlayerEligibility {
     return PlayerEligibility(
       userId: json['userId'] as int,
       playerName: json['playerName']?.toString() ?? 'Jugador',
+      avatarUrl: json['avatarUrl']?.toString(),
       jerseyNumber: json['jerseyNumber'] as int?,
       position: json['position'] as String?,
       category: json['category'] as String?,

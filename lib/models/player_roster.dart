@@ -108,6 +108,7 @@ class PlayerRoster {
 
   // Helpers
   String get playerName => player?.name ?? 'Jugador #$playerId';
+  String? get avatarUrl => player?.avatarUrl;
   String get teamName => team?.name ?? 'Equipo #$teamId';
 
   bool get isMedicalCertificateValid {
@@ -155,17 +156,26 @@ class Player {
   final int? userId;
   final String name;
   final String? email;
+  final String? avatarUrl;
 
   Player({
     required this.id,
     this.userId,
     required this.name,
     this.email,
+    this.avatarUrl,
   });
 
   factory Player.fromJson(Map<String, dynamic> json) {
     final id = json['id'] ?? 0;
     final user = json['user'];
+    String? avatar;
+    if (user is Map) {
+      final u = user['avatarUrl'] ?? user['avatar_url'];
+      if (u != null && u.toString().trim().isNotEmpty) {
+        avatar = u.toString();
+      }
+    }
     return Player(
       id: id,
       userId: json['user_id'] as int? ??
@@ -183,6 +193,7 @@ class Player {
               : (user['username']?.toString() ?? 'Jugador $id')
           : (json['name']?.toString() ?? 'Jugador $id'),
       email: user is Map ? user['email'] as String? : json['email'] as String?,
+      avatarUrl: avatar,
     );
   }
 
@@ -191,6 +202,7 @@ class Player {
         'userId': userId,
         'name': name,
         'email': email,
+        'avatarUrl': avatarUrl,
       };
 }
 

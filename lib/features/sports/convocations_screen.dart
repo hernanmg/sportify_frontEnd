@@ -5,6 +5,7 @@ import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/convocation_pdf_service.dart';
 import 'package:sportify_amateur/features/sports/convocation_form_screen.dart';
 import 'package:sportify_amateur/features/sports/post_match_screen.dart';
+import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 
@@ -154,6 +155,11 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                       final convoked = p.isConvoked ? '✓' : '–';
                       return ListTile(
                         dense: true,
+                        leading: PlayerAvatar(
+                          avatarUrl: p.avatarUrl,
+                          displayName: p.userName,
+                          radius: 16,
+                        ),
                         title: Text('$convoked ${p.userName}'),
                         subtitle: Text(
                           '${p.statusDisplayName}${p.eligibilityDetail != null ? ' · ${p.eligibilityDetail}' : ''}',
@@ -347,7 +353,38 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                           ],
                                         ),
                                         const SizedBox(height: 8),
-                                        Row(
+                                        if (!isDraft && canOpenPostMatch(c))
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 8,
+                                            ),
+                                            child: SizedBox(
+                                              width: double.infinity,
+                                              child: FilledButton.tonalIcon(
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          PostMatchScreen(
+                                                        eventId: c.id,
+                                                        eventTitle: c.title,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                icon: const Icon(
+                                                  Icons.emoji_events_outlined,
+                                                ),
+                                                label: const Text(
+                                                  'Post-partido',
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        Wrap(
+                                          spacing: 4,
+                                          runSpacing: 4,
                                           children: [
                                             if (isDraft)
                                               TextButton.icon(
@@ -386,27 +423,6 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                                 ),
                                                 label: const Text('PDF'),
                                               ),
-                                            if (sportEventPostMatchAvailable(c))
-                                              TextButton.icon(
-                                                onPressed: () {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (_) =>
-                                                          PostMatchScreen(
-                                                        eventId: c.id,
-                                                        eventTitle: c.title,
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                                icon: const Icon(
-                                                  Icons.emoji_events_outlined,
-                                                ),
-                                                label: const Text(
-                                                  'Post-partido',
-                                                ),
-                                              ),
                                             if (isDraft)
                                               TextButton.icon(
                                                 onPressed: () async {
@@ -426,7 +442,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                                   if (r == true) await _load();
                                                 },
                                                 icon: const Icon(Icons.edit),
-                                                label: const Text('Plantel'),
+                                                label: const Text('Editar'),
                                               ),
                                           ],
                                         ),

@@ -1,6 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -23,6 +22,7 @@ import 'package:sportify_amateur/features/admin/deleted_users_screen.dart';
 import 'package:sportify_amateur/features/permissions/permissions_screen.dart';
 import 'package:sportify_amateur/features/sports/sports_management_screen.dart';
 import 'package:sportify_amateur/features/sports/sports_management_args.dart';
+import 'package:sportify_amateur/features/sports/post_match_screen.dart';
 import 'package:sportify_amateur/features/teams/teams_management_screen.dart';
 import 'package:sportify_amateur/features/onboarding/onboarding_wizard.dart';
 import 'package:sportify_amateur/features/teams/team_form_screen.dart';
@@ -118,6 +118,23 @@ class MainApp extends StatelessWidget {
         '/userDetail': (context) => UserFormScreen(),
         '/games': (context) => GamesScreen(),
         '/events': (context) => GamesScreen(),
+        '/sports/post-match': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          int? eventId;
+          if (args is Map) {
+            final raw = args['eventId'];
+            if (raw is int) eventId = raw;
+            if (raw != null && eventId == null) {
+              eventId = int.tryParse('$raw');
+            }
+          }
+          if (eventId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Falta eventId para Post-partido')),
+            );
+          }
+          return PostMatchScreen(eventId: eventId);
+        },
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/player-detail') {

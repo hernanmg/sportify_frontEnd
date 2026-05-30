@@ -246,6 +246,18 @@ class NotificationModel {
     return false;
   }
 
+  bool get opensPostMatch {
+    final action = data?['action']?.toString();
+    if (action == 'open_post_match') return true;
+    final deepLink = data?['deepLink']?.toString();
+    if (deepLink == '/sports/post-match') return true;
+    final t = title.toLowerCase();
+    if (t.contains('cerrá tu voto') || t.contains('cierra tu voto')) {
+      return true;
+    }
+    return false;
+  }
+
   int? get navigationTeamId {
     final fromData = data?['teamId'];
     if (fromData != null) return int.tryParse('$fromData');

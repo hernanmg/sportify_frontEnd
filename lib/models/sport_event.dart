@@ -21,6 +21,14 @@ double? _parseDouble(dynamic value) {
   return double.tryParse(value.toString());
 }
 
+String? _avatarUrlFromParticipantJson(dynamic user) {
+  if (user is! Map) return null;
+  final map = Map<String, dynamic>.from(user);
+  final url = map['avatarUrl'] ?? map['avatar_url'];
+  if (url == null || url.toString().trim().isEmpty) return null;
+  return url.toString();
+}
+
 String? _userNameFromParticipantJson(dynamic user) {
   if (user is! Map) return null;
   final map = Map<String, dynamic>.from(user);
@@ -94,6 +102,7 @@ class EventParticipant {
   final int eventId;
   final int userId;
   final String userName;
+  final String? avatarUrl;
   final String? userEmail;
   final ParticipantStatus status;
   final ParticipantRole role;
@@ -115,6 +124,7 @@ class EventParticipant {
     required this.eventId,
     required this.userId,
     required this.userName,
+    this.avatarUrl,
     this.userEmail,
     required this.status,
     required this.role,
@@ -140,6 +150,7 @@ class EventParticipant {
       userName: _userNameFromParticipantJson(json['user']) ??
           json['userName'] as String? ??
           'Usuario',
+      avatarUrl: _avatarUrlFromParticipantJson(json['user']),
       userEmail: json['user']?['email'] ?? json['userEmail'],
       status: ParticipantStatus.fromString(json['status'] ?? 'pending'),
       role: ParticipantRole.fromString(json['role'] ?? 'player'),

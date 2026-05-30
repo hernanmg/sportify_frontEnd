@@ -534,6 +534,17 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
     );
   }
 
+  void _openPostMatch() {
+    final id = notification.sportEventId ?? notification.convocationEventId;
+    if (id == null) return;
+    Navigator.pop(context);
+    Navigator.pushNamed(
+      context,
+      '/sports/post-match',
+      arguments: {'eventId': id},
+    );
+  }
+
   Future<void> _respond(bool confirm) async {
     final eventId = notification.convocationEventId;
     if (eventId == null) return;
@@ -573,6 +584,8 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
         notification.isConvocationResponse &&
         notification.convocationEventId != null;
     final showViewPlayerStatus = notification.opensPlayerStatus;
+    final showOpenPostMatch =
+        notification.opensPostMatch && notification.sportEventId != null;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -646,6 +659,17 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
                 onPressed: _openPlayerStatus,
                 icon: const Icon(Icons.health_and_safety_outlined),
                 label: const Text('Ver ficha'),
+              ),
+            ),
+          ],
+          if (showOpenPostMatch) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _openPostMatch,
+                icon: const Icon(Icons.how_to_vote),
+                label: const Text('Ir a post-partido'),
               ),
             ),
           ],

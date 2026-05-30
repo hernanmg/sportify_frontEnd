@@ -1,6 +1,11 @@
+import 'dart:ui' show Offset;
+
+import 'package:sportify_amateur/models/board_stroke.dart';
+
 class PostMatchPlayerOfMatch {
   final int userId;
   final String userName;
+  final String? avatarUrl;
   final int? jerseyNumber;
   final double? officialScore;
   final double? teamAvgScore;
@@ -8,6 +13,7 @@ class PostMatchPlayerOfMatch {
   PostMatchPlayerOfMatch({
     required this.userId,
     required this.userName,
+    this.avatarUrl,
     this.jerseyNumber,
     this.officialScore,
     this.teamAvgScore,
@@ -17,6 +23,7 @@ class PostMatchPlayerOfMatch {
     return PostMatchPlayerOfMatch(
       userId: json['userId'] as int,
       userName: json['userName']?.toString() ?? 'Jugador',
+      avatarUrl: json['avatarUrl']?.toString(),
       jerseyNumber: json['jerseyNumber'] as int?,
       officialScore: _toDouble(json['officialScore']),
       teamAvgScore: _toDouble(json['teamAvgScore']),
@@ -29,6 +36,7 @@ class PostMatchPlayerOfMatch {
 class PostMatchPlayerRow {
   final int userId;
   final String userName;
+  final String? avatarUrl;
   final int? jerseyNumber;
   final bool isConvoked;
   final bool? attended;
@@ -40,6 +48,7 @@ class PostMatchPlayerRow {
   PostMatchPlayerRow({
     required this.userId,
     required this.userName,
+    this.avatarUrl,
     this.jerseyNumber,
     required this.isConvoked,
     this.attended,
@@ -53,6 +62,7 @@ class PostMatchPlayerRow {
     return PostMatchPlayerRow(
       userId: json['userId'] as int,
       userName: json['userName']?.toString() ?? 'Jugador',
+      avatarUrl: json['avatarUrl']?.toString(),
       jerseyNumber: json['jerseyNumber'] as int?,
       isConvoked: json['isConvoked'] as bool? ?? true,
       attended: json['attended'] as bool?,
@@ -64,6 +74,119 @@ class PostMatchPlayerRow {
   }
 }
 
+class PostMatchLineupRow {
+  final int userId;
+  final String userName;
+  final String? avatarUrl;
+  final int? jerseyNumber;
+  final String? playingPosition;
+  final String role;
+  final bool isStarter;
+  final bool? attended;
+  final bool confirmed;
+
+  PostMatchLineupRow({
+    required this.userId,
+    required this.userName,
+    this.avatarUrl,
+    this.jerseyNumber,
+    this.playingPosition,
+    required this.role,
+    required this.isStarter,
+    this.attended,
+    this.confirmed = false,
+  });
+
+  factory PostMatchLineupRow.fromJson(Map<String, dynamic> json) {
+    return PostMatchLineupRow(
+      userId: json['userId'] as int,
+      userName: json['userName']?.toString() ?? 'Jugador',
+      avatarUrl: json['avatarUrl']?.toString(),
+      jerseyNumber: json['jerseyNumber'] as int?,
+      playingPosition: json['playingPosition']?.toString(),
+      role: json['role']?.toString() ?? 'player',
+      isStarter: json['isStarter'] as bool? ?? false,
+      attended: json['attended'] as bool?,
+      confirmed: json['confirmed'] as bool? ?? false,
+    );
+  }
+
+  String get roleLabel {
+    switch (role) {
+      case 'substitute':
+        return 'Suplente';
+      case 'coach':
+        return 'DT';
+      case 'staff':
+        return 'Staff';
+      default:
+        return 'Jugador';
+    }
+  }
+}
+
+class PostMatchStatsRow {
+  final int userId;
+  final String userName;
+  final int? jerseyNumber;
+  final int goals;
+  final int assists;
+  final int yellowCards;
+  final int redCards;
+  final int? minutesPlayed;
+
+  PostMatchStatsRow({
+    required this.userId,
+    required this.userName,
+    this.jerseyNumber,
+    required this.goals,
+    required this.assists,
+    required this.yellowCards,
+    required this.redCards,
+    this.minutesPlayed,
+  });
+
+  factory PostMatchStatsRow.fromJson(Map<String, dynamic> json) {
+    return PostMatchStatsRow(
+      userId: json['userId'] as int,
+      userName: json['userName']?.toString() ?? 'Jugador',
+      jerseyNumber: json['jerseyNumber'] as int?,
+      goals: json['goals'] as int? ?? 0,
+      assists: json['assists'] as int? ?? 0,
+      yellowCards: json['yellowCards'] as int? ?? 0,
+      redCards: json['redCards'] as int? ?? 0,
+      minutesPlayed: json['minutesPlayed'] as int?,
+    );
+  }
+}
+
+class PostMatchResult {
+  final int? teamScore;
+  final int? opponentScore;
+  final bool isHomeMatch;
+
+  PostMatchResult({
+    this.teamScore,
+    this.opponentScore,
+    required this.isHomeMatch,
+  });
+
+  factory PostMatchResult.fromJson(Map<String, dynamic> json) {
+    return PostMatchResult(
+      teamScore: json['teamScore'] as int?,
+      opponentScore: json['opponentScore'] as int?,
+      isHomeMatch: json['isHomeMatch'] as bool? ?? true,
+    );
+  }
+
+  String scoreLabel(String opponentName) {
+    if (teamScore == null || opponentScore == null) return 'Sin resultado';
+    final us = isHomeMatch ? teamScore : opponentScore;
+    final them = isHomeMatch ? opponentScore : teamScore;
+    return '$us - $them vs $opponentName';
+  }
+}
+
 class PostMatchData {
   final int eventId;
   final String title;
@@ -71,6 +194,7 @@ class PostMatchData {
   final DateTime eventDate;
   final String status;
   final String? opponentName;
+  final bool canAccess;
   final bool postMatchOpen;
   final bool votingClosed;
   final bool canVote;
@@ -79,6 +203,17 @@ class PostMatchData {
   final List<PostMatchPlayerRow> targets;
   final int myVotesCount;
   final int votesExpected;
+  final int currentUserId;
+  final bool isCompleted;
+  final PostMatchResult matchResult;
+  final List<PostMatchLineupRow> lineup;
+  final List<PostMatchStatsRow> stats;
+  final String? formation;
+  final Map<int, Offset> lineupSlots;
+  final List<BoardStroke> boardStrokes;
+  final String? reportText;
+  final DateTime? reportUpdatedAt;
+  final int? reportUpdatedByUserId;
 
   PostMatchData({
     required this.eventId,
@@ -87,6 +222,7 @@ class PostMatchData {
     required this.eventDate,
     required this.status,
     this.opponentName,
+    required this.canAccess,
     required this.postMatchOpen,
     required this.votingClosed,
     required this.canVote,
@@ -95,10 +231,23 @@ class PostMatchData {
     required this.targets,
     required this.myVotesCount,
     required this.votesExpected,
+    required this.currentUserId,
+    required this.isCompleted,
+    required this.matchResult,
+    required this.lineup,
+    required this.stats,
+    this.formation,
+    required this.lineupSlots,
+    required this.boardStrokes,
+    this.reportText,
+    this.reportUpdatedAt,
+    this.reportUpdatedByUserId,
   });
 
   factory PostMatchData.fromJson(Map<String, dynamic> json) {
     final pom = json['playerOfMatch'];
+    final report = json['report'];
+    final reportMap = report is Map ? Map<String, dynamic>.from(report) : null;
     return PostMatchData(
       eventId: json['eventId'] as int,
       title: json['title']?.toString() ?? 'Partido',
@@ -106,6 +255,7 @@ class PostMatchData {
       eventDate: DateTime.parse(json['eventDate'] as String),
       status: json['status']?.toString() ?? '',
       opponentName: json['opponentName']?.toString(),
+      canAccess: json['canAccess'] as bool? ?? true,
       postMatchOpen: json['postMatchOpen'] as bool? ?? false,
       votingClosed: json['votingClosed'] as bool? ?? false,
       canVote: json['canVote'] as bool? ?? false,
@@ -120,8 +270,57 @@ class PostMatchData {
           .toList(),
       myVotesCount: json['myVotesCount'] as int? ?? 0,
       votesExpected: json['votesExpected'] as int? ?? 0,
+      currentUserId: json['currentUserId'] as int? ?? 0,
+      isCompleted: json['isCompleted'] as bool? ?? false,
+      matchResult: PostMatchResult.fromJson(
+        Map<String, dynamic>.from(
+          (json['matchResult'] as Map?) ?? {'isHomeMatch': true},
+        ),
+      ),
+      lineup: (json['lineup'] as List<dynamic>? ?? [])
+          .map((e) => PostMatchLineupRow.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ))
+          .toList(),
+      stats: (json['stats'] as List<dynamic>? ?? [])
+          .map((e) => PostMatchStatsRow.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ))
+          .toList(),
+      formation: json['formation']?.toString(),
+      lineupSlots: _parseLineupSlots(json['lineupSlots']),
+      boardStrokes: BoardStroke.listFromJson(json['boardStrokes']),
+      reportText: reportMap?['text']?.toString(),
+      reportUpdatedAt: reportMap != null && reportMap['updatedAt'] != null
+          ? DateTime.tryParse(reportMap['updatedAt'].toString())
+          : null,
+      reportUpdatedByUserId: (reportMap?['updatedByUserId'] is int)
+          ? (reportMap?['updatedByUserId'] as int)
+          : int.tryParse('${reportMap?['updatedByUserId']}'),
     );
   }
+}
+
+Map<int, Offset> _parseLineupSlots(dynamic raw) {
+  if (raw is! Map) return {};
+  final out = <int, Offset>{};
+  raw.forEach((key, value) {
+    final uid = int.tryParse(key.toString());
+    if (uid == null || value is! Map) return;
+    final x = (value['x'] as num?)?.toDouble();
+    final y = (value['y'] as num?)?.toDouble();
+    if (x != null && y != null) {
+      out[uid] = Offset(x, y);
+    }
+  });
+  return out;
+}
+
+class VoteSheetResult {
+  final bool success;
+  final String? message;
+
+  const VoteSheetResult({required this.success, this.message});
 }
 
 double? _toDouble(dynamic v) {

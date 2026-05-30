@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/services/convocations_service.dart';
 import 'package:sportify_amateur/core/services/convocation_template_service.dart';
@@ -544,17 +545,14 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
                           fontSize: 12,
                         ),
                       ),
-                      secondary: CircleAvatar(
+                      secondary: PlayerAvatar(
+                        avatarUrl: p.avatarUrl,
+                        displayName: p.playerName,
+                        radius: 20,
                         backgroundColor: p.color.materialColor.withValues(
                           alpha: 0.2,
                         ),
-                        child: Text(
-                          '${p.jerseyNumber ?? '?'}',
-                          style: TextStyle(
-                            color: p.color.materialColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        badgeText: '${p.jerseyNumber ?? '?'}',
                       ),
                     );
                   },

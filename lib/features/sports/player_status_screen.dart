@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/player_status_service.dart';
@@ -219,15 +220,12 @@ class PlayerStatusScreenState extends State<PlayerStatusScreen> {
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: CircleAvatar(
+            leading: PlayerAvatar(
+              avatarUrl: p.avatarUrl,
+              displayName: p.playerName,
+              radius: 22,
               backgroundColor: p.color.materialColor.withValues(alpha: 0.2),
-              child: Text(
-                '${p.jerseyNumber ?? '?'}',
-                style: TextStyle(
-                  color: p.color.materialColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              badgeText: '${p.jerseyNumber ?? '?'}',
             ),
             title: Text(p.playerName),
             subtitle: Text('${p.statusEmoji} ${p.reason}'),

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/services/post_match_service.dart';
+import 'package:sportify_amateur/features/sports/match_lineup_board_tab.dart';
+import 'package:sportify_amateur/features/sports/post_match_manage_tabs.dart';
+import 'package:sportify_amateur/widgets/field_drawing_overlay.dart';
+import 'package:sportify_amateur/widgets/match_field_widget.dart';
+import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:sportify_amateur/models/post_match.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 
@@ -25,17 +30,20 @@ class _PostMatchScreenState extends State<PostMatchScreen>
   PostMatchData? _data;
   bool _loading = true;
   String? _error;
+  final _reportCtrl = TextEditingController();
+  bool _savingReport = false;
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 5, vsync: this);
     _load();
   }
 
   @override
   void dispose() {
     _tabs.dispose();
+    _reportCtrl.dispose();
     super.dispose();
   }
 
@@ -49,6 +57,7 @@ class _PostMatchScreenState extends State<PostMatchScreen>
       if (!mounted) return;
       setState(() {
         _data = data;
+        _reportCtrl.text = data.reportText ?? '';
         _loading = false;
       });
     } catch (e) {
@@ -57,6 +66,24 @@ class _PostMatchScreenState extends State<PostMatchScreen>
         _error = PostMatchService.errorMessage(e);
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _saveReport() async {
+    final data = _data;
+    if (data == null || !data.canManage) return;
+    setState(() => _savingReport = true);
+    try {
+      await _service.updateReport(
+        data.eventId,
+        text: _reportCtrl.text.trim().isEmpty ? null : _reportCtrl.text.trim(),
+      );
+      await _load();
+      _snack('Acta guardada');
+    } catch (e) {
+      _snack(PostMatchService.errorMessage(e), error: true);
+    } finally {
+      if (mounted) setState(() => _savingReport = false);
     }
   }
 
@@ -70,43 +97,71 @@ class _PostMatchScreenState extends State<PostMatchScreen>
     );
   }
 
+  List<PostMatchPlayerRow> _peerVoteTargets(PostMatchData data) {
+    if (data.currentUserId <= 0) return data.targets;
+    return data.targets
+        .where((t) => t.userId != data.currentUserId)
+        .toList();
+  }
+
   Future<void> _openVoteSheet() async {
     final data = _data;
     if (data == null || !data.canVote) return;
 
+    final voteTargets = _peerVoteTargets(data);
+    if (voteTargets.isEmpty) {
+      _snack(
+        'No hay jugadores convocados para puntuar. '
+        'El DT debe armar el plantel del partido.',
+        error: true,
+      );
+      return;
+    }
+
     final scores = <int, int>{
-      for (final t in data.targets)
+      for (final t in voteTargets)
         if (t.myVote != null) t.userId: t.myVote!,
     };
 
-    final result = await showModalBottomSheet<Map<int, int>?>(
+    final result = await showModalBottomSheet<VoteSheetResult>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) => _VoteBottomSheet(
         eventId: widget.eventId,
-        targets: data.targets,
+        targets: voteTargets,
         initialScores: scores,
         mode: _VoteMode.peer,
       ),
     );
 
-    if (result == null || !mounted) return;
-    await _load();
-    _snack('Votos guardados');
+    if (!mounted || result == null) return;
+    if (result.success) {
+      await _load();
+      _snack(result.message ?? 'Puntuaciones guardadas');
+    } else {
+      _snack(result.message ?? 'No se pudieron guardar', error: true);
+    }
   }
 
   Future<void> _openOfficialSheet() async {
     final data = _data;
     if (data == null || !data.canManage) return;
 
+    if (data.targets.isEmpty) {
+      _snack('No hay jugadores en la lista del partido', error: true);
+      return;
+    }
+
     final scores = <int, int>{
       for (final t in data.targets)
         if (t.officialScore != null) t.userId: t.officialScore!.round(),
     };
 
-    final result = await showModalBottomSheet<Map<int, int>?>(
+    final result = await showModalBottomSheet<VoteSheetResult>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) => _VoteBottomSheet(
         eventId: widget.eventId,
         targets: data.targets,
@@ -116,9 +171,13 @@ class _PostMatchScreenState extends State<PostMatchScreen>
       ),
     );
 
-    if (result == null || !mounted) return;
-    await _load();
-    _snack('Notas oficiales guardadas');
+    if (!mounted || result == null) return;
+    if (result.success) {
+      await _load();
+      _snack(result.message ?? 'Notas oficiales guardadas');
+    } else {
+      _snack(result.message ?? 'No se pudieron guardar', error: true);
+    }
   }
 
   Future<void> _closeVoting() async {
@@ -151,6 +210,94 @@ class _PostMatchScreenState extends State<PostMatchScreen>
     }
   }
 
+  Future<void> _completeMatch() async {
+    final data = _data;
+    if (data == null || !data.canManage || data.isCompleted) return;
+
+    var teamText = data.matchResult.teamScore?.toString() ?? '';
+    var oppText = data.matchResult.opponentScore?.toString() ?? '';
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Finalizar partido'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Marcá el partido como completado. Se cierra la votación '
+              'y se notifica al equipo.',
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    initialValue: teamText,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Goles nuestros',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (v) => teamText = v,
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text('-'),
+                ),
+                Expanded(
+                  child: TextFormField(
+                    initialValue: oppText,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: data.opponentName ?? 'Rival',
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (v) => oppText = v,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Finalizar'),
+          ),
+        ],
+      ),
+    );
+
+    int? parseScore(String s) {
+      final t = s.trim();
+      if (t.isEmpty) return null;
+      return int.tryParse(t);
+    }
+
+    final teamScore = parseScore(teamText);
+    final oppScore = parseScore(oppText);
+
+    if (ok != true) return;
+
+    try {
+      await _service.completeMatch(
+        widget.eventId,
+        teamScore: teamScore,
+        opponentScore: oppScore,
+      );
+      await _load();
+      _snack('Partido finalizado');
+    } catch (e) {
+      _snack(PostMatchService.errorMessage(e), error: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = _data?.title ?? widget.eventTitle ?? 'Post-partido';
@@ -158,6 +305,14 @@ class _PostMatchScreenState extends State<PostMatchScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
+        actions: [
+          if (_data?.canManage == true && _data?.isCompleted != true)
+            IconButton(
+              icon: const Icon(Icons.flag),
+              tooltip: 'Finalizar partido',
+              onPressed: _completeMatch,
+            ),
+        ],
         bottom: _loading || _error != null
             ? null
             : TabBar(
@@ -167,6 +322,8 @@ class _PostMatchScreenState extends State<PostMatchScreen>
                 tabs: const [
                   Tab(text: 'Resumen'),
                   Tab(text: 'Asistencia'),
+                  Tab(text: 'Estadísticas'),
+                  Tab(text: 'Alineación'),
                   Tab(text: 'Más'),
                 ],
               ),
@@ -210,20 +367,32 @@ class _PostMatchScreenState extends State<PostMatchScreen>
     }
 
     final data = _data!;
-    if (!data.postMatchOpen) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            'Post-partido disponible cuando el partido finalice '
-            '(estado completado o fecha pasada).',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
 
-    return TabBarView(
+    return Column(
+      children: [
+        if (!data.postMatchOpen && data.canManage)
+          MaterialBanner(
+            content: const Text(
+              'Partido programado: podés cargar asistencia, alineación y '
+              'estadísticas. La votación del plantel se habilita al finalizar.',
+            ),
+            actions: [
+              if (!data.isCompleted)
+                TextButton(
+                  onPressed: _completeMatch,
+                  child: const Text('Finalizar partido'),
+                ),
+            ],
+          )
+        else if (!data.postMatchOpen)
+          MaterialBanner(
+            content: const Text(
+              'La votación se habilita cuando el partido finalice.',
+            ),
+            actions: const [SizedBox.shrink()],
+          ),
+        Expanded(
+          child: TabBarView(
       controller: _tabs,
       children: [
         _SummaryTab(
@@ -231,10 +400,36 @@ class _PostMatchScreenState extends State<PostMatchScreen>
           onVote: _openVoteSheet,
           onOfficial: _openOfficialSheet,
           onCloseVoting: _closeVoting,
+          onComplete: _completeMatch,
           onRefresh: _load,
         ),
-        _AttendanceTab(targets: data.targets),
-        _ComingSoonTab(),
+        PostMatchAttendanceTab(
+          data: data,
+          service: _service,
+          onUpdated: _load,
+          onMessage: (msg, {error = false}) => _snack(msg, error: error),
+        ),
+        PostMatchStatsTab(
+          data: data,
+          service: _service,
+          onUpdated: _load,
+          onMessage: (msg, {error = false}) => _snack(msg, error: error),
+        ),
+        MatchLineupBoardTab(
+          data: data,
+          service: _service,
+          onUpdated: _load,
+          onMessage: (msg, {error = false}) => _snack(msg, error: error),
+        ),
+        _ReportTab(
+          data: data,
+          controller: _reportCtrl,
+          saving: _savingReport,
+          onSave: _saveReport,
+        ),
+      ],
+          ),
+        ),
       ],
     );
   }
@@ -247,6 +442,7 @@ class _SummaryTab extends StatelessWidget {
   final VoidCallback onVote;
   final VoidCallback onOfficial;
   final VoidCallback onCloseVoting;
+  final VoidCallback onComplete;
   final Future<void> Function() onRefresh;
 
   const _SummaryTab({
@@ -254,6 +450,7 @@ class _SummaryTab extends StatelessWidget {
     required this.onVote,
     required this.onOfficial,
     required this.onCloseVoting,
+    required this.onComplete,
     required this.onRefresh,
   });
 
@@ -267,63 +464,91 @@ class _SummaryTab extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          if (pom != null) ...[
-            Card(
-              color: Colors.amber.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
+          Card(
+            color: Colors.amber.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  if (pom != null)
+                    PlayerAvatar(
+                      avatarUrl: pom.avatarUrl,
+                      displayName: pom.userName,
+                      radius: 28,
+                      badgeText: pom.jerseyNumber?.toString(),
+                    )
+                  else
                     CircleAvatar(
                       radius: 28,
                       backgroundColor: Colors.amber.shade200,
                       child: Text(
-                        pom.jerseyNumber?.toString() ??
-                            pom.userName[0].toUpperCase(),
-                        style: const TextStyle(
+                        '—',
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                          fontSize: 22,
+                          color: Colors.amber.shade900,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Jugador del partido',
-                            style: Theme.of(context).textTheme.labelMedium,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Jugador del partido',
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                        Text(
+                          pom?.userName ?? '—',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          pom?.displayScore != null
+                              ? 'Nota ${pom!.displayScore!.toStringAsFixed(1)}'
+                              : data.isCompleted
+                                  ? 'Sin definir'
+                                  : 'Se define al finalizar el partido',
+                          style: TextStyle(
+                            color: Colors.amber.shade900,
+                            fontWeight: FontWeight.w500,
                           ),
-                          Text(
-                            pom.userName,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          if (pom.displayScore != null)
-                            Text(
-                              'Nota ${pom.displayScore!.toStringAsFixed(1)}',
-                              style: TextStyle(
-                                color: Colors.amber.shade900,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const Icon(Icons.emoji_events, size: 40, color: Colors.amber),
-                  ],
-                ),
+                  ),
+                  const Icon(Icons.emoji_events, size: 40, color: Colors.amber),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-          ],
+          ),
+          const SizedBox(height: 12),
           Text(
             '${data.opponentName ?? 'Rival'} · $dateStr',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
+          if (data.matchResult.teamScore != null &&
+              data.matchResult.opponentScore != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                data.matchResult.scoreLabel(data.opponentName ?? 'Rival'),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ),
+          if (data.isCompleted)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Chip(
+                label: const Text('Partido finalizado'),
+                backgroundColor: Colors.green.shade100,
+              ),
+            ),
           if (data.votingClosed)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -358,11 +583,17 @@ class _SummaryTab extends StatelessWidget {
                   icon: const Icon(Icons.gavel, size: 18),
                   label: const Text('Notas DT'),
                 ),
-                if (!data.votingClosed)
+                if (!data.votingClosed && data.postMatchOpen)
                   OutlinedButton.icon(
                     onPressed: onCloseVoting,
                     icon: const Icon(Icons.lock, size: 18),
                     label: const Text('Cerrar votación'),
+                  ),
+                if (!data.isCompleted)
+                  FilledButton.icon(
+                    onPressed: onComplete,
+                    icon: const Icon(Icons.flag, size: 18),
+                    label: const Text('Finalizar partido'),
                   ),
               ],
             ),
@@ -381,6 +612,41 @@ class _SummaryTab extends StatelessWidget {
             )
           else
             ...data.targets.map((t) => _PlayerScoreCard(row: t)),
+          if (data.lineup.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text(
+              'Alineación',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            AspectRatio(
+              aspectRatio: 1.5,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  MatchFieldWidget(
+                    players: data.lineup,
+                    slots: data.lineupSlots.isNotEmpty
+                        ? data.lineupSlots
+                        : defaultSlotsForFormation(
+                            data.formation ?? '4-4-2',
+                            data.lineup
+                                .where((p) => p.isStarter)
+                                .map((p) => p.userId)
+                                .toList(),
+                          ),
+                    formation: data.formation,
+                    compact: true,
+                  ),
+                  FieldDrawingOverlay(
+                    strokes: data.boardStrokes,
+                    drawEnabled: false,
+                    onStrokesChanged: (_) {},
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -405,7 +671,23 @@ class _PlayerScoreCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+            Row(
+              children: [
+                PlayerAvatar(
+                  avatarUrl: row.avatarUrl,
+                  displayName: row.userName,
+                  radius: 18,
+                  badgeText: row.jerseyNumber?.toString(),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -485,72 +767,68 @@ class _ScoreColumn extends StatelessWidget {
   }
 }
 
-class _AttendanceTab extends StatelessWidget {
-  final List<PostMatchPlayerRow> targets;
+class _ReportTab extends StatelessWidget {
+  final PostMatchData data;
+  final TextEditingController controller;
+  final bool saving;
+  final VoidCallback onSave;
 
-  const _AttendanceTab({required this.targets});
+  const _ReportTab({
+    required this.data,
+    required this.controller,
+    required this.saving,
+    required this.onSave,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (targets.isEmpty) {
-      return const Center(child: Text('Sin jugadores convocados'));
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: targets.length,
-      itemBuilder: (_, i) {
-        final t = targets[i];
-        final att = t.attended;
-        IconData icon;
-        Color color;
-        String status;
-        if (att == true) {
-          icon = Icons.check_circle;
-          color = Colors.green;
-          status = 'Presente';
-        } else if (att == false) {
-          icon = Icons.cancel;
-          color = Colors.red;
-          status = 'Ausente';
-        } else {
-          icon = Icons.help_outline;
-          color = Colors.grey;
-          status = 'Sin registrar';
-        }
-        return ListTile(
-          leading: Icon(icon, color: color),
-          title: Text(t.userName),
-          subtitle: Text(t.isConvoked ? 'Convocado' : 'No convocado'),
-          trailing: Text(status),
-        );
-      },
-    );
-  }
-}
-
-class _ComingSoonTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    const items = [
-      ('Estadísticas', Icons.bar_chart),
-      ('Alineación', Icons.grid_view),
-      ('Reseña', Icons.article),
-      ('Foro', Icons.forum),
-    ];
+    final readOnly = !data.canManage;
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: items
-          .map(
-            (e) => Card(
-              child: ListTile(
-                leading: Icon(e.$2, color: Colors.grey),
-                title: Text(e.$1),
-                subtitle: const Text('Próximamente — Fase 2'),
-                trailing: const Icon(Icons.lock_outline, size: 18),
-              ),
-            ),
-          )
-          .toList(),
+      children: [
+        Text(
+          'Acta / Reseña',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Usá este espacio para dejar un resumen del partido: '
+          'plan, objetivos, jugadas clave, decisiones, aprendizajes.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: controller,
+          readOnly: readOnly,
+          minLines: 10,
+          maxLines: 18,
+          decoration: InputDecoration(
+            hintText: readOnly
+                ? 'Sin acta cargada.'
+                : 'Escribí el acta del partido…',
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (data.reportUpdatedAt != null)
+          Text(
+            'Última edición: ${DateFormat('dd/MM/yyyy HH:mm').format(data.reportUpdatedAt!)}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        const SizedBox(height: 12),
+        if (data.canManage)
+          FilledButton.icon(
+            onPressed: saving ? null : onSave,
+            icon: saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save),
+            label: const Text('Guardar acta'),
+          ),
+      ],
     );
   }
 }
@@ -578,6 +856,7 @@ class _VoteBottomSheetState extends State<_VoteBottomSheet> {
   late Map<int, int> _scores;
   final _service = PostMatchService();
   bool _saving = false;
+  String? _error;
 
   @override
   void initState() {
@@ -590,91 +869,129 @@ class _VoteBottomSheetState extends State<_VoteBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final maxH = MediaQuery.sizeOf(context).height * 0.88;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottom),
-      child: DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.85,
-        minChildSize: 0.4,
-        maxChildSize: 0.95,
-        builder: (_, scroll) => Material(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.title,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
+    return SizedBox(
+      height: maxH,
+      child: Material(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  controller: scroll,
-                  itemCount: widget.targets.length,
-                  itemBuilder: (_, i) {
-                    final t = widget.targets[i];
-                    final score = _scores[t.userId] ?? 7;
-                    return ListTile(
-                      title: Text(t.userName),
-                      subtitle: Slider(
-                        value: score.toDouble(),
-                        min: 1,
-                        max: 10,
-                        divisions: 9,
-                        label: score.toString(),
-                        onChanged: (v) {
-                          setState(() {
-                            _scores[t.userId] = v.round();
-                          });
-                        },
-                      ),
-                      trailing: Text(
-                        '$score',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: FilledButton(
-                    onPressed: _saving ? null : _save,
-                    child: _saving
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Guardar'),
                   ),
+                  IconButton(
+                    onPressed: _saving
+                        ? null
+                        : () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
-            ],
-          ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                itemCount: widget.targets.length,
+                itemBuilder: (_, i) {
+                  final t = widget.targets[i];
+                  final score = _scores[t.userId] ?? 7;
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  t.userName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '$score',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 22,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Slider(
+                            value: score.toDouble(),
+                            min: 1,
+                            max: 10,
+                            divisions: 9,
+                            label: score.toString(),
+                            onChanged: _saving
+                                ? null
+                                : (v) {
+                                    setState(() {
+                                      _scores[t.userId] = v.round();
+                                      _error = null;
+                                    });
+                                  },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: FilledButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Guardar puntuaciones'),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Future<void> _save() async {
-    setState(() => _saving = true);
+    if (widget.targets.isEmpty) {
+      setState(() => _error = 'No hay jugadores para puntuar');
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
     try {
       final ratings = _scores.entries
           .map((e) => {'ratedUserId': e.key, 'score': e.value})
@@ -689,28 +1006,34 @@ class _VoteBottomSheetState extends State<_VoteBottomSheet> {
         );
       }
       if (!mounted) return;
-      Navigator.pop(context, _scores);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(PostMatchService.errorMessage(e)),
-          backgroundColor: Colors.red,
+      Navigator.pop(
+        context,
+        VoteSheetResult(
+          success: true,
+          message: widget.mode == _VoteMode.peer
+              ? 'Puntuaciones guardadas'
+              : 'Notas oficiales guardadas',
         ),
       );
-    } finally {
-      if (mounted) setState(() => _saving = false);
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(
+        context,
+        VoteSheetResult(
+          success: false,
+          message: PostMatchService.errorMessage(e),
+        ),
+      );
     }
   }
 }
 
-/// Si el partido ya pasó o está completado.
-bool sportEventPostMatchAvailable(SportEvent event) {
+/// Convocatoria enviada (o posterior): se puede abrir post-partido.
+bool canOpenPostMatch(SportEvent event) {
   if (event.type != SportEventType.match) return false;
   if (event.status == SportEventStatus.draft ||
       event.status == SportEventStatus.cancelled) {
     return false;
   }
-  if (event.status == SportEventStatus.completed) return true;
-  return event.eventDate.isBefore(DateTime.now());
+  return true;
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
+import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
 import 'package:sportify_amateur/features/sports/social_event_expenses_screen.dart';
 
@@ -372,13 +373,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   Widget _buildParticipantTile(EventParticipant participant) {
     return ListTile(
-      leading: CircleAvatar(
+      leading: PlayerAvatar(
+        avatarUrl: participant.avatarUrl,
+        displayName: participant.userName,
+        radius: 22,
         backgroundColor:
-            _getParticipantStatusColor(participant.status).withOpacity(0.1),
-        child: Icon(
-          _getParticipantStatusIcon(participant.status),
-          color: _getParticipantStatusColor(participant.status),
-        ),
+            _getParticipantStatusColor(participant.status).withOpacity(0.15),
       ),
       title: Text(participant.userName),
       subtitle: Column(

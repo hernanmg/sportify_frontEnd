@@ -3,6 +3,7 @@ import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/player_roster.dart';
 import 'package:sportify_amateur/features/sports/roster_form_improved_screen.dart';
+import 'package:sportify_amateur/widgets/player_avatar.dart';
 
 class RosterManagementScreen extends StatefulWidget {
   final int? teamId;
@@ -500,24 +501,13 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
             children: [
               Row(
                 children: [
-                  // Número de camiseta
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: player.canPlay ? Colors.green : Colors.grey,
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: Center(
-                      child: Text(
-                        player.jerseyNumber.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                  PlayerAvatar(
+                    avatarUrl: player.avatarUrl,
+                    displayName: player.playerName,
+                    radius: 25,
+                    badgeText: player.jerseyNumber.toString(),
+                    backgroundColor:
+                        player.canPlay ? Colors.green : Colors.grey,
                   ),
                   const SizedBox(width: 16),
                   // Información del jugador
