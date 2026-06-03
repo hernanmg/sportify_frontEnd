@@ -53,17 +53,38 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
           roster = [];
           for (final t in teams) {
             try {
-              final chunk = await _rosterService.getRosterByTeam(
+              final categoryFilter =
+                  t.isTeamAdmin && t.categoryIds.isNotEmpty
+                      ? t.categoryIds
+                      : null;
+              var chunk = await _rosterService.getRosterByTeam(
                 t.teamId,
                 season: _selectedSeason,
+                categoryIds: categoryFilter,
               );
+              if (chunk.isEmpty) {
+                chunk = await _rosterService.getRosterByTeam(
+                  t.teamId,
+                  categoryIds: categoryFilter,
+                );
+              }
               for (final row in chunk) {
                 if (seen.add(row.id)) {
                   roster.add(row);
                 }
               }
-            } catch (_) {
-              // Omitir equipo si falla (permisos o red)
+            } catch (e) {
+              debugPrint('Roster equipo ${t.teamId}: $e');
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'No se pudo cargar plantel (${t.name}): $e',
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             }
           }
           roster.sort((a, b) {

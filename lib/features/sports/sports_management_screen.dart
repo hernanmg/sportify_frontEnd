@@ -12,6 +12,10 @@ import 'package:sportify_amateur/core/services/notification_service.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
+import 'package:sportify_amateur/features/sports/team_admin_panel_screen.dart';
+import 'package:sportify_amateur/features/finance/quota_overview_screen.dart';
+import 'package:sportify_amateur/features/sports/attendance_screen.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 
 class SportsManagementScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -35,18 +39,37 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
       GlobalKey<RosterManagementScreenState>();
   final GlobalKey<ConvocationsScreenState> _convocationsKey =
       GlobalKey<ConvocationsScreenState>();
+  final GlobalKey<EventsManagementScreenState> _eventsKey =
+      GlobalKey<EventsManagementScreenState>();
   final GlobalKey<PlayerStatusScreenState> _playerStatusKey =
       GlobalKey<PlayerStatusScreenState>();
+
+  String? _userRole;
 
   @override
   void initState() {
     super.initState();
+    _loadRole();
     final tab = widget.initialTabIndex.clamp(0, 3);
     _tabController = TabController(length: 4, vsync: this, initialIndex: tab);
     _tabController.addListener(() {
       if (!mounted) return;
       setState(() {});
     });
+  }
+
+  Future<void> _loadRole() async {
+    final role = await AuthStorageService().getRole();
+    if (mounted) setState(() => _userRole = role);
+  }
+
+  bool get _isStaff {
+    final r = _userRole;
+    return r == 'super_admin' ||
+        r == 'manager' ||
+        r == 'admin' ||
+        r == 'team_captain' ||
+        r == 'dt';
   }
 
   @override
@@ -92,6 +115,30 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
             icon: const Icon(Icons.more_vert),
             onSelected: (value) => _handleMenuAction(value),
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'admin_panel',
+                child: ListTile(
+                  leading: Icon(Icons.dashboard_customize),
+                  title: Text('Panel del equipo'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'team_quotas',
+                child: ListTile(
+                  leading: Icon(Icons.groups),
+                  title: Text('Cuotas del plantel'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'attendance',
+                child: ListTile(
+                  leading: Icon(Icons.fact_check),
+                  title: Text('Asistencias'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
               const PopupMenuItem(
                 value: 'send_training_reminder',
                 child: ListTile(
@@ -144,19 +191,78 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
           ),
         ],
       ),
-      body: TabBarView(
+      body: Column(
+        children: [
+          _buildOperationsBar(),
+          Expanded(
+            child: TabBarView(
         controller: _tabController,
         children: [
           RosterManagementScreen(key: _rosterListKey),
-          const EventsManagementScreen(),
+          EventsManagementScreen(key: _eventsKey),
           ConvocationsScreen(key: _convocationsKey),
           PlayerStatusScreen(
             key: _playerStatusKey,
             initialTeamId: widget.initialTeamId,
           ),
         ],
+            ),
+          ),
+        ],
       ),
       floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
+
+  Widget _buildOperationsBar() {
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          children: [
+            if (_isStaff) ...[
+              _opsChip(
+                icon: Icons.dashboard_customize,
+                label: 'Panel del equipo',
+                tooltip:
+                    'Morosos, confirmaciones, asistencia y saldo del mes (DT / admin)',
+                onTap: _openAdminPanel,
+              ),
+              _opsChip(
+                icon: Icons.fact_check,
+                label: 'Asistencias',
+                onTap: _openAttendance,
+              ),
+            ],
+            _opsChip(
+              icon: Icons.groups,
+              label: 'Cuotas plantel',
+              onTap: _openTeamQuotas,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _opsChip({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    String? tooltip,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: Tooltip(
+        message: tooltip ?? label,
+        child: ActionChip(
+          avatar: Icon(icon, size: 18),
+          label: Text(label),
+          onPressed: onTap,
+        ),
+      ),
     );
   }
 
@@ -190,6 +296,15 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
   void _handleMenuAction(String action) async {
     try {
       switch (action) {
+        case 'admin_panel':
+          await _openAdminPanel();
+          break;
+        case 'team_quotas':
+          await _openTeamQuotas();
+          break;
+        case 'attendance':
+          await _openAttendance();
+          break;
         case 'send_training_reminder':
           await _sendTrainingReminder();
           break;
@@ -366,6 +481,85 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
     }
   }
 
+  Future<int?> _pickTeamId({String? emptyMessage}) async {
+    try {
+      final teams = MyTeamOption.dedupeByTeamId(await TeamService().getMyTeams());
+      if (!mounted) return null;
+      if (teams.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              emptyMessage ?? 'No tenés equipos asignados',
+            ),
+          ),
+        );
+        return null;
+      }
+      if (widget.initialTeamId != null) {
+        final found = MyTeamOption.findInList(teams, widget.initialTeamId!);
+        if (found != null) return found.teamId;
+      }
+      if (teams.length == 1) return teams.first.teamId;
+      final picked = await showModalBottomSheet<MyTeamOption>(
+        context: context,
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: teams
+                .map(
+                  (t) => ListTile(
+                    title: Text(t.name),
+                    onTap: () => Navigator.pop(ctx, t),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      );
+      return picked?.teamId;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<void> _openAdminPanel() async {
+    final teamId = await _pickTeamId();
+    if (teamId == null || !mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TeamAdminPanelScreen(initialTeamId: teamId),
+      ),
+    );
+  }
+
+  Future<void> _openTeamQuotas() async {
+    final teamId = await _pickTeamId();
+    if (teamId == null || !mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => QuotaOverviewScreen(teamId: teamId),
+      ),
+    );
+  }
+
+  Future<void> _openAttendance() async {
+    final teamId = await _pickTeamId();
+    if (teamId == null || !mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AttendanceScreen(teamId: teamId),
+      ),
+    );
+  }
+
   Future<void> _openTeamInvite() async {
     try {
       final teams = await TeamService().getMyTeams();
@@ -461,6 +655,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
     );
     if (result == true && mounted) {
       _convocationsKey.currentState?.reload();
+      _eventsKey.currentState?.reloadEvents();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Convocatoria guardada'),

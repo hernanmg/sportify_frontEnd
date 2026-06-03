@@ -515,7 +515,7 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
           child: Text(
-            'Arrastrá o tocá para agregar · X para quitar',
+            'Tocá para agregar · arrastrá en la cancha para mover · X para quitar',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
@@ -801,9 +801,12 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
           formation: _formation,
           compact: true,
           showFormationLabel: false,
-          onPlayerTap: readOnly || _penEnabled
+          onPlayerTap: null,
+          onSlotMoved: readOnly || _penEnabled
               ? null
-              : (uid) => _removeFromField(uid),
+              : (userId, offset) {
+                  setState(() => _slots[userId] = offset);
+                },
         ),
         FieldDrawingOverlay(
           strokes: _strokes,

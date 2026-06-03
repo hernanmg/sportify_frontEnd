@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
 import 'package:sportify_amateur/features/sports/social_event_expenses_screen.dart';
+import 'package:sportify_amateur/features/sports/event_attendance_screen.dart';
+import 'package:sportify_amateur/features/sports/widgets/training_event_finance_card.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final SportEvent event;
@@ -15,11 +18,29 @@ class EventDetailScreen extends StatefulWidget {
 
 class _EventDetailScreenState extends State<EventDetailScreen> {
   late SportEvent _event;
+  bool _isManager = false;
+  bool _canTakeAttendance = false;
 
   @override
   void initState() {
     super.initState();
     _event = widget.event;
+    _loadRole();
+  }
+
+  Future<void> _loadRole() async {
+    final role = await AuthStorageService().getRole();
+    final staff = role == 'super_admin' ||
+        role == 'manager' ||
+        role == 'admin' ||
+        role == 'team_captain' ||
+        role == 'dt';
+    if (mounted) {
+      setState(() {
+        _isManager = staff;
+        _canTakeAttendance = staff;
+      });
+    }
   }
 
   @override
@@ -185,9 +206,54 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               ],
             ),
           ),
+          if (_event.type == SportEventType.training) ...[
+            const SizedBox(height: 16),
+            TrainingEventFinanceCard(
+              event: _event,
+              isManager: _isManager,
+            ),
+            if (_canTakeAttendance) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            EventAttendanceScreen(eventId: _event.id),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.fact_check),
+                  label: const Text('Tomar asistencia'),
+                ),
+              ),
+            ],
+          ],
           if (_event.type == SportEventType.match) ...[
             const SizedBox(height: 16),
             _buildMatchDetails(),
+            if (_canTakeAttendance) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            EventAttendanceScreen(eventId: _event.id),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.fact_check),
+                  label: const Text('Tomar asistencia'),
+                ),
+              ),
+            ],
           ],
           if (_event.type == SportEventType.social) ...[
             const SizedBox(height: 16),
@@ -262,7 +328,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         Icons.people,
         Column(
           children: [
-            if (_event.participants.isNotEmpty) ...[
+            if (_event.visibleParticipants.isNotEmpty) ...[
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -277,7 +343,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 16),
-              ..._event.participants
+              ..._event.visibleParticipants
                   .map((participant) => _buildParticipantTile(participant)),
             ] else ...[
               const Text(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
@@ -10,22 +11,36 @@ class EventsManagementScreen extends StatefulWidget {
   const EventsManagementScreen({Key? key}) : super(key: key);
 
   @override
-  _EventsManagementScreenState createState() => _EventsManagementScreenState();
+  EventsManagementScreenState createState() => EventsManagementScreenState();
 }
 
-class _EventsManagementScreenState extends State<EventsManagementScreen> {
+class EventsManagementScreenState extends State<EventsManagementScreen> {
   final SportEventsService _eventsService = SportEventsService();
   final TeamService _teamService = TeamService();
   List<SportEvent> _events = [];
   List<SportEvent> _filteredEvents = [];
   bool _isLoading = true;
   SportEventType? _selectedFilter;
+  bool _canDeleteEvents = false;
 
   @override
   void initState() {
     super.initState();
+    _loadRole();
     _loadEvents();
   }
+
+  Future<void> _loadRole() async {
+    final role = await AuthStorageService().getRole();
+    final canDelete = role == 'super_admin' ||
+        role == 'manager' ||
+        role == 'admin' ||
+        role == 'dt' ||
+        role == 'team_captain';
+    if (mounted) setState(() => _canDeleteEvents = canDelete);
+  }
+
+  Future<void> reloadEvents() => _loadEvents();
 
   Future<void> _loadEvents() async {
     try {
@@ -48,7 +63,7 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
             }
           } catch (_) {}
         }
-        events.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+        events.sort(_compareEvents);
       }
       setState(() {
         _events = events;
@@ -75,7 +90,27 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
       _filteredEvents =
           _events.where((event) => event.type == _selectedFilter).toList();
     }
-    _filteredEvents.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+    _filteredEvents.sort(_compareEvents);
+  }
+
+  int _typeSortOrder(SportEventType type) {
+    switch (type) {
+      case SportEventType.training:
+        return 0;
+      case SportEventType.match:
+        return 1;
+      case SportEventType.meeting:
+        return 2;
+      case SportEventType.social:
+        return 3;
+    }
+  }
+
+  int _compareEvents(SportEvent a, SportEvent b) {
+    final typeCmp =
+        _typeSortOrder(a.type).compareTo(_typeSortOrder(b.type));
+    if (typeCmp != 0) return typeCmp;
+    return a.eventDate.compareTo(b.eventDate);
   }
 
   @override
@@ -199,7 +234,7 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
   }
 
   Widget _buildEventCard(SportEvent event) {
-    return Card(
+    final card = Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: _buildEventIcon(event.type),
@@ -215,7 +250,12 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
               children: [
                 Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
                 const SizedBox(width: 4),
-                Text(event.formattedDate),
+                Expanded(
+                  child: Text(
+                    event.formattedDate,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             if (event.location != null) ...[
@@ -229,12 +269,19 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
               ),
             ],
             const SizedBox(height: 2),
-            Row(
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Icon(Icons.people, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text('${event.participantCount} participantes'),
-                const Spacer(),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.people, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text('${event.participantCount} participantes'),
+                  ],
+                ),
                 _buildStatusChip(event.status),
               ],
             ),
@@ -268,19 +315,85 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: ListTile(
-                leading: Icon(Icons.delete, color: Colors.red),
-                title: Text('Eliminar', style: TextStyle(color: Colors.red)),
-                contentPadding: EdgeInsets.zero,
+            if (_canDeleteEvents)
+              const PopupMenuItem(
+                value: 'delete',
+                child: ListTile(
+                  leading: Icon(Icons.delete, color: Colors.red),
+                  title: Text('Eliminar', style: TextStyle(color: Colors.red)),
+                  contentPadding: EdgeInsets.zero,
+                ),
               ),
-            ),
           ],
         ),
         onTap: () => _viewEventDetails(event),
       ),
     );
+
+    if (!_canDeleteEvents) return card;
+
+    return Dismissible(
+      key: ValueKey('event-${event.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade400,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      confirmDismiss: (_) async {
+        return await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Eliminar evento'),
+                content: Text('¿Eliminar "${event.title}"?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton(
+                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Eliminar'),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+      },
+      onDismissed: (_) => _performDelete(event),
+      child: card,
+    );
+  }
+
+  Future<void> _performDelete(SportEvent event) async {
+    try {
+      await _eventsService.deleteEvent(event.id);
+      await _loadEvents();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Evento eliminado'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      await _loadEvents();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildEventIcon(SportEventType type) {
@@ -356,6 +469,8 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.bold,
@@ -448,27 +563,7 @@ class _EventsManagementScreenState extends State<EventsManagementScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              try {
-                await _eventsService.deleteEvent(event.id);
-                _loadEvents(); // Recargar lista
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Evento eliminado exitosamente'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al eliminar evento: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
+              await _performDelete(event);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Eliminar'),

@@ -289,7 +289,7 @@ class _RolesScreenState extends State<RolesScreen> {
   }
 
   bool _isSystemRole(String roleName) {
-    return ['super_admin', 'manager', 'team_captain', 'player', 'guest']
+    return ['super_admin', 'manager', 'dt', 'team_captain', 'player', 'guest']
         .contains(roleName);
   }
 

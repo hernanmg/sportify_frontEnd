@@ -75,7 +75,9 @@ class _FieldDrawingOverlayState extends State<FieldDrawingOverlay> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return GestureDetector(
+        return IgnorePointer(
+          ignoring: !widget.drawEnabled,
+          child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onPanStart: widget.drawEnabled
               ? (d) {
@@ -99,6 +101,7 @@ class _FieldDrawingOverlayState extends State<FieldDrawingOverlay> {
               currentWidth: widget.penWidth,
             ),
           ),
+        ),
         );
       },
     );

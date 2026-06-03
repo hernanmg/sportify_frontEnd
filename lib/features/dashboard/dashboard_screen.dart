@@ -70,6 +70,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           'route': '/finances',
         },
         {
+          'title': 'Panel del equipo',
+          'icon': Icons.dashboard_customize,
+          'description':
+              'Resumen DT: morosos, confirmaciones pendientes, asistencia y caja del mes',
+          'requiredRole': 'user',
+          'color': Colors.teal,
+          'route': '/sports/admin-panel',
+        },
+        {
           'title': 'Gestión de Asistencia y Horarios',
           'icon': Icons.calendar_today,
           'description': 'Organiza entrenamientos y eventos',
@@ -101,6 +110,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           'requiredRole': 'user',
           'color': Colors.deepPurple,
           'route': '/my-events',
+        },
+        {
+          'title': 'Mis partidos',
+          'icon': Icons.how_to_vote,
+          'description': 'Convocatorias y votación post-partido',
+          'requiredRole': 'user',
+          'color': Colors.green,
+          'route': '/sports/my-matches',
         },
         {
           'title': 'Notificaciones',
@@ -165,7 +182,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (role == 'super_admin') return true;
 
             // Manager / capitán del club: gestión deportiva y equipos
-            if ((role == 'manager' || role == 'team_captain') &&
+            if ((role == 'manager' ||
+                    role == 'team_captain' ||
+                    role == 'dt') &&
                 (requiredRole == 'manager' || requiredRole == 'user'))
               return true;
 

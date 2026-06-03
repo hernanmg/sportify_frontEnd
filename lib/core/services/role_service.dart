@@ -63,6 +63,8 @@ class RoleService {
         return 'Manager/Administrador';
       case 'team_captain':
         return 'Capitán de Equipo';
+      case 'dt':
+        return 'Director Técnico (DT)';
       case 'player':
         return 'Jugador';
       case 'guest':
@@ -81,6 +83,8 @@ class RoleService {
         return 'Gestiona ligas, torneos y usuarios';
       case 'team_captain':
         return 'Gestiona su equipo y jugadores';
+      case 'dt':
+        return 'Gestión deportiva: entrenos, asistencia, cobros';
       case 'player':
         return 'Participa en equipos y actividades';
       case 'guest':
@@ -97,7 +101,7 @@ class RoleService {
 
     // manager puede asignar roles de menor jerarquía
     if (currentUserRole == 'manager') {
-      return ['team_captain', 'player', 'guest'].contains(targetRole);
+      return ['dt', 'team_captain', 'player', 'guest'].contains(targetRole);
     }
 
     // team_captain solo puede asignar player
@@ -117,6 +121,8 @@ class RoleService {
       case 'manager':
         return 4;
       case 'team_captain':
+        return 3;
+      case 'dt':
         return 3;
       case 'player':
         return 2;
@@ -222,7 +228,7 @@ class RoleService {
 
   // Helpers para UI
   static bool isSystemRole(String roleName) {
-    return ['super_admin', 'manager', 'team_captain', 'player', 'guest']
+    return ['super_admin', 'manager', 'dt', 'team_captain', 'player', 'guest']
         .contains(roleName);
   }
 

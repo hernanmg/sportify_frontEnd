@@ -144,6 +144,52 @@ class _PostMatchScreenState extends State<PostMatchScreen>
     }
   }
 
+  Future<void> _pickPlayerOfMatch(List<PostMatchPlayerOfMatch> tied) async {
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Empate en el puntaje. Elegí jugador del partido:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            ...tied.map(
+              (p) => ListTile(
+                leading: PlayerAvatar(
+                  avatarUrl: p.avatarUrl,
+                  displayName: p.userName,
+                  radius: 20,
+                ),
+                title: Text(p.userName),
+                subtitle: p.displayScore != null
+                    ? Text('Nota ${p.displayScore!.toStringAsFixed(1)}')
+                    : null,
+                onTap: () => Navigator.pop(ctx, p.userId),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    try {
+      await _service.setOfficialRatings(
+        widget.eventId,
+        ratings: const [],
+        playerOfMatchUserId: picked,
+      );
+      await _load();
+      _snack('Jugador del partido definido');
+    } catch (e) {
+      _snack(PostMatchService.errorMessage(e), error: true);
+    }
+  }
+
   Future<void> _openOfficialSheet() async {
     final data = _data;
     if (data == null || !data.canManage) return;
@@ -402,6 +448,7 @@ class _PostMatchScreenState extends State<PostMatchScreen>
           onCloseVoting: _closeVoting,
           onComplete: _completeMatch,
           onRefresh: _load,
+          onPickPlayerOfMatch: _pickPlayerOfMatch,
         ),
         PostMatchAttendanceTab(
           data: data,
@@ -437,6 +484,19 @@ class _PostMatchScreenState extends State<PostMatchScreen>
 
 enum _VoteMode { peer, official }
 
+String _pomScoreLabel(PostMatchPlayerOfMatch pom) {
+  final parts = <String>[];
+  if (pom.teamAvgScore != null) {
+    parts.add('plantel ${pom.teamAvgScore!.toStringAsFixed(1)}');
+  }
+  if (pom.officialScore != null) {
+    parts.add('DT ${pom.officialScore!.toStringAsFixed(1)}');
+  }
+  final score = pom.displayScore?.toStringAsFixed(1) ?? '—';
+  if (parts.isEmpty) return 'Nota $score';
+  return 'Nota $score (${parts.join(' · ')})';
+}
+
 class _SummaryTab extends StatelessWidget {
   final PostMatchData data;
   final VoidCallback onVote;
@@ -444,6 +504,7 @@ class _SummaryTab extends StatelessWidget {
   final VoidCallback onCloseVoting;
   final VoidCallback onComplete;
   final Future<void> Function() onRefresh;
+  final void Function(List<PostMatchPlayerOfMatch> tied) onPickPlayerOfMatch;
 
   const _SummaryTab({
     required this.data,
@@ -452,11 +513,13 @@ class _SummaryTab extends StatelessWidget {
     required this.onCloseVoting,
     required this.onComplete,
     required this.onRefresh,
+    required this.onPickPlayerOfMatch,
   });
 
   @override
   Widget build(BuildContext context) {
     final pom = data.playerOfMatch;
+    final tied = data.playerOfMatchTied;
     final dateStr = DateFormat('dd/MM/yyyy HH:mm').format(data.eventDate);
 
     return RefreshIndicator(
@@ -468,59 +531,92 @@ class _SummaryTab extends StatelessWidget {
             color: Colors.amber.shade50,
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (pom != null)
-                    PlayerAvatar(
-                      avatarUrl: pom.avatarUrl,
-                      displayName: pom.userName,
-                      radius: 28,
-                      badgeText: pom.jerseyNumber?.toString(),
-                    )
-                  else
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.amber.shade200,
-                      child: Text(
-                        '—',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22,
-                          color: Colors.amber.shade900,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
                           'Jugador del partido',
-                          style: Theme.of(context).textTheme.labelMedium,
-                        ),
-                        Text(
-                          pom?.userName ?? '—',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                        Text(
-                          pom?.displayScore != null
-                              ? 'Nota ${pom!.displayScore!.toStringAsFixed(1)}'
-                              : data.isCompleted
-                                  ? 'Sin definir'
-                                  : 'Se define al finalizar el partido',
-                          style: TextStyle(
-                            color: Colors.amber.shade900,
-                            fontWeight: FontWeight.w500,
+                      ),
+                      const Icon(Icons.emoji_events,
+                          size: 32, color: Colors.amber),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (pom != null)
+                    Row(
+                      children: [
+                        PlayerAvatar(
+                          avatarUrl: pom.avatarUrl,
+                          displayName: pom.userName,
+                          radius: 28,
+                          badgeText: pom.jerseyNumber?.toString(),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                pom.userName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              if (pom.displayScore != null)
+                                Text(
+                                  _pomScoreLabel(pom),
+                                  style: TextStyle(color: Colors.amber.shade900),
+                                ),
+                            ],
                           ),
                         ),
                       ],
+                    )
+                  else if (tied.length > 1) ...[
+                    Text(
+                      'Empate (${tied.length} jugadores)',
+                      style: TextStyle(color: Colors.amber.shade900),
                     ),
-                  ),
-                  const Icon(Icons.emoji_events, size: 40, color: Colors.amber),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: tied
+                          .map(
+                            (p) => Chip(
+                              avatar: PlayerAvatar(
+                                avatarUrl: p.avatarUrl,
+                                displayName: p.userName,
+                                radius: 14,
+                              ),
+                              label: Text(
+                                '${p.userName}${p.displayScore != null ? ' (${p.displayScore!.toStringAsFixed(1)})' : ''}',
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    if (data.canManage) ...[
+                      const SizedBox(height: 8),
+                      FilledButton.tonal(
+                        onPressed: () => onPickPlayerOfMatch(tied),
+                        child: const Text('Definir jugador del partido'),
+                      ),
+                    ],
+                  ] else
+                    Text(
+                      data.isCompleted
+                          ? 'Sin definir'
+                          : 'Se define al finalizar el partido',
+                      style: TextStyle(color: Colors.amber.shade900),
+                    ),
                 ],
               ),
             ),
@@ -564,14 +660,33 @@ class _SummaryTab extends StatelessWidget {
                 'Tu voto: ${data.myVotesCount}/${data.votesExpected} jugadores',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+            )
+          else if (data.postMatchOpen &&
+              !data.votingClosed &&
+              data.votesExpected > 0 &&
+              data.myVotesCount >= data.votesExpected)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Chip(
+                label: const Text('Ya enviaste tu votación'),
+                backgroundColor: Colors.green.shade100,
+              ),
             ),
           const SizedBox(height: 8),
-          Text(
-            'Cualquier miembro del equipo puede votar, aunque no esté en la lista del partido.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade700,
-                ),
-          ),
+          if (data.canVote)
+            Text(
+              'Como jugador convocado podés puntuar a tus compañeros del partido.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey.shade700,
+                  ),
+            )
+          else if (!data.votingClosed && data.postMatchOpen && data.isCompleted)
+            Text(
+              'La votación está abierta para jugadores convocados.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey.shade700,
+                  ),
+            ),
           if (data.canManage) ...[
             const SizedBox(height: 12),
             Wrap(

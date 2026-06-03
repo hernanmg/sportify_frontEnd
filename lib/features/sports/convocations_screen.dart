@@ -107,6 +107,48 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
     if (result == true) await _load();
   }
 
+  Future<void> _deleteConvocation(SportEvent c) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar convocatoria'),
+        content: Text(
+          '¿Eliminar "${c.title}"? Se borrará el partido y sus datos asociados.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _convocationsService.deleteConvocation(c.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Convocatoria eliminada'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Future<void> _send(SportEvent c) async {
     try {
       await _convocationsService.sendConvocation(c.id);
@@ -152,7 +194,6 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                   child: ListView(
                     shrinkWrap: true,
                     children: responses.map((p) {
-                      final convoked = p.isConvoked ? '✓' : '–';
                       return ListTile(
                         dense: true,
                         leading: PlayerAvatar(
@@ -160,7 +201,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                           displayName: p.userName,
                           radius: 16,
                         ),
-                        title: Text('$convoked ${p.userName}'),
+                        title: Text(p.userName),
                         subtitle: Text(
                           '${p.statusDisplayName}${p.eligibilityDetail != null ? ' · ${p.eligibilityDetail}' : ''}',
                         ),
@@ -361,8 +402,8 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                             child: SizedBox(
                                               width: double.infinity,
                                               child: FilledButton.tonalIcon(
-                                                onPressed: () {
-                                                  Navigator.push(
+                                                onPressed: () async {
+                                                  await Navigator.push(
                                                     context,
                                                     MaterialPageRoute(
                                                       builder: (_) =>
@@ -372,6 +413,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                                       ),
                                                     ),
                                                   );
+                                                  if (mounted) await _load();
                                                 },
                                                 icon: const Icon(
                                                   Icons.emoji_events_outlined,
@@ -386,6 +428,18 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                           spacing: 4,
                                           runSpacing: 4,
                                           children: [
+                                            if (c.canDeleteConvocation)
+                                              TextButton.icon(
+                                                onPressed: () =>
+                                                    _deleteConvocation(c),
+                                                icon: const Icon(
+                                                  Icons.delete_outline,
+                                                ),
+                                                label: const Text('Eliminar'),
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor: Colors.red,
+                                                ),
+                                              ),
                                             if (isDraft)
                                               TextButton.icon(
                                                 onPressed: () => _send(c),

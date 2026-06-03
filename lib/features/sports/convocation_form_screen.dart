@@ -6,6 +6,7 @@ import 'package:sportify_amateur/core/services/convocation_template_service.dart
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/convocation_template.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
+import 'package:sportify_amateur/models/team_category_pick.dart';
 import 'package:sportify_amateur/models/player_eligibility.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 
@@ -35,8 +36,8 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
   final _courtController = TextEditingController();
   final _notesController = TextEditingController();
 
-  List<MyTeamOption> _teams = [];
-  MyTeamOption? _selectedTeam;
+  List<TeamCategoryPick> _teamPicks = [];
+  TeamCategoryPick? _selectedPick;
   DateTime _matchDate = DateTime.now().add(const Duration(days: 3));
   TimeOfDay _matchTime = const TimeOfDay(hour: 16, minute: 0);
   bool _isOfficial = false;
@@ -81,14 +82,21 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
             .toList();
       }
       teams = MyTeamOption.dedupeByTeamId(teams);
+      final picks = TeamCategoryPick.fromMyTeams(teams);
       final draftTeamId = widget.existing?.teamId ?? _draft?.teamId;
+      final meta = widget.existing?.metadata ?? _draft?.metadata;
+      final draftCatId = meta?['categoryId'] as int?;
       final selected = (draftTeamId != null
-              ? MyTeamOption.findInList(teams, draftTeamId)
+              ? TeamCategoryPick.findForTeam(
+                  picks,
+                  draftTeamId,
+                  categoryId: draftCatId,
+                )
               : null) ??
-          (teams.isNotEmpty ? teams.first : null);
+          (picks.isNotEmpty ? picks.first : null);
       setState(() {
-        _teams = teams;
-        _selectedTeam = selected;
+        _teamPicks = picks;
+        _selectedPick = selected;
       });
     } catch (_) {}
   }
@@ -106,7 +114,7 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
   }
 
   Future<void> _loadTemplates() async {
-    final teamId = _selectedTeam?.teamId ?? _draft?.teamId;
+    final teamId = _selectedPick?.teamId ?? _draft?.teamId;
     if (teamId == null) return;
     try {
       final list = await _templateService.list(teamId);
@@ -126,7 +134,7 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
   }
 
   Future<void> _saveAsTemplate() async {
-    final teamId = _selectedTeam?.teamId ?? _draft?.teamId;
+    final teamId = _selectedPick?.teamId ?? _draft?.teamId;
     if (teamId == null || _convokedIds.isEmpty) return;
     final name = await showDialog<String>(
       context: context,
@@ -203,7 +211,7 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
   }
 
   Future<void> _createDraft() async {
-    if (!_formKey.currentState!.validate() || _selectedTeam == null) return;
+    if (!_formKey.currentState!.validate() || _selectedPick == null) return;
 
     setState(() => _loading = true);
     try {
@@ -216,7 +224,9 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
       );
       final payload = {
         'title': _titleController.text.trim(),
-        'teamId': _selectedTeam!.teamId,
+        'teamId': _selectedPick!.teamId,
+        if (_selectedPick!.categoryId != null)
+          'categoryId': _selectedPick!.categoryId,
         'eventDate': dt.toIso8601String(),
         'opponentName': _opponentController.text.trim(),
         'location': _locationController.text.trim(),
@@ -272,8 +282,9 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
         await _convocationsService.sendConvocation(_draft!.id);
       }
       if (mounted) {
-        Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        final nav = Navigator.of(context);
+        messenger.showSnackBar(
           SnackBar(
             content: Text(
               send
@@ -283,6 +294,7 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        nav.pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -327,27 +339,31 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          if (_teams.isEmpty)
+          if (_teamPicks.isEmpty)
             const Text('No tenés equipos asignados.')
           else
-            DropdownButtonFormField<MyTeamOption>(
-              value: _selectedTeam != null &&
-                      _teams.any((t) => t.teamId == _selectedTeam!.teamId)
-                  ? _selectedTeam
+            DropdownButtonFormField<TeamCategoryPick>(
+              value: _selectedPick != null &&
+                      _teamPicks.any(
+                        (p) =>
+                            p.teamId == _selectedPick!.teamId &&
+                            p.categoryId == _selectedPick!.categoryId,
+                      )
+                  ? _selectedPick
                   : null,
               decoration: const InputDecoration(
-                labelText: 'Equipo',
+                labelText: 'Equipo y categoría',
                 border: OutlineInputBorder(),
               ),
-              items: _teams
+              items: _teamPicks
                   .map(
-                    (t) => DropdownMenuItem(
-                      value: t,
-                      child: Text(t.displayLabel),
+                    (p) => DropdownMenuItem(
+                      value: p,
+                      child: Text(p.label),
                     ),
                   )
                   .toList(),
-              onChanged: (v) => setState(() => _selectedTeam = v),
+              onChanged: (v) => setState(() => _selectedPick = v),
             ),
           const SizedBox(height: 12),
           TextFormField(

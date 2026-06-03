@@ -4,6 +4,7 @@ import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/features/finance/ledger_tab.dart';
 import 'package:sportify_amateur/features/finance/my_account_tab.dart';
 import 'package:sportify_amateur/features/finance/team_finance_tab.dart';
+import 'package:sportify_amateur/features/finance/quota_overview_screen.dart';
 import 'package:sportify_amateur/models/team.dart';
 
 class FinanceHubScreen extends StatefulWidget {
@@ -155,6 +156,22 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
                 ],
               ),
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.groups),
+                  tooltip: 'Cuotas del plantel',
+                  onPressed: _selectedTeam == null
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => QuotaOverviewScreen(
+                                teamId: _selectedTeam!.id,
+                              ),
+                            ),
+                          );
+                        },
+                ),
                 IconButton(
                   icon: const Icon(Icons.refresh),
                   onPressed: () => _refreshCurrentTab(tabController),

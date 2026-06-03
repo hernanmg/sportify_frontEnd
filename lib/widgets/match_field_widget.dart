@@ -10,6 +10,7 @@ class MatchFieldWidget extends StatelessWidget {
   final bool compact;
   final bool showFormationLabel;
   final void Function(int userId)? onPlayerTap;
+  final void Function(int userId, Offset normalizedPosition)? onSlotMoved;
 
   const MatchFieldWidget({
     super.key,
@@ -19,6 +20,7 @@ class MatchFieldWidget extends StatelessWidget {
     this.compact = false,
     this.showFormationLabel = true,
     this.onPlayerTap,
+    this.onSlotMoved,
   });
 
   @override
@@ -42,6 +44,7 @@ class MatchFieldWidget extends StatelessWidget {
                   slots: slots,
                   compact: compact,
                   onPlayerTap: onPlayerTap,
+                  onSlotMoved: onSlotMoved,
                 ),
               ),
             ],
@@ -60,6 +63,7 @@ class MatchFieldWidget extends StatelessWidget {
                 slots: slots,
                 compact: compact,
                 onPlayerTap: onPlayerTap,
+                onSlotMoved: onSlotMoved,
               ),
             ),
           ],
@@ -93,12 +97,14 @@ class _PitchStack extends StatelessWidget {
   final Map<int, Offset> slots;
   final bool compact;
   final void Function(int userId)? onPlayerTap;
+  final void Function(int userId, Offset normalizedPosition)? onSlotMoved;
 
   const _PitchStack({
     required this.players,
     required this.slots,
     required this.compact,
     this.onPlayerTap,
+    this.onSlotMoved,
   });
 
   @override
@@ -132,6 +138,21 @@ class _PitchStack extends StatelessWidget {
                 child: GestureDetector(
                   onTap: onPlayerTap != null
                       ? () => onPlayerTap!(p.userId)
+                      : null,
+                  onPanUpdate: onSlotMoved != null
+                      ? (d) {
+                          final nx =
+                              ((pos.dx * w) + d.delta.dx) / w;
+                          final ny =
+                              ((pos.dy * h) + d.delta.dy) / h;
+                          onSlotMoved!(
+                            p.userId,
+                            Offset(
+                              nx.clamp(0.05, 0.95),
+                              ny.clamp(0.05, 0.95),
+                            ),
+                          );
+                        }
                       : null,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

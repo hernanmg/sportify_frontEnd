@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sportify_amateur/models/team.dart';
 
 class MyTeamOption {
@@ -26,10 +27,38 @@ class MyTeamOption {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is MyTeamOption && other.teamId == teamId;
+      other is MyTeamOption &&
+          other.teamId == teamId &&
+          listEquals(other.categoryIds, categoryIds);
 
   @override
-  int get hashCode => teamId.hashCode;
+  int get hashCode => Object.hash(teamId, Object.hashAll(categoryIds));
+
+  /// Una fila por categoría (ej. ZFC +40 y ZFC +35 por separado).
+  static List<MyTeamOption> expandByCategory(List<MyTeamOption> list) {
+    final out = <MyTeamOption>[];
+    for (final t in list) {
+      if (t.categoryIds.length <= 1) {
+        out.add(t);
+        continue;
+      }
+      for (var i = 0; i < t.categoryIds.length; i++) {
+        final id = t.categoryIds[i];
+        final name = i < t.categories.length
+            ? t.categories[i]
+            : 'Categoría $id';
+        out.add(MyTeamOption(
+          teamId: t.teamId,
+          name: t.name,
+          categories: [name],
+          categoryIds: [id],
+          isTeamAdmin: t.isTeamAdmin,
+          team: t.team,
+        ));
+      }
+    }
+    return out;
+  }
 
   /// Un equipo por `teamId` (evita ítems duplicados en dropdowns).
   static List<MyTeamOption> dedupeByTeamId(List<MyTeamOption> list) {

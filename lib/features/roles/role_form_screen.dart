@@ -180,7 +180,7 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
   Widget build(BuildContext context) {
     final isEditing = widget.role != null;
     final isSystemRole = isEditing &&
-        ['super_admin', 'manager', 'team_captain', 'player', 'guest']
+        ['super_admin', 'manager', 'dt', 'team_captain', 'player', 'guest']
             .contains(widget.role!.name);
 
     return Scaffold(

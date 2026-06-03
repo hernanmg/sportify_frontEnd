@@ -110,7 +110,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
         _selectedCategoryIds.addAll(team.categoryIds);
       }
     });
-    if (_selectedType == SportEventType.social && team != null) {
+    if ((_selectedType == SportEventType.social ||
+            _selectedType == SportEventType.training) &&
+        team != null) {
       await _loadInvitees();
     }
   }
@@ -288,7 +290,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
                     .map(
                       (team) => DropdownMenuItem(
                         value: team,
-                        child: Text(team.displayLabel),
+                        child: Text(team.name),
                       ),
                     )
                     .toList(),
@@ -447,10 +449,63 @@ class _EventFormScreenState extends State<EventFormScreen> {
   Widget _buildTypeSpecificSection() {
     if (_selectedType == SportEventType.match) {
       return _buildMatchSection();
-    } else if (_selectedType == SportEventType.social) {
+    }
+    if (_selectedType == SportEventType.social) {
       return _buildSocialSection();
     }
+    if (_selectedType == SportEventType.training) {
+      return _buildTrainingSection();
+    }
     return const SizedBox.shrink();
+  }
+
+  Widget _buildTrainingSection() {
+    final team = _selectedTeam;
+    if (team == null) return const SizedBox.shrink();
+    final catIds = team.categoryIds;
+    if (catIds.isEmpty) return const SizedBox.shrink();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Categorías del entrenamiento',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Elegí una o más categorías convocadas a este entreno.',
+              style: TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: List.generate(catIds.length, (i) {
+                final id = catIds[i];
+                final name =
+                    i < team.categories.length ? team.categories[i] : 'Cat $id';
+                final selected = _selectedCategoryIds.contains(id);
+                return FilterChip(
+                  label: Text(name),
+                  selected: selected,
+                  onSelected: (v) {
+                    setState(() {
+                      if (v) {
+                        _selectedCategoryIds.add(id);
+                      } else {
+                        _selectedCategoryIds.remove(id);
+                      }
+                    });
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildMatchSection() {
@@ -885,12 +940,28 @@ class _EventFormScreenState extends State<EventFormScreen> {
   }
 
   Future<void> _selectConfirmationDeadline() async {
+    final eventStart = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+    final now = DateTime.now();
+    final firstDate = DateTime(now.year, now.month, now.day);
+    final lastDate = eventStart.isAfter(now)
+        ? eventStart
+        : now.add(const Duration(days: 1));
+    var initial = _confirmationDeadline ??
+        eventStart.subtract(const Duration(hours: 2));
+    if (initial.isBefore(firstDate)) initial = firstDate;
+    if (initial.isAfter(lastDate)) initial = lastDate;
+
     final date = await showDatePicker(
       context: context,
-      initialDate: _confirmationDeadline ??
-          _selectedDate.subtract(const Duration(hours: 2)),
-      firstDate: DateTime.now(),
-      lastDate: _selectedDate,
+      initialDate: initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
     if (date != null) {
       final time = await showTimePicker(
@@ -921,6 +992,17 @@ class _EventFormScreenState extends State<EventFormScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Seleccioná un equipo para el evento'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (_selectedType == SportEventType.training &&
+        _selectedTeam!.categoryIds.isNotEmpty &&
+        _selectedCategoryIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seleccioná al menos una categoría para el entrenamiento'),
           backgroundColor: Colors.red,
         ),
       );
@@ -969,6 +1051,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
           'isOfficialMatch': _isOfficialMatch,
           'requiresPaymentUpToDate': _requiresPaymentUpToDate,
         },
+
+        if (_selectedType == SportEventType.training &&
+            _selectedCategoryIds.isNotEmpty)
+          'categoryIds': _selectedCategoryIds.toList(),
 
         // Para eventos sociales
         if (_selectedType == SportEventType.social) ...{

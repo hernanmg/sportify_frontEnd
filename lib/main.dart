@@ -38,7 +38,11 @@ import 'package:sportify_amateur/features/users/users_screen.dart';
 import 'package:sportify_amateur/features/notifications/notification_screen.dart';
 import 'package:sportify_amateur/features/finance/finance_hub_screen.dart';
 import 'package:sportify_amateur/features/sports/my_events_screen.dart';
+import 'package:sportify_amateur/features/sports/my_matches_screen.dart';
 import 'package:sportify_amateur/features/teams/join_team_screen.dart';
+import 'package:sportify_amateur/features/sports/team_admin_panel_screen.dart';
+import 'package:sportify_amateur/features/finance/quota_overview_screen.dart';
+import 'package:sportify_amateur/features/sports/attendance_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -106,8 +110,49 @@ class MainApp extends StatelessWidget {
         '/teams': (context) => const TeamsManagementScreen(),
         '/notifications': (context) => const NotificationsScreen(),
         '/my-events': (context) => const MyEventsScreen(),
+        '/sports/my-matches': (context) => const MyMatchesScreen(),
         '/join-team': (context) => const JoinTeamScreen(),
         '/finances': (context) => const FinanceHubScreen(),
+        '/sports/admin-panel': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          int? teamId;
+          if (args is Map) {
+            final raw = args['teamId'];
+            if (raw is int) teamId = raw;
+            if (raw != null && teamId == null) teamId = int.tryParse('$raw');
+          }
+          return TeamAdminPanelScreen(initialTeamId: teamId);
+        },
+        '/finances/quota-overview': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          int? teamId;
+          if (args is Map) {
+            final raw = args['teamId'];
+            if (raw is int) teamId = raw;
+            if (raw != null && teamId == null) teamId = int.tryParse('$raw');
+          }
+          if (teamId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Falta teamId')),
+            );
+          }
+          return QuotaOverviewScreen(teamId: teamId);
+        },
+        '/sports/attendance': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          int? teamId;
+          if (args is Map) {
+            final raw = args['teamId'];
+            if (raw is int) teamId = raw;
+            if (raw != null && teamId == null) teamId = int.tryParse('$raw');
+          }
+          if (teamId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Falta teamId')),
+            );
+          }
+          return AttendanceScreen(teamId: teamId);
+        },
         '/dashboard': (context) => const DashboardScreen(),
         '/secondary': (context) => const SecondaryHomeScreen(),
         '/roles': (context) => const RolesScreen(),

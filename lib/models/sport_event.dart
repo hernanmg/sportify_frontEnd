@@ -252,6 +252,7 @@ class SportEvent {
 
   final String? notes;
   final Map<String, dynamic>? metadata;
+  final bool postMatchVotingClosed;
   final List<EventParticipant> participants;
   final String? myParticipationStatus;
   final DateTime createdAt;
@@ -282,6 +283,7 @@ class SportEvent {
     required this.requiresPaymentUpToDate,
     this.notes,
     this.metadata,
+    this.postMatchVotingClosed = false,
     required this.participants,
     this.myParticipationStatus,
     required this.createdAt,
@@ -324,6 +326,9 @@ class SportEvent {
       metadata: json['metadata'] != null
           ? Map<String, dynamic>.from(json['metadata'])
           : null,
+      postMatchVotingClosed: json['postMatchVotingClosed'] ==
+              true ||
+          json['post_match_voting_closed'] == true,
       participants: json['participants'] != null
           ? (json['participants'] as List)
               .map((p) => EventParticipant.fromJson(p))
@@ -361,17 +366,31 @@ class SportEvent {
     };
   }
 
+  /// Participantes visibles en listados (en partidos, solo convocados).
+  List<EventParticipant> get visibleParticipants {
+    if (type != SportEventType.match) return participants;
+    return participants.where((p) => p.isConvoked).toList();
+  }
+
   // Getters computados
-  int get participantCount => participants.length;
+  int get participantCount => visibleParticipants.length;
 
-  int get confirmedCount =>
-      participants.where((p) => p.status == ParticipantStatus.confirmed).length;
+  int get confirmedCount => visibleParticipants
+      .where((p) => p.status == ParticipantStatus.confirmed)
+      .length;
 
-  int get pendingCount =>
-      participants.where((p) => p.status == ParticipantStatus.pending).length;
+  int get pendingCount => visibleParticipants
+      .where((p) => p.status == ParticipantStatus.pending)
+      .length;
 
-  int get declinedCount =>
-      participants.where((p) => p.status == ParticipantStatus.declined).length;
+  int get declinedCount => visibleParticipants
+      .where((p) => p.status == ParticipantStatus.declined)
+      .length;
+
+  bool get canDeleteConvocation =>
+      type == SportEventType.match &&
+      status == SportEventStatus.completed &&
+      postMatchVotingClosed;
 
   String get typeDisplayName {
     switch (type) {

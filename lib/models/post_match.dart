@@ -9,6 +9,7 @@ class PostMatchPlayerOfMatch {
   final int? jerseyNumber;
   final double? officialScore;
   final double? teamAvgScore;
+  final double? combinedScore;
 
   PostMatchPlayerOfMatch({
     required this.userId,
@@ -17,6 +18,7 @@ class PostMatchPlayerOfMatch {
     this.jerseyNumber,
     this.officialScore,
     this.teamAvgScore,
+    this.combinedScore,
   });
 
   factory PostMatchPlayerOfMatch.fromJson(Map<String, dynamic> json) {
@@ -27,10 +29,19 @@ class PostMatchPlayerOfMatch {
       jerseyNumber: json['jerseyNumber'] as int?,
       officialScore: _toDouble(json['officialScore']),
       teamAvgScore: _toDouble(json['teamAvgScore']),
+      combinedScore: _toDouble(json['combinedScore']),
     );
   }
 
-  double? get displayScore => officialScore ?? teamAvgScore;
+  double? get displayScore {
+    if (combinedScore != null) return combinedScore;
+    final parts = <double>[];
+    if (teamAvgScore != null) parts.add(teamAvgScore!);
+    if (officialScore != null) parts.add(officialScore!);
+    if (parts.isEmpty) return null;
+    final avg = parts.reduce((a, b) => a + b) / parts.length;
+    return (avg * 10).round() / 10;
+  }
 }
 
 class PostMatchPlayerRow {
@@ -71,6 +82,15 @@ class PostMatchPlayerRow {
       officialScore: _toDouble(json['officialScore']),
       myVote: json['myVote'] as int?,
     );
+  }
+
+  double? get displayScore {
+    final parts = <double>[];
+    if (teamAvgScore != null) parts.add(teamAvgScore!);
+    if (officialScore != null) parts.add(officialScore!);
+    if (parts.isEmpty) return null;
+    final avg = parts.reduce((a, b) => a + b) / parts.length;
+    return (avg * 10).round() / 10;
   }
 }
 
@@ -200,6 +220,7 @@ class PostMatchData {
   final bool canVote;
   final bool canManage;
   final PostMatchPlayerOfMatch? playerOfMatch;
+  final List<PostMatchPlayerOfMatch> playerOfMatchTied;
   final List<PostMatchPlayerRow> targets;
   final int myVotesCount;
   final int votesExpected;
@@ -228,6 +249,7 @@ class PostMatchData {
     required this.canVote,
     required this.canManage,
     this.playerOfMatch,
+    this.playerOfMatchTied = const [],
     required this.targets,
     required this.myVotesCount,
     required this.votesExpected,
@@ -246,6 +268,7 @@ class PostMatchData {
 
   factory PostMatchData.fromJson(Map<String, dynamic> json) {
     final pom = json['playerOfMatch'];
+    final tiedRaw = json['playerOfMatchTied'];
     final report = json['report'];
     final reportMap = report is Map ? Map<String, dynamic>.from(report) : null;
     return PostMatchData(
@@ -263,6 +286,16 @@ class PostMatchData {
       playerOfMatch: pom is Map<String, dynamic>
           ? PostMatchPlayerOfMatch.fromJson(pom)
           : null,
+      playerOfMatchTied: tiedRaw is List
+          ? tiedRaw
+              .whereType<Map>()
+              .map(
+                (e) => PostMatchPlayerOfMatch.fromJson(
+                  Map<String, dynamic>.from(e),
+                ),
+              )
+              .toList()
+          : const [],
       targets: (json['targets'] as List<dynamic>? ?? [])
           .map((e) => PostMatchPlayerRow.fromJson(
                 Map<String, dynamic>.from(e as Map),

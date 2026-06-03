@@ -207,4 +207,289 @@ class FinanceService {
       Map<String, dynamic>.from(response.data as Map),
     );
   }
+
+  Future<Map<String, dynamic>> generateMonthlyQuota({
+    required int teamId,
+    required int year,
+    required int month,
+    required double amount,
+    String? season,
+  }) async {
+    final response = await _dio.post('/finance/fees/monthly-quota', data: {
+      'teamId': teamId,
+      'year': year,
+      'month': month,
+      'amount': amount,
+      if (season != null) 'season': season,
+    });
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<QuotaOverview> getQuotaOverview(int teamId, {String? concept}) async {
+    final response = await _dio.get(
+      '/finance/team/$teamId/quota-overview',
+      queryParameters: concept != null ? {'concept': concept} : null,
+    );
+    return QuotaOverview.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  Future<Map<String, dynamic>> sendQuotaReminders(
+    int teamId, {
+    String? concept,
+  }) async {
+    final response = await _dio.post(
+      '/finance/team/$teamId/quota-reminders',
+      queryParameters: concept != null ? {'concept': concept} : null,
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<TrainingCollectionView> getTrainingCollection(int eventId) async {
+    final response =
+        await _dio.get('/finance/sport-events/$eventId/training-collection');
+    return TrainingCollectionView.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+
+  Future<Map<String, dynamic>> openTrainingCollection(
+    int eventId, {
+    required double amountPerPlayer,
+    String? notes,
+  }) async {
+    final response = await _dio.post(
+      '/finance/sport-events/$eventId/training-collection',
+      data: {
+        'amountPerPlayer': amountPerPlayer,
+        if (notes != null) 'notes': notes,
+      },
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<LedgerEntry> createTrainingExpense({
+    required int teamId,
+    required int sportEventId,
+    required double amount,
+    required String description,
+  }) async {
+    final response = await _dio.post('/finance/training-expenses', data: {
+      'teamId': teamId,
+      'sportEventId': sportEventId,
+      'amount': amount,
+      'description': description,
+    });
+    return LedgerEntry.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
+  }
+}
+
+class QuotaOverview {
+  final int teamId;
+  final String? concept;
+  final double totalCharged;
+  final double totalPaid;
+  final double totalOutstanding;
+  final int playersCount;
+  final int paidCount;
+  final int pendingCount;
+  final List<QuotaPlayerRow> players;
+
+  QuotaOverview({
+    required this.teamId,
+    this.concept,
+    required this.totalCharged,
+    required this.totalPaid,
+    required this.totalOutstanding,
+    required this.playersCount,
+    required this.paidCount,
+    required this.pendingCount,
+    required this.players,
+  });
+
+  factory QuotaOverview.fromJson(Map<String, dynamic> json) {
+    return QuotaOverview(
+      teamId: json['teamId'] as int,
+      concept: json['concept']?.toString(),
+      totalCharged: _parseAmount(json['totalCharged']),
+      totalPaid: _parseAmount(json['totalPaid']),
+      totalOutstanding: _parseAmount(json['totalOutstanding']),
+      playersCount: json['playersCount'] as int? ?? 0,
+      paidCount: json['paidCount'] as int? ?? 0,
+      pendingCount: json['pendingCount'] as int? ?? 0,
+      players: (json['players'] as List<dynamic>? ?? [])
+          .map((e) => QuotaPlayerRow.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+    );
+  }
+}
+
+class QuotaPlayerRow {
+  final int userId;
+  final String userName;
+  final double totalCharged;
+  final double totalPaid;
+  final double balance;
+  final String status;
+
+  QuotaPlayerRow({
+    required this.userId,
+    required this.userName,
+    required this.totalCharged,
+    required this.totalPaid,
+    required this.balance,
+    required this.status,
+  });
+
+  factory QuotaPlayerRow.fromJson(Map<String, dynamic> json) {
+    return QuotaPlayerRow(
+      userId: json['userId'] as int,
+      userName: json['userName']?.toString() ?? '',
+      totalCharged: _parseAmount(json['totalCharged']),
+      totalPaid: _parseAmount(json['totalPaid']),
+      balance: _parseAmount(json['balance']),
+      status: json['status']?.toString() ?? 'pending',
+    );
+  }
+
+  bool get isPaid => balance <= 0.01;
+}
+
+class TrainingCollectionView {
+  final int eventId;
+  final int teamId;
+  final String title;
+  final double totalExpense;
+  final int confirmedCount;
+  final double? amountPerPlayer;
+  final List<TrainingExpenseRow> expenses;
+  final List<TrainingCollectionPlayer> players;
+  final TrainingCollectionSummary summary;
+
+  TrainingCollectionView({
+    required this.eventId,
+    required this.teamId,
+    required this.title,
+    required this.totalExpense,
+    required this.confirmedCount,
+    this.amountPerPlayer,
+    required this.expenses,
+    required this.players,
+    required this.summary,
+  });
+
+  factory TrainingCollectionView.fromJson(Map<String, dynamic> json) {
+    return TrainingCollectionView(
+      eventId: json['eventId'] as int,
+      teamId: json['teamId'] as int,
+      title: json['title']?.toString() ?? '',
+      totalExpense: _parseAmount(json['totalExpense']),
+      confirmedCount: json['confirmedCount'] as int? ?? 0,
+      amountPerPlayer: json['amountPerPlayer'] != null
+          ? _parseAmount(json['amountPerPlayer'])
+          : null,
+      expenses: (json['expenses'] as List<dynamic>? ?? [])
+          .map(
+            (e) => TrainingExpenseRow.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ),
+          )
+          .toList(),
+      players: (json['players'] as List<dynamic>? ?? [])
+          .map(
+            (e) => TrainingCollectionPlayer.fromJson(
+              Map<String, dynamic>.from(e as Map),
+            ),
+          )
+          .toList(),
+      summary: TrainingCollectionSummary.fromJson(
+        Map<String, dynamic>.from(json['summary'] as Map? ?? {}),
+      ),
+    );
+  }
+
+  bool get isOpen => players.isNotEmpty || totalExpense > 0;
+}
+
+class TrainingExpenseRow {
+  final int id;
+  final double amount;
+  final String description;
+
+  TrainingExpenseRow({
+    required this.id,
+    required this.amount,
+    required this.description,
+  });
+
+  factory TrainingExpenseRow.fromJson(Map<String, dynamic> json) {
+    return TrainingExpenseRow(
+      id: json['id'] as int,
+      amount: _parseAmount(json['amount']),
+      description: json['description']?.toString() ?? '',
+    );
+  }
+}
+
+class TrainingCollectionPlayer {
+  final int userId;
+  final String userName;
+  final int? chargeId;
+  final double amount;
+  final double paidAmount;
+  final String status;
+  final double balance;
+
+  TrainingCollectionPlayer({
+    required this.userId,
+    required this.userName,
+    this.chargeId,
+    required this.amount,
+    required this.paidAmount,
+    required this.status,
+    required this.balance,
+  });
+
+  factory TrainingCollectionPlayer.fromJson(Map<String, dynamic> json) {
+    return TrainingCollectionPlayer(
+      userId: json['userId'] as int,
+      userName: json['userName']?.toString() ?? '',
+      chargeId: json['chargeId'] as int?,
+      amount: _parseAmount(json['amount']),
+      paidAmount: _parseAmount(json['paidAmount']),
+      status: json['status']?.toString() ?? 'pending',
+      balance: _parseAmount(json['balance']),
+    );
+  }
+
+  bool get isPaid => balance <= 0.01;
+}
+
+class TrainingCollectionSummary {
+  final int total;
+  final int paid;
+  final int pending;
+
+  TrainingCollectionSummary({
+    required this.total,
+    required this.paid,
+    required this.pending,
+  });
+
+  factory TrainingCollectionSummary.fromJson(Map<String, dynamic> json) {
+    return TrainingCollectionSummary(
+      total: json['total'] as int? ?? 0,
+      paid: json['paid'] as int? ?? 0,
+      pending: json['pending'] as int? ?? 0,
+    );
+  }
+}
+
+double _parseAmount(dynamic v) {
+  if (v == null) return 0;
+  if (v is num) return v.toDouble();
+  return double.tryParse(v.toString()) ?? 0;
 }
