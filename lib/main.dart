@@ -12,7 +12,8 @@ import 'package:sportify_amateur/core/common/themes_provider.dart';
 import 'package:sportify_amateur/features/auth/login.dart';
 import 'package:sportify_amateur/features/auth/user_login.dart';
 import 'package:sportify_amateur/features/auth/register_screen.dart';
-import 'package:sportify_amateur/features/dashboard/dashboard_screen.dart';
+import 'package:sportify_amateur/core/common/season_provider.dart';
+import 'package:sportify_amateur/features/shell/app_shell_screen.dart';
 import 'package:sportify_amateur/features/profile/profile_screen.dart';
 import 'package:sportify_amateur/features/profile/profile_info_screen.dart';
 import 'package:sportify_amateur/features/profile/security_screen.dart';
@@ -59,10 +60,15 @@ void main() async {
   }
   // Limpia el token al iniciar la app (solo para pruebas)
   // await storageService.clearStoredToken();
-  runApp(ChangeNotifierProvider(
-    create: (_) => ThemeProvider(),
-    child: const MainApp(),
-  ));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => SeasonProvider()),
+      ],
+      child: const MainApp(),
+    ),
+  );
 }
 
 class MainApp extends StatelessWidget {
@@ -73,6 +79,7 @@ class MainApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
       navigatorKey: AppNavigator.key,
+      scaffoldMessengerKey: AppNavigator.messengerKey,
       title: 'Sportify Amateur',
       theme: ThemeData(
         brightness: Brightness.light,
@@ -153,7 +160,7 @@ class MainApp extends StatelessWidget {
           }
           return AttendanceScreen(teamId: teamId);
         },
-        '/dashboard': (context) => const DashboardScreen(),
+        '/dashboard': (context) => const AppShellScreen(),
         '/secondary': (context) => const SecondaryHomeScreen(),
         '/roles': (context) => const RolesScreen(),
         '/users': (context) => const UsersScreen(),

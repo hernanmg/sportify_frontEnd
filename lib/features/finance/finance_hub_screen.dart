@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/widgets/season_selector_chip.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/features/finance/ledger_tab.dart';
@@ -156,6 +157,7 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
                 ],
               ),
               actions: [
+                const SeasonSelectorChip(),
                 IconButton(
                   icon: const Icon(Icons.groups),
                   tooltip: 'Cuotas del plantel',

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/finance_service.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
@@ -91,7 +93,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
     if (amount == null || amount <= 0) return;
 
     try {
-      final season = RosterService.getSeasons().first;
+      final season = context.read<SeasonProvider>().season;
       await _finance.generateMonthlyQuota(
         teamId: widget.teamId,
         year: now.year,
@@ -148,6 +150,11 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
   @override
   Widget build(BuildContext context) {
     final o = _overview;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final onSurface = theme.colorScheme.onSurface;
+    final onVariant = theme.colorScheme.onSurfaceVariant;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Estado de cuotas'),
@@ -168,7 +175,9 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
                           padding: const EdgeInsets.all(16),
                           children: [
                             Card(
-                              color: Colors.blue.shade50,
+                              color: isDark
+                                  ? theme.colorScheme.surfaceContainerHigh
+                                  : Colors.blue.shade50,
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Column(
@@ -177,16 +186,17 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
                                     if (o.concept != null)
                                       Text(
                                         o.concept!,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.bold,
+                                          color: onSurface,
                                         ),
                                       ),
                                     const SizedBox(height: 8),
                                     Text(
                                       'Todo el plantel puede ver quién está al día. '
                                       'La responsabilidad es del grupo.',
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(color: onVariant),
                                     ),
                                     const SizedBox(height: 12),
                                     Row(
@@ -218,16 +228,27 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
                             ...o.players.map((p) {
                               return ListTile(
                                 tileColor: p.isPaid
-                                    ? Colors.green.shade50
-                                    : Colors.orange.shade50,
+                                    ? (isDark
+                                        ? Colors.green.withValues(alpha: 0.22)
+                                        : Colors.green.shade50)
+                                    : (isDark
+                                        ? Colors.orange.withValues(alpha: 0.22)
+                                        : Colors.orange.shade50),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                title: Text(p.userName),
+                                title: Text(
+                                  p.userName,
+                                  style: TextStyle(
+                                    color: onSurface,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                                 subtitle: Text(
                                   p.isPaid
                                       ? 'Al día'
                                       : 'Debe ${formatMoney(p.balance)}',
+                                  style: TextStyle(color: onVariant),
                                 ),
                                 trailing: Icon(
                                   p.isPaid
@@ -272,9 +293,15 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
   }
 
   Widget _chip(String label, String value, Color color) {
+    final theme = Theme.of(context);
     return Column(
       children: [
-        Text(label, style: Theme.of(context).textTheme.labelSmall),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
         Text(
           value,
           style: TextStyle(

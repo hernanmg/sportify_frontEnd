@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
@@ -122,7 +124,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
     if (team == null) return;
     setState(() => _loadingInvitees = true);
     try {
-      final season = RosterService.getSeasons().first;
+      final season = context.read<SeasonProvider>().season;
       final categoryFilter = _selectedCategoryIds.isEmpty
           ? team.categoryIds
           : _selectedCategoryIds.toList();

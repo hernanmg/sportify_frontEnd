@@ -16,6 +16,10 @@ import 'package:sportify_amateur/features/sports/team_admin_panel_screen.dart';
 import 'package:sportify_amateur/features/finance/quota_overview_screen.dart';
 import 'package:sportify_amateur/features/sports/attendance_screen.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
+import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/season_provider.dart';
+import 'package:sportify_amateur/widgets/season_selector_chip.dart';
 
 class SportsManagementScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -111,6 +115,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
           ],
         ),
         actions: [
+          const SeasonSelectorChip(),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) => _handleMenuAction(value),
@@ -210,7 +215,14 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
           ),
         ],
       ),
-      floatingActionButton: _buildFloatingActionButton(),
+      floatingActionButton: () {
+        final fab = _buildFloatingActionButton();
+        if (fab == null) return null;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: kAppShellBottomInset),
+          child: fab,
+        );
+      }(),
     );
   }
 
@@ -613,7 +625,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
   }
 
   Future<void> _addToRoster() async {
-    final season = RosterService.getSeasons().first;
+    final season = context.read<SeasonProvider>().season;
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(

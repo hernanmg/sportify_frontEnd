@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/services/finance_service.dart';
 import 'package:sportify_amateur/features/finance/payment_receipt_dialog.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
@@ -25,6 +27,21 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
   void initState() {
     super.initState();
     reload();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<SeasonProvider>().addListener(_onSeasonChanged);
+      }
+    });
+  }
+
+  void _onSeasonChanged() => reload();
+
+  @override
+  void dispose() {
+    try {
+      context.read<SeasonProvider>().removeListener(_onSeasonChanged);
+    } catch (_) {}
+    super.dispose();
   }
 
   @override
@@ -51,9 +68,10 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
 
     try {
       final teamId = widget.teamId!;
+      final season = context.read<SeasonProvider>().season;
       final results = await Future.wait([
         _financeService.getTeamSummary(teamId),
-        _financeService.getTeamPlayerBalances(teamId),
+        _financeService.getTeamPlayerBalances(teamId, season: season),
         _financeService.getPendingPayments(teamId),
       ]);
       if (!mounted) return;
@@ -155,7 +173,7 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
     final conceptController = TextEditingController(text: 'Cuota mensual');
     final amountController = TextEditingController();
     final seasons = RosterService.getSeasons();
-    String selectedSeason = seasons.first;
+    String selectedSeason = context.read<SeasonProvider>().season;
     DateTime? selectedDueDate;
 
     final confirmed = await showDialog<bool>(

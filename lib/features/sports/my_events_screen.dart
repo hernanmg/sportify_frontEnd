@@ -120,7 +120,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                   : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView.builder(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
                         itemCount: _events.length,
                         itemBuilder: (context, index) {
                           final event = _events[index];
@@ -146,7 +146,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                                   subtitle: Text(
                                     '${event.teamName ?? 'Equipo'} · ${event.formattedDate}',
                                   ),
-                                  trailing: _statusChip(status),
+                                  trailing: _statusChip(context, status),
                                   onTap: () => _openEvent(event),
                                 ),
                                 if (isPending) ...[
@@ -208,22 +208,61 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
     );
   }
 
-  Widget _statusChip(String? status) {
+  Widget _statusChip(BuildContext context, String? status) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     switch (status) {
       case 'confirmed':
         return Chip(
-          label: const Text('Confirmado'),
-          backgroundColor: Colors.green.shade100,
+          label: Text(
+            'Confirmado',
+            style: TextStyle(
+              color: isDark ? Colors.green.shade900 : Colors.green.shade900,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+          backgroundColor:
+              isDark ? Colors.green.shade300 : Colors.green.shade100,
+          side: BorderSide(
+            color: isDark ? Colors.green.shade600 : Colors.green.shade300,
+          ),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
         );
       case 'declined':
         return Chip(
-          label: const Text('Rechazado'),
-          backgroundColor: Colors.red.shade100,
+          label: Text(
+            'Rechazado',
+            style: TextStyle(
+              color: isDark ? Colors.red.shade900 : Colors.red.shade900,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+          backgroundColor: isDark ? Colors.red.shade300 : Colors.red.shade100,
+          side: BorderSide(
+            color: isDark ? Colors.red.shade600 : Colors.red.shade300,
+          ),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
         );
       default:
         return Chip(
-          label: const Text('Pendiente'),
-          backgroundColor: Colors.orange.shade100,
+          label: Text(
+            'Pendiente',
+            style: TextStyle(
+              color: isDark ? Colors.orange.shade900 : Colors.orange.shade900,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+          backgroundColor:
+              isDark ? Colors.orange.shade300 : Colors.orange.shade100,
+          side: BorderSide(
+            color: isDark ? Colors.orange.shade700 : Colors.orange.shade300,
+          ),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
         );
     }
   }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/player_roster.dart';
@@ -35,6 +37,32 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
     super.initState();
     _selectedSeason = widget.season ?? RosterService.getSeasons().first;
     _loadRoster();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.season != null) return;
+      context.read<SeasonProvider>().addListener(_onGlobalSeason);
+      _syncFromGlobalSeason();
+    });
+  }
+
+  void _onGlobalSeason() => _syncFromGlobalSeason();
+
+  void _syncFromGlobalSeason() {
+    if (widget.season != null || !mounted) return;
+    final s = context.read<SeasonProvider>().season;
+    if (s != _selectedSeason) {
+      setState(() => _selectedSeason = s);
+      _loadRoster();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.season == null) {
+      try {
+        context.read<SeasonProvider>().removeListener(_onGlobalSeason);
+      } catch (_) {}
+    }
+    super.dispose();
   }
 
   Future<void> _loadRoster() async {

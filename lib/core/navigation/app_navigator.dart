@@ -7,6 +7,10 @@ class AppNavigator {
 
   static final GlobalKey<NavigatorState> key = GlobalKey<NavigatorState>();
 
+  /// Mensajes globales sin empujar el FAB del shell.
+  static final GlobalKey<ScaffoldMessengerState> messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+
   static NavigatorState? get state => key.currentState;
 
   static void openFromPushData(Map<String, dynamic> data) {
