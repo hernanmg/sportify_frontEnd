@@ -41,9 +41,14 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   final TextEditingController _emergencyContactController =
       TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _guestFirstNameController =
+      TextEditingController();
+  final TextEditingController _guestLastNameController =
+      TextEditingController();
 
   // Form data
   User? _selectedUser;
+  bool _isGuestMode = false;
   Team? _selectedTeam;
   DateTime? _medicalCertificateDate;
   DateTime? _medicalCertificateExpires;
@@ -269,6 +274,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
 
     final uid = roster.player?.userId;
     if (uid != null) {
+      _isGuestMode = false;
       try {
         _selectedUser =
             _availableUsers.firstWhere((user) => user.id == uid);
@@ -276,6 +282,21 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
         final stub = _stubUserFromRoster(roster);
         _availableUsers = [..._availableUsers, stub];
         _selectedUser = stub;
+      }
+    } else {
+      _isGuestMode = true;
+      _selectedUser = null;
+      _guestFirstNameController.text = roster.player?.guestFirstName ?? '';
+      _guestLastNameController.text = roster.player?.guestLastName ?? '';
+      if (_guestFirstNameController.text.isEmpty &&
+          roster.playerName.isNotEmpty) {
+        final parts = roster.playerName.split(' ');
+        if (parts.isNotEmpty) {
+          _guestFirstNameController.text = parts.first;
+          if (parts.length > 1) {
+            _guestLastNameController.text = parts.sublist(1).join(' ');
+          }
+        }
       }
     }
 
@@ -333,6 +354,30 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
 
   Set<String> _assignedCategoriesFor(int userId) =>
       _assignedCategoriesByUserId[userId] ?? {};
+
+  Set<String> _assignedCategoriesForGuest() {
+    if (widget.roster != null) {
+      final pid = widget.roster!.playerId;
+      return _teamRosters
+          .where((r) => r.playerId == pid)
+          .map((r) => r.category)
+          .toSet();
+    }
+    final doc = _documentNumberController.text.trim();
+    final first = _guestFirstNameController.text.trim().toLowerCase();
+    final last = _guestLastNameController.text.trim().toLowerCase();
+    if (first.isEmpty || last.isEmpty) return {};
+    return _teamRosters.where((r) {
+      if (!r.isGuestPlayer) return false;
+      if (doc.isNotEmpty && r.documentNumber != doc) return false;
+      final gf = r.player?.guestFirstName?.toLowerCase() ?? '';
+      final gl = r.player?.guestLastName?.toLowerCase() ?? '';
+      return gf == first && gl == last;
+    }).map((r) => r.category).toSet();
+  }
+
+  bool get _canSwitchPlayerType =>
+      widget.roster == null || widget.roster!.isGuestPlayer;
 
   bool _isFullyAssigned(int userId) {
     final assigned = _assignedCategoriesFor(userId);
@@ -431,6 +476,8 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     _documentNumberController.dispose();
     _emergencyContactController.dispose();
     _notesController.dispose();
+    _guestFirstNameController.dispose();
+    _guestLastNameController.dispose();
     super.dispose();
   }
 
@@ -458,10 +505,22 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   Future<void> _saveRoster() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedUser == null) {
+    if (!_isGuestMode && _selectedUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Debes seleccionar un usuario'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_isGuestMode &&
+        (_guestFirstNameController.text.trim().isEmpty ||
+            _guestLastNameController.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nombre y apellido son obligatorios'),
           backgroundColor: Colors.red,
         ),
       );
@@ -491,8 +550,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final baseData = {
-        'playerId': _selectedUser!.id,
+      final baseData = <String, dynamic>{
         'teamId': _selectedTeam!.id,
         'jerseyNumber': int.parse(_jerseyNumberController.text),
         'medicalCertificateDate': _medicalCertificateDate?.toIso8601String(),
@@ -511,8 +569,21 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
             : _notesController.text.trim(),
       };
 
+      if (_isGuestMode) {
+        baseData['guestFirstName'] = _guestFirstNameController.text.trim();
+        baseData['guestLastName'] = _guestLastNameController.text.trim();
+      } else {
+        baseData['playerId'] = _selectedUser!.id;
+      }
+
+      final displayName = _isGuestMode
+          ? '${_guestFirstNameController.text.trim()} ${_guestLastNameController.text.trim()}'
+          : _selectedUser!.name;
+
       if (widget.roster == null) {
-        final assigned = _assignedCategoriesFor(_selectedUser!.id);
+        final assigned = _isGuestMode
+            ? _assignedCategoriesForGuest()
+            : _assignedCategoriesFor(_selectedUser!.id);
         final toCreate = _selectedCategories
             .where((c) => !assigned.contains(c))
             .toList();
@@ -523,7 +594,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
                 content: Text(
                   assigned.isEmpty
                       ? 'Seleccioná al menos una categoría nueva'
-                      : '${_selectedUser!.name} ya está en ${assigned.join(', ')}. Elegí otra categoría.',
+                      : '$displayName ya está en ${assigned.join(', ')}. Elegí otra categoría.',
                 ),
                 backgroundColor: Colors.orange,
               ),
@@ -552,7 +623,9 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
           );
         }
       } else {
-        final assigned = _assignedCategoriesFor(_selectedUser!.id);
+        final assigned = _isGuestMode
+            ? _assignedCategoriesForGuest()
+            : _assignedCategoriesFor(_selectedUser!.id);
         final currentCategory = widget.roster!.category;
         var updatedCurrent = false;
 
@@ -597,8 +670,8 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
           SnackBar(
             content: Text(
               widget.roster == null
-                  ? '${_selectedUser!.name} agregado a la lista de buena fe'
-                  : 'Información de ${_selectedUser!.name} actualizada',
+                  ? '$displayName agregado a la lista de buena fe'
+                  : 'Información de $displayName actualizada',
             ),
             backgroundColor: Colors.green,
           ),
@@ -705,7 +778,22 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
               const SizedBox(height: 24),
 
               _buildSectionTitle('Seleccionar Jugador'),
-              _buildUserSelector(),
+              if (_canSwitchPlayerType) ...[
+                _buildPlayerTypeSelector(),
+                const SizedBox(height: 12),
+              ],
+              if (_isGuestMode) _buildGuestNameFields() else _buildUserSelector(),
+              if (_isGuestMode)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Sin cuenta en la app. Podés vincularlo después desde el plantel.',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 24),
 
               // Información del jugador
@@ -771,6 +859,88 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildPlayerTypeSelector() {
+    return SegmentedButton<bool>(
+      segments: const [
+        ButtonSegment(
+          value: false,
+          label: Text('Con app'),
+          icon: Icon(Icons.person),
+        ),
+        ButtonSegment(
+          value: true,
+          label: Text('Sin app'),
+          icon: Icon(Icons.person_off_outlined),
+        ),
+      ],
+      selected: {_isGuestMode},
+      onSelectionChanged: (selection) {
+        setState(() {
+          _isGuestMode = selection.first;
+          if (_isGuestMode) {
+            _selectedUser = null;
+          } else {
+            _guestFirstNameController.clear();
+            _guestLastNameController.clear();
+          }
+        });
+      },
+    );
+  }
+
+  Widget _buildGuestNameFields() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.person_off_outlined, color: Colors.orange),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Jugador sin app',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _responsiveFieldRow([
+            TextFormField(
+              controller: _guestFirstNameController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+              onChanged: (_) => setState(() {}),
+            ),
+            TextFormField(
+              controller: _guestLastNameController,
+              decoration: const InputDecoration(
+                labelText: 'Apellido',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+              onChanged: (_) => setState(() {}),
+            ),
+          ]),
+        ],
+      ),
     );
   }
 
@@ -976,7 +1146,9 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
         spacing: 8,
         children: _selectableCategoryLabels.map((category) {
           final selected = _selectedCategories.contains(category);
-          final assigned = _assignedCategoriesFor(_selectedUser?.id ?? -1);
+          final assigned = _isGuestMode
+              ? _assignedCategoriesForGuest()
+              : _assignedCategoriesFor(_selectedUser?.id ?? -1);
           final isCurrentRowCategory = widget.roster?.category == category;
           final lockedElsewhere = _selectedUser != null &&
               assigned.contains(category) &&

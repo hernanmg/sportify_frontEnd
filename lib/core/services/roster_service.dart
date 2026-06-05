@@ -152,6 +152,25 @@ class RosterService {
     }
   }
 
+  /// Vincula un jugador sin app a un usuario registrado.
+  Future<PlayerRoster> linkRosterToUser(int rosterId, int userId) async {
+    try {
+      final response = await _dio.patch(
+        '/roster/$rosterId/link-user',
+        data: {'userId': userId},
+      );
+      if (response.statusCode == 200) {
+        final data = Map<String, dynamic>.from(response.data as Map);
+        return PlayerRoster.fromJson(data);
+      }
+      throw Exception('Error al vincular jugador con usuario');
+    } on DioException catch (e) {
+      throw Exception(errorMessage(e));
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
   // Actualizar estado médico
   Future<PlayerRoster> updateMedicalStatus(int id, String status) async {
     try {

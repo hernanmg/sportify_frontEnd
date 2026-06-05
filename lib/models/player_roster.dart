@@ -107,6 +107,9 @@ class PlayerRoster {
   }
 
   // Helpers
+  bool get isGuestPlayer => player?.userId == null;
+  bool get hasAppAccount => !isGuestPlayer;
+
   String get playerName => player?.name ?? 'Jugador #$playerId';
   String? get avatarUrl => player?.avatarUrl;
   String get teamName => team?.name ?? 'Equipo #$teamId';
@@ -157,6 +160,8 @@ class Player {
   final String name;
   final String? email;
   final String? avatarUrl;
+  final String? guestFirstName;
+  final String? guestLastName;
 
   Player({
     required this.id,
@@ -164,11 +169,20 @@ class Player {
     required this.name,
     this.email,
     this.avatarUrl,
+    this.guestFirstName,
+    this.guestLastName,
   });
+
+  bool get isGuest => userId == null;
 
   factory Player.fromJson(Map<String, dynamic> json) {
     final id = json['id'] ?? 0;
     final user = json['user'];
+    final guestFirst =
+        json['guestFirstName']?.toString() ?? json['guest_first_name']?.toString();
+    final guestLast =
+        json['guestLastName']?.toString() ?? json['guest_last_name']?.toString();
+
     String? avatar;
     if (user is Map) {
       final u = user['avatarUrl'] ?? user['avatar_url'];
@@ -176,24 +190,39 @@ class Player {
         avatar = u.toString();
       }
     }
+
+    String name;
+    if (guestFirst != null && guestFirst.isNotEmpty ||
+        guestLast != null && guestLast.isNotEmpty) {
+      name = [guestFirst, guestLast]
+          .where((p) => p != null && p.isNotEmpty)
+          .join(' ')
+          .trim();
+    } else if (user is Map) {
+      name = [user['firstName'], user['lastName']]
+              .where((p) => p != null && p.toString().isNotEmpty)
+              .join(' ')
+              .trim()
+              .isNotEmpty
+          ? [user['firstName'], user['lastName']]
+              .where((p) => p != null && p.toString().isNotEmpty)
+              .map((p) => p.toString())
+              .join(' ')
+          : (user['username']?.toString() ?? 'Jugador $id');
+    } else {
+      name = json['name']?.toString() ?? 'Jugador $id';
+    }
+
     return Player(
       id: id,
       userId: json['user_id'] as int? ??
+          json['userId'] as int? ??
           (user is Map ? user['id'] as int? : null),
-      name: user is Map
-          ? [user['firstName'], user['lastName']]
-                  .where((p) => p != null && p.toString().isNotEmpty)
-                  .join(' ')
-                  .trim()
-                  .isNotEmpty
-              ? [user['firstName'], user['lastName']]
-                  .where((p) => p != null && p.toString().isNotEmpty)
-                  .map((p) => p.toString())
-                  .join(' ')
-              : (user['username']?.toString() ?? 'Jugador $id')
-          : (json['name']?.toString() ?? 'Jugador $id'),
+      name: name,
       email: user is Map ? user['email'] as String? : json['email'] as String?,
       avatarUrl: avatar,
+      guestFirstName: guestFirst,
+      guestLastName: guestLast,
     );
   }
 
@@ -203,6 +232,8 @@ class Player {
         'name': name,
         'email': email,
         'avatarUrl': avatarUrl,
+        'guestFirstName': guestFirstName,
+        'guestLastName': guestLastName,
       };
 }
 

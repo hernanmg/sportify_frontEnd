@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
+import 'package:sportify_amateur/core/services/user_service.dart';
 import 'package:sportify_amateur/models/player_roster.dart';
+import 'package:sportify_amateur/models/user.dart';
 import 'package:sportify_amateur/features/sports/roster_form_improved_screen.dart';
 import 'package:sportify_amateur/widgets/player_avatar.dart';
 
@@ -27,6 +29,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
   void reloadRoster() => _loadRoster();
   final RosterService _rosterService = RosterService();
   final TeamService _teamService = TeamService();
+  final UserService _userService = UserService();
   List<PlayerRoster> _roster = [];
   bool _isLoading = true;
   String _selectedSeason = '';
@@ -222,6 +225,125 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
     );
     if (result == true) {
       _loadRoster();
+    }
+  }
+
+  Future<void> _linkPlayerAccount(PlayerRoster player) async {
+    final teamId = player.teamId;
+    List<User> users = [];
+    try {
+      users = await _userService.findForTeam(teamId);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No se pudieron cargar usuarios: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (users.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No hay usuarios registrados vinculados a este equipo',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    User? picked = await showDialog<User>(
+      context: context,
+      builder: (ctx) {
+        User? selected = users.first;
+        return StatefulBuilder(
+          builder: (context, setLocal) {
+            return AlertDialog(
+              title: const Text('Vincular con cuenta'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Asociar "${player.playerName}" con un usuario que ya tenga app:',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<User>(
+                      value: selected,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Usuario registrado',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: users
+                          .map(
+                            (u) => DropdownMenuItem(
+                              value: u,
+                              child: Text(
+                                u.email.isNotEmpty
+                                    ? '${u.displayName} (${u.email})'
+                                    : u.displayName,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setLocal(() => selected = v),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: selected == null
+                      ? null
+                      : () => Navigator.pop(ctx, selected),
+                  child: const Text('Vincular'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (picked == null || !mounted) return;
+
+    try {
+      await _rosterService.linkRosterToUser(player.id, picked.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${player.playerName} vinculado a ${picked.displayName}',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      _loadRoster();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(RosterService.errorMessage(e)),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -586,6 +708,20 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                        if (player.isGuestPlayer) ...[
+                          const SizedBox(height: 4),
+                          Chip(
+                            label: const Text(
+                              'Sin app',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            backgroundColor: Colors.orange.shade100,
+                            padding: EdgeInsets.zero,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ],
                         const SizedBox(height: 4),
                         Wrap(
                           spacing: 8,
@@ -634,6 +770,9 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                             case 'edit':
                               _editPlayer(player);
                               break;
+                            case 'link':
+                              _linkPlayerAccount(player);
+                              break;
                             case 'delete':
                               _deletePlayer(player);
                               break;
@@ -650,6 +789,17 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                               ],
                             ),
                           ),
+                          if (player.isGuestPlayer)
+                            const PopupMenuItem(
+                              value: 'link',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.link, color: Colors.teal),
+                                  SizedBox(width: 8),
+                                  Text('Vincular cuenta'),
+                                ],
+                              ),
+                            ),
                           const PopupMenuItem(
                             value: 'delete',
                             child: Row(
