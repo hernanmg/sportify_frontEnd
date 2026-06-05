@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/category_service.dart';
 import 'package:sportify_amateur/core/services/sport_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
+import 'package:sportify_amateur/features/onboarding/widgets/onboarding_step_buttons.dart';
 import 'package:sportify_amateur/models/category.dart';
 import 'package:sportify_amateur/models/sport.dart';
 
@@ -40,8 +42,10 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
   final Set<int> _selectedCategoryIds = {};
   bool _loadingSports = true;
   bool _loadingCategories = false;
+  bool _seedingCategories = false;
   String? _invitePreview;
   bool _previewLoading = false;
+  bool _isPlatformAdmin = false;
 
   @override
   void initState() {
@@ -52,7 +56,21 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
     _teamNameController.text = widget.initialData['teamName']?.toString() ?? '';
     _inviteCodeController.text =
         widget.initialData['inviteCode']?.toString() ?? '';
-    _loadSports();
+    _loadRoleAndSports();
+  }
+
+  Future<void> _loadRoleAndSports() async {
+    final role = await AuthStorageService().getRole();
+    if (!mounted) return;
+    setState(() {
+      _isPlatformAdmin =
+          role == 'super_admin' || role == 'manager' || role == 'admin';
+      if (_isPlatformAdmin &&
+          widget.initialData['onboardingMode'] == null) {
+        _mode = TeamSetupMode.create;
+      }
+    });
+    await _loadSports();
   }
 
   @override
@@ -76,12 +94,22 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
     }
   }
 
-  Future<void> _loadCategories() async {
+  Future<void> _loadCategories({bool trySeedIfEmpty = true}) async {
     if (_selectedSport == null) return;
     setState(() => _loadingCategories = true);
     try {
-      final cats =
+      var cats =
           await _categoryService.getCategoriesBySport(_selectedSport!.id);
+      if (cats.isEmpty && trySeedIfEmpty) {
+        try {
+          cats = await _categoryService.seedFootballCategories(
+            sportId: _selectedSport!.id,
+          );
+        } catch (_) {
+          // Sin categorías en el servidor; el usuario puede cargarlas manualmente.
+        }
+      }
+      if (!mounted) return;
       setState(() {
         _categories = cats;
         _selectedCategoryIds.removeWhere(
@@ -90,6 +118,23 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
       });
     } finally {
       if (mounted) setState(() => _loadingCategories = false);
+    }
+  }
+
+  Future<void> _seedCategories() async {
+    if (_selectedSport == null) return;
+    setState(() => _seedingCategories = true);
+    try {
+      final cats = await _categoryService.seedFootballCategories(
+        sportId: _selectedSport!.id,
+      );
+      if (!mounted) return;
+      setState(() => _categories = cats);
+      _snack('Categorías cargadas (${cats.length})', isError: false);
+    } catch (e) {
+      _snack('No se pudieron cargar categorías: $e');
+    } finally {
+      if (mounted) setState(() => _seedingCategories = false);
     }
   }
 
@@ -147,9 +192,12 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
     });
   }
 
-  void _snack(String msg) {
+  void _snack(String msg, {bool isError = true}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? Colors.red : Colors.green.shade700,
+      ),
     );
   }
 
@@ -166,27 +214,47 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '¿Cómo querés empezar?',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  Text(
+                    _isPlatformAdmin
+                        ? 'Como administrador, creá el primer equipo'
+                        : '¿Cómo querés empezar?',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
+                  if (_isPlatformAdmin) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'No necesitás código de invitación: vos gestionás el club.',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   _modeTile(
                     TeamSetupMode.create,
-                    'Administro / creo un equipo',
-                    'Quedás como encargado y recibís un código para invitar al plantel',
+                    _isPlatformAdmin
+                        ? 'Crear equipo del club'
+                        : 'Administro / creo un equipo',
+                    _isPlatformAdmin
+                        ? 'Definís deporte, categorías y recibís el código para el plantel'
+                        : 'Quedás como encargado y recibís un código para invitar al plantel',
                     Icons.shield,
+                    recommended: _isPlatformAdmin,
                   ),
-                  _modeTile(
-                    TeamSetupMode.join,
-                    'Me uno con código de invitación',
-                    'Tu capitán te comparte un código del equipo',
-                    Icons.vpn_key,
-                  ),
+                  if (!_isPlatformAdmin)
+                    _modeTile(
+                      TeamSetupMode.join,
+                      'Me uno con código de invitación',
+                      'Tu capitán o DT te comparte un código del equipo',
+                      Icons.vpn_key,
+                    ),
                   _modeTile(
                     TeamSetupMode.skip,
                     'Lo configuro después',
-                    'Podés crear o unirte a un equipo más tarde',
+                    _isPlatformAdmin
+                        ? 'Creá el equipo desde Inicio → Crear equipo o Menú → Gestión de equipos'
+                        : 'Podés crear o unirte a un equipo más tarde',
                     Icons.schedule,
                   ),
                   if (_mode == TeamSetupMode.create) ...[
@@ -219,16 +287,59 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
                           await _loadCategories();
                         },
                       ),
-                    const SizedBox(height: 12),
-                    const Text('Categorías del equipo'),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Categorías del equipo *',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Elegí al menos una (ej. Libre, +35, Femenino)',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 8),
                     if (_loadingCategories)
                       const Padding(
                         padding: EdgeInsets.all(8),
                         child: CircularProgressIndicator(),
                       )
+                    else if (_categories.isEmpty)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'No hay categorías para este deporte.',
+                              ),
+                              const SizedBox(height: 8),
+                              FilledButton.tonalIcon(
+                                onPressed:
+                                    _seedingCategories ? null : _seedCategories,
+                                icon: _seedingCategories
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.download),
+                                label: const Text(
+                                  'Cargar categorías de fútbol',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
                     else
                       Wrap(
                         spacing: 8,
+                        runSpacing: 4,
                         children: _categories.map((cat) {
                           final selected =
                               _selectedCategoryIds.contains(cat.id);
@@ -290,7 +401,13 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
               ),
             ),
           ),
-          _bottomButtons(),
+          OnboardingStepButtons(
+            onPrevious: widget.onPrevious,
+            onPrimary: _handleNext,
+            primaryLabel: 'Continuar',
+            primaryColor: Colors.orange,
+            onSkip: widget.onSkip,
+          ),
         ],
       ),
     );
@@ -335,15 +452,41 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
     TeamSetupMode mode,
     String title,
     String subtitle,
-    IconData icon,
-  ) {
+    IconData icon, {
+    bool recommended = false,
+  }) {
     final selected = _mode == mode;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: selected ? Colors.orange.shade50 : null,
       child: ListTile(
         leading: Icon(icon, color: selected ? Colors.orange : Colors.grey),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            if (recommended)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'Recomendado',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.orange.shade900,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        ),
         subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
         trailing: Radio<TeamSetupMode>(
           value: mode,
@@ -352,36 +495,6 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
         ),
         onTap: () => setState(() => _mode = mode),
       ),
-    );
-  }
-
-  Widget _bottomButtons() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: widget.onPrevious,
-                child: const Text('Anterior'),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              flex: 2,
-              child: ElevatedButton(
-                onPressed: _handleNext,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Continuar'),
-              ),
-            ),
-          ],
-        ),
-        TextButton(onPressed: widget.onSkip, child: const Text('Saltar este paso')),
-      ],
     );
   }
 }

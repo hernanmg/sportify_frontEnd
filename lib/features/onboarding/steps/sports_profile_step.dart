@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/features/onboarding/widgets/onboarding_step_buttons.dart';
 
 class SportsProfileStep extends StatefulWidget {
   final Map<String, dynamic> initialData;
@@ -169,83 +170,12 @@ class _SportsProfileStepState extends State<SportsProfileStep> {
             ),
           ),
 
-          // Bottom buttons
-          Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 50,
-                      child: OutlinedButton(
-                        onPressed: widget.onPrevious,
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.grey),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.arrow_back, size: 20),
-                            SizedBox(width: 8),
-                            Text('Anterior'),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _handleNext,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Continuar',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward, size: 20),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                height: 50,
-                child: TextButton(
-                  onPressed: widget.onSkip,
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.grey[600],
-                  ),
-                  child: const Text(
-                    'Saltar este paso',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ),
-              ),
-            ],
+          OnboardingStepButtons(
+            onPrevious: widget.onPrevious,
+            onPrimary: _handleNext,
+            primaryLabel: 'Continuar',
+            primaryColor: Colors.green,
+            onSkip: widget.onSkip,
           ),
         ],
       ),

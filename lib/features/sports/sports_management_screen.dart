@@ -176,14 +176,28 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-              const PopupMenuItem(
-                value: 'join_team',
-                child: ListTile(
-                  leading: Icon(Icons.vpn_key),
-                  title: Text('Unirme con código'),
-                  contentPadding: EdgeInsets.zero,
+              if (_userRole == 'super_admin' ||
+                  _userRole == 'manager' ||
+                  _userRole == 'admin')
+                const PopupMenuItem(
+                  value: 'manage_teams',
+                  child: ListTile(
+                    leading: Icon(Icons.groups_3),
+                    title: Text('Crear / gestionar equipos'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
+              if (_userRole != 'super_admin' &&
+                  _userRole != 'manager' &&
+                  _userRole != 'admin')
+                const PopupMenuItem(
+                  value: 'join_team',
+                  child: ListTile(
+                    leading: Icon(Icons.vpn_key),
+                    title: Text('Unirme con código'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
               const PopupMenuItem(
                 value: 'invite_team',
                 child: ListTile(
@@ -328,6 +342,9 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
           break;
         case 'social_event':
           await _createSocialEvent();
+          break;
+        case 'manage_teams':
+          await Navigator.pushNamed(context, '/teams');
           break;
         case 'join_team':
           await Navigator.push(

@@ -35,13 +35,23 @@
             ]
         },
         {
+            "name": "sportify_amateur (Render API)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "args": [
+                "--dart-define",
+                "API_BASE_URL=https://sportify-backend-yyqe.onrender.com"
+            ]
+        },
+        {
             "name": "sportify_amateur (Production)",
             "request": "launch",
             "type": "dart",
             "program": "lib/main.dart",
             "args": [
                 "--dart-define",
-                "API_BASE_URL=https://prod.api.sportify.com"
+                "API_BASE_URL=https://sportify-backend-yyqe.onrender.com"
             ]
         },
         {
@@ -63,7 +73,7 @@
             "flutterMode": "release",
             "args": [
                 "--dart-define",
-                "API_BASE_URL=https://prod.api.sportify.com"
+                "API_BASE_URL=https://sportify-backend-yyqe.onrender.com"
             ]
         }
     ]
