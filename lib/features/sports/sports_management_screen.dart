@@ -86,7 +86,9 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gestión Deportiva'),
+        title: const Text('Gestión deportiva'),
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,

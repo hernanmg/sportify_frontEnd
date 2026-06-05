@@ -29,6 +29,7 @@ class TeamExtrasService {
     required String name,
     String? description,
     String? website,
+    String? logoUrl,
     double? amountContributed,
   }) async {
     final response = await _dio.post(
@@ -38,6 +39,29 @@ class TeamExtrasService {
         if (description != null && description.isNotEmpty)
           'description': description,
         if (website != null && website.isNotEmpty) 'website': website,
+        if (logoUrl != null && logoUrl.isNotEmpty) 'logoUrl': logoUrl,
+        if (amountContributed != null) 'amountContributed': amountContributed,
+      },
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> updateSponsor(
+    int teamId,
+    int sponsorId, {
+    String? name,
+    String? description,
+    String? website,
+    String? logoUrl,
+    double? amountContributed,
+  }) async {
+    final response = await _dio.patch(
+      '/teams/$teamId/sponsors/$sponsorId',
+      data: {
+        if (name != null) 'name': name,
+        if (description != null) 'description': description,
+        if (website != null) 'website': website,
+        if (logoUrl != null) 'logoUrl': logoUrl,
         if (amountContributed != null) 'amountContributed': amountContributed,
       },
     );

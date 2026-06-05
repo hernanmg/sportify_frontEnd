@@ -5,7 +5,6 @@ import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
 import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
-import 'package:sportify_amateur/core/services/debug_service.dart';
 
 class EventsManagementScreen extends StatefulWidget {
   const EventsManagementScreen({Key? key}) : super(key: key);
@@ -175,12 +174,6 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
             onPressed: _createEvent,
             icon: const Icon(Icons.add),
             label: const Text('Nuevo'),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            onPressed: _debugConnection,
-            icon: const Icon(Icons.bug_report),
-            tooltip: 'Debug conexión',
           ),
         ],
       ),
@@ -595,98 +588,4 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
     }
   }
 
-  void _debugConnection() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        title: Text('Verificando conexión...'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Probando autenticación y backend'),
-          ],
-        ),
-      ),
-    );
-
-    try {
-      await DebugService.printDebugInfo();
-      final authStatus = await DebugService.checkAuthStatus();
-      final healthCheck = await DebugService.checkBackendHealth();
-      
-      // Probar Socket.IO
-      final socketTest = await DebugService.testSocketIOConnection();
-
-      Navigator.pop(context); // Cerrar dialog de carga
-
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Estado de Conexión'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                    'Backend: ${healthCheck['backendOnline'] ? '✅ Conectado' : '❌ Desconectado'}'),
-                const SizedBox(height: 8),
-                Text(
-                    'Autenticación: ${authStatus['isAuthenticated'] ? '✅ Válida' : '❌ Inválida'}'),
-                const SizedBox(height: 8),
-                Text(
-                    'Socket.IO: ${socketTest['isConnected'] ? '✅ Conectado' : '❌ Desconectado'}'),
-                if (socketTest['socketId'] != null)
-                  Text('Socket ID: ${socketTest['socketId']}'),
-                const SizedBox(height: 8),
-                if (authStatus['token'] != null)
-                  Text('Token: ${authStatus['token']}'),
-                const SizedBox(height: 8),
-                if (authStatus['error'] != null)
-                  Text('Error: ${authStatus['error']}',
-                      style: const TextStyle(color: Colors.red)),
-                const SizedBox(height: 8),
-                if (authStatus['userInfo'] != null) ...[
-                  if (authStatus['userInfo']['user'] != null) ...[
-                    Text(
-                        'Usuario: ${authStatus['userInfo']['user']['username'] ?? 'N/A'}'),
-                    Text(
-                        'Email: ${authStatus['userInfo']['user']['email'] ?? 'N/A'}'),
-                    Text(
-                        'Rol: ${authStatus['userInfo']['user']['role'] ?? 'N/A'}'),
-                  ] else
-                    Text('Info: ${authStatus['userInfo'].toString()}'),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar'),
-            ),
-            if (!authStatus['isAuthenticated'])
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pushReplacementNamed(context, '/login');
-                },
-                child: const Text('Ir a Login'),
-              ),
-          ],
-        ),
-      );
-    } catch (e) {
-      Navigator.pop(context); // Cerrar dialog de carga
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error en debug: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 }

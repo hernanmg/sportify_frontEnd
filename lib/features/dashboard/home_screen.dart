@@ -8,6 +8,7 @@ import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/features/dashboard/team_membership_banner.dart';
 import 'package:sportify_amateur/widgets/season_selector_chip.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
+import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -67,9 +68,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          SliverAppBar.large(
-            expandedHeight: 140,
+          SliverAppBar(
+            expandedHeight: 128,
             pinned: true,
+            stretch: false,
             actions: [
               IconButton(
                 icon: const Icon(Icons.account_circle),
@@ -81,24 +83,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
+              stretchModes: const [],
               title: Text(
                 _userName != null && _userName!.isNotEmpty
                     ? 'Hola, $_userName'
                     : 'Sportify Amateur',
                 style: const TextStyle(fontSize: 18),
               ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      primary,
-                      primary.withValues(alpha: 0.7),
-                    ],
-                  ),
-                ),
-              ),
+              background: SmoothHeaderGradient.primary(primary),
             ),
           ),
           SliverToBoxAdapter(

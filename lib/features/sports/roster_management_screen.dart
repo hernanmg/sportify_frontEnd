@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
@@ -278,7 +279,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-            widget.teamId != null ? 'Lista de Buena Fe' : 'Gestión de Roster'),
+            widget.teamId != null ? 'Lista de buena fe' : 'Gestión de plantel'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
@@ -297,15 +298,9 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
       body: Column(
         children: [
           // Header con filtros
-          Container(
+          SmoothHeaderGradient.green(
+            child: Padding(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.green.shade600, Colors.green.shade400],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
             child: Column(
               children: [
                 // Selector de temporada
@@ -437,6 +432,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                   ],
                 ),
               ],
+            ),
             ),
           ),
 

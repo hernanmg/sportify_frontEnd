@@ -103,7 +103,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
       ),
       ListTile(
         leading: _menuIcon(Icons.business, Colors.deepOrange),
-        title: const Text('Sponsors'),
+        title: const Text('Patrocinadores'),
         onTap: () {
           Navigator.pop(ctx);
           Navigator.push(
@@ -411,54 +411,53 @@ class _AppShellScreenState extends State<AppShellScreen> {
     final primary = theme.colorScheme.primary;
     final isHome = _index == 2;
 
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
     return AppShellScope(
       selectTab: _selectTab,
       child: Scaffold(
       resizeToAvoidBottomInset: false,
       extendBody: true,
-      body: IndexedStack(
-        index: _index.clamp(0, 3),
-        children: const [
-          SportsManagementScreen(),
-          FinanceHubScreen(),
-          HomeScreen(),
-          MyEventsScreen(),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          IndexedStack(
+            index: _index.clamp(0, 3),
+            children: const [
+              SportsManagementScreen(),
+              FinanceHubScreen(),
+              HomeScreen(),
+              MyEventsScreen(),
+            ],
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 62 + bottomInset - 6,
+            child: Center(
+              child: Material(
+                elevation: 6,
+                shadowColor: Colors.black38,
+                shape: const CircleBorder(),
+                color: isHome ? primary : primary.withValues(alpha: 0.92),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => setState(() => _index = 2),
+                  child: SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: Icon(
+                      isHome ? Icons.home_rounded : Icons.home_outlined,
+                      size: 26,
+                      color: theme.colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
-      floatingActionButton: Transform.translate(
-        offset: const Offset(0, 14),
-        child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: primary.withValues(alpha: 0.35),
-              blurRadius: 10,
-              spreadRadius: 0,
-              offset: const Offset(0, 3),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: FloatingActionButton(
-          onPressed: () => setState(() => _index = 2),
-          elevation: 0,
-          highlightElevation: 2,
-          backgroundColor: isHome ? primary : primary.withValues(alpha: 0.92),
-          foregroundColor: theme.colorScheme.onPrimary,
-          shape: const CircleBorder(),
-          child: Icon(
-            isHome ? Icons.home_rounded : Icons.home_outlined,
-            size: 26,
-          ),
-        ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: Material(
         elevation: 16,
         shadowColor: Colors.black38,
