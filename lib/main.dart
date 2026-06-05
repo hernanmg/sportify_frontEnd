@@ -86,7 +86,6 @@ class MainApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         snackBarTheme: const SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.fromLTRB(16, 0, 16, 92),
         ),
       ),
       darkTheme: ThemeData(
@@ -94,7 +93,6 @@ class MainApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         snackBarTheme: const SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.fromLTRB(16, 0, 16, 92),
         ),
       ),
       themeMode: themeProvider.themeMode,
@@ -190,7 +188,7 @@ class MainApp extends StatelessWidget {
           }
           if (eventId == null) {
             return const Scaffold(
-              body: Center(child: Text('Falta eventId para Post-partido')),
+              body: Center(child: Text('Falta eventId para gestionar partido')),
             );
           }
           return PostMatchScreen(eventId: eventId);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/core/services/admin_metrics_service.dart';
+import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
 
 class AdminConfigScreen extends StatefulWidget {
   const AdminConfigScreen({super.key});
@@ -96,47 +97,44 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header informativo
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.red.shade600, Colors.red.shade400],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SmoothHeaderGradient.primary(
+                Colors.red.shade700,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.admin_panel_settings,
-                        color: Colors.white,
-                        size: 28,
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.admin_panel_settings,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'Panel de Administración',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 12),
-                      Text(
-                        'Panel de Administración',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 8),
                   Text(
                     'Gestiona usuarios, roles y configuración del sistema',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 14,
                     ),
                   ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 24),

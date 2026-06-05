@@ -416,10 +416,10 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                                   if (mounted) await _load();
                                                 },
                                                 icon: const Icon(
-                                                  Icons.emoji_events_outlined,
+                                                  Icons.sports_soccer_outlined,
                                                 ),
                                                 label: const Text(
-                                                  'Post-partido',
+                                                  'Gestionar partido',
                                                 ),
                                               ),
                                             ),

@@ -297,142 +297,161 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
       ),
       body: Column(
         children: [
-          // Header con filtros
+          // Header con filtros (tema oscuro local: texto blanco sobre verde)
           SmoothHeaderGradient.green(
-            child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Selector de temporada
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today, color: Colors.white),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Temporada:',
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        value: _selectedSeason,
-                        dropdownColor: Colors.green.shade700,
-                        style: const TextStyle(color: Colors.white),
-                        underline: Container(),
-                        items: RosterService.getSeasons().map((season) {
-                          return DropdownMenuItem(
-                            value: season,
-                            child: Text(season),
-                          );
-                        }).toList(),
-                        onChanged: (season) {
-                          if (season != null) {
-                            setState(() {
-                              _selectedSeason = season;
-                            });
-                            _loadRoster();
-                          }
-                        },
-                      ),
-                    ),
-                  ],
+            child: Theme(
+              data: ThemeData.dark().copyWith(
+                brightness: Brightness.dark,
+                dropdownMenuTheme: const DropdownMenuThemeData(
+                  textStyle: TextStyle(color: Colors.white),
                 ),
-                const SizedBox(height: 16),
-                // Barra de búsqueda y filtros
-                Row(
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
                   children: [
-                    Expanded(
-                      flex: 2,
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Buscar por nombre, número o documento...',
-                          hintStyle:
-                              TextStyle(color: Colors.white.withOpacity(0.7)),
-                          prefixIcon:
-                              const Icon(Icons.search, color: Colors.white),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide.none,
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today, color: Colors.white),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Temporada:',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
                           ),
-                          filled: true,
-                          fillColor: Colors.white.withOpacity(0.2),
                         ),
-                        style: const TextStyle(color: Colors.white),
-                        onChanged: (value) {
-                          setState(() {
-                            _searchQuery = value;
-                          });
-                        },
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _selectedSeason,
+                            dropdownColor: Colors.green.shade700,
+                            iconEnabledColor: Colors.white,
+                            style: const TextStyle(color: Colors.white),
+                            underline: Container(),
+                            items: RosterService.getSeasons().map((season) {
+                              return DropdownMenuItem(
+                                value: season,
+                                child: Text(season),
+                              );
+                            }).toList(),
+                            onChanged: (season) {
+                              if (season != null) {
+                                setState(() {
+                                  _selectedSeason = season;
+                                });
+                                _loadRoster();
+                              }
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        value: _filterStatus,
-                        dropdownColor: Colors.green.shade700,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 13),
-                        underline: Container(),
-                        items: const [
-                          DropdownMenuItem(value: 'all', child: Text('Todos')),
-                          DropdownMenuItem(
-                              value: 'can_play', child: Text('Habilitados')),
-                          DropdownMenuItem(
-                              value: 'enabled', child: Text('Activos')),
-                          DropdownMenuItem(
-                              value: 'disabled', child: Text('Inactivos')),
-                          DropdownMenuItem(
-                              value: 'medical_pending',
-                              child: Text('Apto pend.')),
-                          DropdownMenuItem(
-                              value: 'medical_expired',
-                              child: Text('Apto venc.')),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _filterStatus = value;
-                            });
-                          }
-                        },
-                      ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: TextField(
+                            cursorColor: Colors.white,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              hintText:
+                                  'Buscar por nombre, número o documento...',
+                              hintStyle: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.75),
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.search,
+                                color: Colors.white,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                borderSide: BorderSide.none,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white.withValues(alpha: 0.2),
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                _searchQuery = value;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _filterStatus,
+                            dropdownColor: Colors.green.shade700,
+                            iconEnabledColor: Colors.white,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                            underline: Container(),
+                            items: const [
+                              DropdownMenuItem(
+                                  value: 'all', child: Text('Todos')),
+                              DropdownMenuItem(
+                                  value: 'can_play',
+                                  child: Text('Habilitados')),
+                              DropdownMenuItem(
+                                  value: 'enabled', child: Text('Activos')),
+                              DropdownMenuItem(
+                                  value: 'disabled',
+                                  child: Text('Inactivos')),
+                              DropdownMenuItem(
+                                  value: 'medical_pending',
+                                  child: Text('Apto pend.')),
+                              DropdownMenuItem(
+                                  value: 'medical_expired',
+                                  child: Text('Apto venc.')),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  _filterStatus = value;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        _buildStatChip(
+                            'Total', _roster.length.toString(), Icons.people),
+                        _buildStatChip(
+                            'Habilitados',
+                            _roster.where((p) => p.canPlay).length.toString(),
+                            Icons.check_circle),
+                        _buildStatChip(
+                            'Pendientes',
+                            _roster
+                                .where((p) => p.medicalStatus == 'pending')
+                                .length
+                                .toString(),
+                            Icons.pending),
+                        _buildStatChip(
+                            'Vencidos',
+                            _roster
+                                .where((p) => !p.isMedicalCertificateValid)
+                                .length
+                                .toString(),
+                            Icons.warning),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                // Estadísticas rápidas (Wrap evita overflow en pantallas angostas)
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _buildStatChip(
-                        'Total', _roster.length.toString(), Icons.people),
-                    _buildStatChip(
-                        'Habilitados',
-                        _roster.where((p) => p.canPlay).length.toString(),
-                        Icons.check_circle),
-                    _buildStatChip(
-                        'Pendientes',
-                        _roster
-                            .where((p) => p.medicalStatus == 'pending')
-                            .length
-                            .toString(),
-                        Icons.pending),
-                    _buildStatChip(
-                        'Vencidos',
-                        _roster
-                            .where((p) => !p.isMedicalCertificateValid)
-                            .length
-                            .toString(),
-                        Icons.warning),
-                  ],
-                ),
-              ],
-            ),
+              ),
             ),
           ),
 
@@ -460,7 +479,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -480,7 +499,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 12,
             ),
           ),

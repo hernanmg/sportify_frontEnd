@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
-import 'package:sportify_amateur/core/services/notification_service.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/features/dashboard/team_membership_banner.dart';
 import 'package:sportify_amateur/widgets/season_selector_chip.dart';
@@ -72,6 +70,12 @@ class _HomeScreenState extends State<HomeScreen> {
             expandedHeight: 128,
             pinned: true,
             stretch: false,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            surfaceTintColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            iconTheme: const IconThemeData(color: Colors.white),
+            actionsIconTheme: const IconThemeData(color: Colors.white),
             actions: [
               IconButton(
                 icon: const Icon(Icons.account_circle),
@@ -79,18 +83,62 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               Switch(
                 value: isDark,
+                activeThumbColor: Colors.white,
+                activeTrackColor: Colors.white.withValues(alpha: 0.45),
+                inactiveThumbColor: Colors.white70,
+                inactiveTrackColor: Colors.white.withValues(alpha: 0.25),
                 onChanged: themeProvider.toggleTheme,
               ),
             ],
-            flexibleSpace: FlexibleSpaceBar(
-              stretchModes: const [],
-              title: Text(
-                _userName != null && _userName!.isNotEmpty
-                    ? 'Hola, $_userName'
-                    : 'Sportify Amateur',
-                style: const TextStyle(fontSize: 18),
-              ),
-              background: SmoothHeaderGradient.primary(primary),
+            flexibleSpace: Stack(
+              fit: StackFit.expand,
+              children: [
+                SmoothHeaderGradient.primary(primary),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    height: 80,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.38),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                FlexibleSpaceBar(
+                  stretchModes: const [],
+                  centerTitle: false,
+                  titlePadding: const EdgeInsetsDirectional.only(
+                    start: 16,
+                    bottom: 14,
+                  ),
+                  title: Text(
+                    _userName != null && _userName!.isNotEmpty
+                        ? 'Hola, $_userName'
+                        : 'Sportify Amateur',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black38,
+                          blurRadius: 8,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                  background: const SizedBox.shrink(),
+                ),
+              ],
             ),
           ),
           SliverToBoxAdapter(

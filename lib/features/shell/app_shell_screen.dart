@@ -405,57 +405,49 @@ class _AppShellScreenState extends State<AppShellScreen> {
     );
   }
 
+  Widget _homeDockButton({
+    required ThemeData theme,
+    required Color primary,
+  }) {
+    return Material(
+      elevation: 6,
+      shadowColor: Colors.black38,
+      shape: const CircleBorder(),
+      color: primary,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () => setState(() => _index = 2),
+        child: SizedBox(
+          width: 56,
+          height: 56,
+          child: Icon(
+            Icons.home_rounded,
+            size: 26,
+            color: theme.colorScheme.onPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
-    final isHome = _index == 2;
-
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return AppShellScope(
       selectTab: _selectTab,
       child: Scaffold(
       resizeToAvoidBottomInset: false,
       extendBody: true,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          IndexedStack(
-            index: _index.clamp(0, 3),
-            children: const [
-              SportsManagementScreen(),
-              FinanceHubScreen(),
-              HomeScreen(),
-              MyEventsScreen(),
-            ],
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 62 + bottomInset - 6,
-            child: Center(
-              child: Material(
-                elevation: 6,
-                shadowColor: Colors.black38,
-                shape: const CircleBorder(),
-                color: isHome ? primary : primary.withValues(alpha: 0.92),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => setState(() => _index = 2),
-                  child: SizedBox(
-                    width: 56,
-                    height: 56,
-                    child: Icon(
-                      isHome ? Icons.home_rounded : Icons.home_outlined,
-                      size: 26,
-                      color: theme.colorScheme.onPrimary,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
+      body: IndexedStack(
+        index: _index.clamp(0, 3),
+        children: const [
+          SportsManagementScreen(),
+          FinanceHubScreen(),
+          HomeScreen(),
+          MyEventsScreen(),
         ],
       ),
       bottomNavigationBar: Material(
@@ -472,35 +464,50 @@ class _AppShellScreenState extends State<AppShellScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             elevation: 0,
             color: Colors.transparent,
-            notchMargin: 6,
-            shape: const CircularNotchedRectangle(),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Stack(
+              clipBehavior: Clip.none,
+              fit: StackFit.expand,
               children: [
-                _navItem(
-                  index: 0,
-                  icon: Icons.sports_soccer_outlined,
-                  selectedIcon: Icons.sports_soccer_rounded,
-                  label: 'Deportiva',
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    _navItem(
+                      index: 0,
+                      icon: Icons.sports_soccer_outlined,
+                      selectedIcon: Icons.sports_soccer_rounded,
+                      label: 'Deportiva',
+                    ),
+                    _navItem(
+                      index: 1,
+                      icon: Icons.payments_outlined,
+                      selectedIcon: Icons.payments_rounded,
+                      label: 'Finanzas',
+                    ),
+                    const SizedBox(width: 64),
+                    _navItem(
+                      index: 3,
+                      icon: Icons.event_outlined,
+                      selectedIcon: Icons.event_rounded,
+                      label: 'Eventos',
+                    ),
+                    _navItem(
+                      index: 4,
+                      icon: Icons.apps_outlined,
+                      selectedIcon: Icons.apps_rounded,
+                      label: 'Más',
+                    ),
+                  ],
                 ),
-                _navItem(
-                  index: 1,
-                  icon: Icons.payments_outlined,
-                  selectedIcon: Icons.payments_rounded,
-                  label: 'Finanzas',
-                ),
-                const SizedBox(width: 48),
-                _navItem(
-                  index: 3,
-                  icon: Icons.event_outlined,
-                  selectedIcon: Icons.event_rounded,
-                  label: 'Eventos',
-                ),
-                _navItem(
-                  index: 4,
-                  icon: Icons.apps_outlined,
-                  selectedIcon: Icons.apps_rounded,
-                  label: 'Más',
+                Positioned(
+                  top: -18,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _homeDockButton(
+                      theme: theme,
+                      primary: primary,
+                    ),
+                  ),
                 ),
               ],
             ),

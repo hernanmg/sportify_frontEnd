@@ -346,11 +346,27 @@ class _PostMatchScreenState extends State<PostMatchScreen>
 
   @override
   Widget build(BuildContext context) {
-    final title = _data?.title ?? widget.eventTitle ?? 'Post-partido';
+    final eventName = _data?.title ?? widget.eventTitle;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Gestionar partido',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            if (eventName != null && eventName.isNotEmpty)
+              Text(
+                eventName,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.normal,
+                    ),
+              ),
+          ],
+        ),
         actions: [
           if (_data?.canManage == true && _data?.isCompleted != true)
             IconButton(

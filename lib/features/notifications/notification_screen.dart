@@ -669,7 +669,7 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
               child: FilledButton.icon(
                 onPressed: _openPostMatch,
                 icon: const Icon(Icons.how_to_vote),
-                label: const Text('Ir a post-partido'),
+                label: const Text('Gestionar partido'),
               ),
             ),
           ],
