@@ -450,58 +450,82 @@ class _AppShellScreenState extends State<AppShellScreen> {
           MyEventsScreen(),
         ],
       ),
-      bottomNavigationBar: Material(
-        elevation: 16,
-        shadowColor: Colors.black38,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-        color: theme.colorScheme.surfaceContainerHighest.withValues(
-          alpha: theme.brightness == Brightness.dark ? 0.95 : 1,
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-          child: BottomAppBar(
-            height: 62,
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            elevation: 0,
-            color: Colors.transparent,
+      bottomNavigationBar: Builder(
+        builder: (context) {
+          const barHeight = 62.0;
+          const buttonSize = 56.0;
+          final bottomInset = MediaQuery.paddingOf(context).bottom;
+          // Centro del botón al borde superior de la barra (mitad arriba, mitad adentro).
+          final buttonBottom = bottomInset + barHeight - buttonSize / 2;
+
+          return SizedBox(
+            height: buttonBottom + buttonSize,
             child: Stack(
               clipBehavior: Clip.none,
-              fit: StackFit.expand,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _navItem(
-                      index: 0,
-                      icon: Icons.sports_soccer_outlined,
-                      selectedIcon: Icons.sports_soccer_rounded,
-                      label: 'Deportiva',
-                    ),
-                    _navItem(
-                      index: 1,
-                      icon: Icons.payments_outlined,
-                      selectedIcon: Icons.payments_rounded,
-                      label: 'Finanzas',
-                    ),
-                    const SizedBox(width: 64),
-                    _navItem(
-                      index: 3,
-                      icon: Icons.event_outlined,
-                      selectedIcon: Icons.event_rounded,
-                      label: 'Eventos',
-                    ),
-                    _navItem(
-                      index: 4,
-                      icon: Icons.apps_outlined,
-                      selectedIcon: Icons.apps_rounded,
-                      label: 'Más',
-                    ),
-                  ],
-                ),
                 Positioned(
-                  top: -18,
                   left: 0,
                   right: 0,
+                  bottom: 0,
+                  child: Material(
+                    elevation: 16,
+                    shadowColor: Colors.black38,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(22),
+                    ),
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: theme.brightness == Brightness.dark ? 0.95 : 1,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(22),
+                      ),
+                      child: BottomAppBar(
+                        height: barHeight,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        elevation: 0,
+                        color: Colors.transparent,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            _navItem(
+                              index: 0,
+                              icon: Icons.sports_soccer_outlined,
+                              selectedIcon: Icons.sports_soccer_rounded,
+                              label: 'Deportiva',
+                            ),
+                            _navItem(
+                              index: 1,
+                              icon: Icons.payments_outlined,
+                              selectedIcon: Icons.payments_rounded,
+                              label: 'Finanzas',
+                            ),
+                            const SizedBox(width: 64),
+                            _navItem(
+                              index: 3,
+                              icon: Icons.event_outlined,
+                              selectedIcon: Icons.event_rounded,
+                              label: 'Eventos',
+                            ),
+                            _navItem(
+                              index: 4,
+                              icon: Icons.apps_outlined,
+                              selectedIcon: Icons.apps_rounded,
+                              label: 'Más',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: buttonBottom,
                   child: Center(
                     child: _homeDockButton(
                       theme: theme,
@@ -511,8 +535,8 @@ class _AppShellScreenState extends State<AppShellScreen> {
                 ),
               ],
             ),
-          ),
-        ),
+          );
+        },
       ),
     ),
     );
