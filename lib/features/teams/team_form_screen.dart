@@ -166,7 +166,9 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
           savedTeam.id,
           _selectedCategoryIds.toList(),
         );
-        _showSuccess('Equipo creado exitosamente');
+        _showSuccess(
+          'Equipo creado. Ya quedaste asignado como encargado del club.',
+        );
       }
 
       if (widget.isFromOnboarding) {

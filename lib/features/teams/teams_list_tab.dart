@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/team.dart';
 import 'package:sportify_amateur/features/teams/team_form_screen.dart';
@@ -14,7 +15,9 @@ class TeamsListTabState extends State<TeamsListTab> {
   final TeamService _teamService = TeamService();
   List<Team> _teams = [];
   List<Team> _filteredTeams = [];
+  Set<int> _myTeamIds = {};
   bool _isLoading = true;
+  bool _isPlatformAdmin = false;
   String _searchQuery = '';
 
   @override
@@ -28,8 +31,13 @@ class TeamsListTabState extends State<TeamsListTab> {
   Future<void> _loadTeams() async {
     setState(() => _isLoading = true);
     try {
+      final role = await AuthStorageService().getRole();
+      final myTeams = await _teamService.getMyTeams();
       final teams = await _teamService.getAllTeams();
       setState(() {
+        _isPlatformAdmin =
+            role == 'super_admin' || role == 'manager' || role == 'admin';
+        _myTeamIds = myTeams.map((t) => t.teamId).toSet();
         _teams = teams;
         _filteredTeams = teams;
         _isLoading = false;
@@ -84,6 +92,31 @@ class TeamsListTabState extends State<TeamsListTab> {
     }
   }
 
+  Future<void> _claimTeam(Team team) async {
+    try {
+      final result = await _teamService.claimTeamAsAdmin(team.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['message']?.toString() ??
+                'Te asignaste a ${team.name}',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+      await _loadTeams();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(TeamService.errorMessage(e)),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _deleteTeam(Team team) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -132,6 +165,9 @@ class TeamsListTabState extends State<TeamsListTab> {
     }
   }
 
+  bool _canClaim(Team team) =>
+      _isPlatformAdmin && !_myTeamIds.contains(team.id);
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -139,18 +175,30 @@ class TeamsListTabState extends State<TeamsListTab> {
         Container(
           padding: const EdgeInsets.all(16),
           color: Colors.blue.shade50,
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: 'Buscar equipos...',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Buscar equipos...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                onChanged: _filterTeams,
               ),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            onChanged: _filterTeams,
+              if (_isPlatformAdmin) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Si creaste un equipo y no aparece en Inicio, usá ⋮ → Asignarme como encargado.',
+                  style: TextStyle(fontSize: 12, color: Colors.blue.shade900),
+                ),
+              ],
+            ],
           ),
         ),
         Expanded(
@@ -185,16 +233,26 @@ class TeamsListTabState extends State<TeamsListTab> {
                         itemCount: _filteredTeams.length,
                         itemBuilder: (context, index) {
                           final team = _filteredTeams[index];
+                          final isMine = _myTeamIds.contains(team.id);
                           return Card(
                             child: ListTile(
-                              leading: const CircleAvatar(
-                                child: Icon(Icons.groups),
+                              leading: CircleAvatar(
+                                backgroundColor: isMine
+                                    ? Colors.green.shade100
+                                    : null,
+                                child: Icon(
+                                  Icons.groups,
+                                  color: isMine ? Colors.green.shade800 : null,
+                                ),
                               ),
                               title: Text(team.name),
                               subtitle: Text(
                                 [
                                   team.sport,
-                                  team.category,
+                                  team.categoryNames.isNotEmpty
+                                      ? team.categoryNames.join(', ')
+                                      : team.category,
+                                  if (isMine) 'Ya asignado',
                                 ].whereType<String>().join(' • '),
                               ),
                               onTap: () => _editTeam(team),
@@ -204,14 +262,21 @@ class TeamsListTabState extends State<TeamsListTab> {
                                     _editTeam(team);
                                   } else if (value == 'delete') {
                                     _deleteTeam(team);
+                                  } else if (value == 'claim') {
+                                    _claimTeam(team);
                                   }
                                 },
-                                itemBuilder: (context) => const [
-                                  PopupMenuItem(
+                                itemBuilder: (context) => [
+                                  if (_canClaim(team))
+                                    const PopupMenuItem(
+                                      value: 'claim',
+                                      child: Text('Asignarme como encargado'),
+                                    ),
+                                  const PopupMenuItem(
                                     value: 'edit',
                                     child: Text('Editar'),
                                   ),
-                                  PopupMenuItem(
+                                  const PopupMenuItem(
                                     value: 'delete',
                                     child: Text('Eliminar'),
                                   ),

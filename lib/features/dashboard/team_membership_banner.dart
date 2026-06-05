@@ -134,7 +134,7 @@ class _TeamMembershipBannerState extends State<TeamMembershipBanner> {
             const SizedBox(height: 8),
             Text(
               _isPlatformAdmin
-                  ? 'Como administrador, creá el primer equipo del club. También podés hacerlo desde Menú → Gestión de equipos.'
+                  ? 'Si ya creaste el equipo en Gestión de equipos, abrí la pestaña Equipos → menú ⋮ del club → Asignarme como encargado.'
                   : 'Pedile el código a tu capitán o director técnico para unirte al plantel.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: fg.withValues(alpha: 0.92),

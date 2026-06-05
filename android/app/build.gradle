@@ -61,6 +61,12 @@ android {
         debug {
             // Firma debug por defecto del SDK (no requiere upload-keystore.jks)
         }
+        release {
+            // APK instalable en dispositivo (pruebas / Drive). Para Play Store usar keystore propio.
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
+        }
     }
 }
 

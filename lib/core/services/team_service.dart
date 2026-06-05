@@ -120,6 +120,12 @@ class TeamService {
     }
   }
 
+  /// Asigna al usuario actual como encargado (super_admin / manager / admin).
+  Future<Map<String, dynamic>> claimTeamAsAdmin(int teamId) async {
+    final response = await _dio.post('/teams/$teamId/claim-admin');
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
   Future<Team> setTeamCategories(int teamId, List<int> categoryIds) async {
     final response = await _dio.patch(
       '/teams/$teamId/categories',
