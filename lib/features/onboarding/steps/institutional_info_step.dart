@@ -6,7 +6,9 @@ import 'package:sportify_amateur/core/services/sport_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/features/onboarding/widgets/onboarding_step_buttons.dart';
 import 'package:sportify_amateur/models/category.dart';
+import 'package:sportify_amateur/models/my_team_option.dart';
 import 'package:sportify_amateur/models/sport.dart';
+import 'package:sportify_amateur/models/team.dart';
 
 enum TeamSetupMode { create, join, skip }
 
@@ -46,6 +48,30 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
   String? _invitePreview;
   bool _previewLoading = false;
   bool _isPlatformAdmin = false;
+  bool _isDt = false;
+  List<MyTeamOption> _myTeams = [];
+  Team? _matchedExistingTeam;
+  bool _checkingTeamName = false;
+
+  static const _fieldDecoration = InputDecoration(
+    border: OutlineInputBorder(),
+    filled: true,
+    fillColor: Colors.white,
+  );
+
+  InputDecoration _inputDecoration(String label) {
+    return _fieldDecoration.copyWith(
+      labelText: label,
+      labelStyle: const TextStyle(
+        color: Color(0xFF374151),
+        fontWeight: FontWeight.w600,
+      ),
+      floatingLabelStyle: const TextStyle(
+        color: Color(0xFF111827),
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -56,25 +82,79 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
     _teamNameController.text = widget.initialData['teamName']?.toString() ?? '';
     _inviteCodeController.text =
         widget.initialData['inviteCode']?.toString() ?? '';
+    _teamNameController.addListener(_onTeamNameChanged);
     _loadRoleAndSports();
   }
 
   Future<void> _loadRoleAndSports() async {
     final role = await AuthStorageService().getRole();
+    List<MyTeamOption> teams = [];
+    try {
+      teams = await _teamService.getMyTeams();
+    } catch (_) {}
+
     if (!mounted) return;
     setState(() {
       _isPlatformAdmin =
           role == 'super_admin' || role == 'manager' || role == 'admin';
-      if (_isPlatformAdmin &&
+      _isDt = role == 'dt';
+      _myTeams = teams;
+      if (teams.isNotEmpty && widget.initialData['onboardingMode'] == null) {
+        _mode = TeamSetupMode.skip;
+      } else if (_isDt && widget.initialData['onboardingMode'] == null) {
+        _mode = TeamSetupMode.join;
+      } else if (_isPlatformAdmin &&
           widget.initialData['onboardingMode'] == null) {
         _mode = TeamSetupMode.create;
       }
     });
     await _loadSports();
+    if (_teamNameController.text.trim().length >= 2) {
+      await _checkExistingTeamName(_teamNameController.text.trim());
+    }
+  }
+
+  void _onTeamNameChanged() {
+    final name = _teamNameController.text.trim();
+    if (name.length < 2) {
+      if (_matchedExistingTeam != null) {
+        setState(() => _matchedExistingTeam = null);
+      }
+      return;
+    }
+    _checkExistingTeamName(name);
+  }
+
+  Future<void> _checkExistingTeamName(String name) async {
+    if (_selectedSport == null) return;
+    setState(() => _checkingTeamName = true);
+    try {
+      final matches = await _teamService.searchTeams(name);
+      Team? exact;
+      for (final t in matches) {
+        if (t.name.toLowerCase() == name.toLowerCase() &&
+            t.sportId == _selectedSport!.id) {
+          exact = t;
+          break;
+        }
+      }
+      if (!mounted) return;
+      setState(() => _matchedExistingTeam = exact);
+    } catch (_) {
+      if (mounted) setState(() => _matchedExistingTeam = null);
+    } finally {
+      if (mounted) setState(() => _checkingTeamName = false);
+    }
+  }
+
+  bool _isGenericGenderCategory(String name) {
+    final n = name.trim().toLowerCase();
+    return n == 'masculino' || n == 'femenino';
   }
 
   @override
   void dispose() {
+    _teamNameController.removeListener(_onTeamNameChanged);
     _teamNameController.dispose();
     _inviteCodeController.dispose();
     super.dispose();
@@ -110,10 +190,12 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
         }
       }
       if (!mounted) return;
+      final selectable =
+          cats.where((c) => !_isGenericGenderCategory(c.name)).toList();
       setState(() {
-        _categories = cats;
+        _categories = selectable.isNotEmpty ? selectable : cats;
         _selectedCategoryIds.removeWhere(
-          (id) => !cats.any((c) => c.id == id),
+          (id) => !_categories.any((c) => c.id == id),
         );
       });
     } finally {
@@ -214,20 +296,76 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_myTeams.isNotEmpty) ...[
+                    Card(
+                      color: Colors.green.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.check_circle,
+                                    color: Colors.green.shade700, size: 20),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text(
+                                    'Ya tenés equipo asignado',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ..._myTeams.map(
+                              (t) => Text(
+                                '• ${t.displayLabel}',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Podés continuar con «Lo configuro después».',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   Text(
                     _isPlatformAdmin
                         ? 'Como administrador, creá el primer equipo'
-                        : '¿Cómo querés empezar?',
+                        : _isDt
+                            ? 'Como DT, unite al equipo del club'
+                            : '¿Cómo querés empezar?',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
+                      color: Color(0xFF111827),
                     ),
                   ),
                   if (_isPlatformAdmin) ...[
                     const SizedBox(height: 8),
                     Text(
                       'No necesitás código de invitación: vos gestionás el club.',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                    ),
+                  ],
+                  if (_isDt && _myTeams.isEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Si el administrador ya creó el equipo, usá el código de invitación '
+                      'o cargá el mismo nombre del equipo para unirte automáticamente.',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                     ),
                   ],
                   const SizedBox(height: 12),
@@ -261,21 +399,41 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
                     const SizedBox(height: 20),
                     TextField(
                       controller: _teamNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre del equipo',
-                        border: OutlineInputBorder(),
+                      style: const TextStyle(
+                        color: Color(0xFF111827),
+                        fontSize: 16,
                       ),
+                      decoration: _inputDecoration('Nombre del equipo'),
                     ),
+                    if (_checkingTeamName)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: LinearProgressIndicator(),
+                      )
+                    else if (_matchedExistingTeam != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'El equipo «${_matchedExistingTeam!.name}» ya existe. '
+                          'Al continuar te unirás como encargado (no se creará otro).',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue.shade800,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 12),
                     if (_loadingSports)
                       const LinearProgressIndicator()
                     else
                       DropdownButtonFormField<Sport>(
                         value: _selectedSport,
-                        decoration: const InputDecoration(
-                          labelText: 'Deporte',
-                          border: OutlineInputBorder(),
+                        style: const TextStyle(
+                          color: Color(0xFF111827),
+                          fontSize: 16,
                         ),
+                        decoration: _inputDecoration('Deporte'),
                         items: _sports
                             .map((s) => DropdownMenuItem(
                                   value: s,
@@ -296,8 +454,8 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Elegí al menos una (ej. Libre, +35, Femenino)',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      'Elegí al menos una (ej. Masculino +35, Masculino +40)',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                     ),
                     const SizedBox(height: 8),
                     if (_loadingCategories)
@@ -363,9 +521,12 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
                     const SizedBox(height: 20),
                     TextField(
                       controller: _inviteCodeController,
-                      decoration: InputDecoration(
-                        labelText: 'Código de invitación',
-                        border: const OutlineInputBorder(),
+                      style: const TextStyle(
+                        color: Color(0xFF111827),
+                        fontSize: 16,
+                        letterSpacing: 1.2,
+                      ),
+                      decoration: _inputDecoration('Código de invitación').copyWith(
                         suffixIcon: IconButton(
                           icon: _previewLoading
                               ? const SizedBox(

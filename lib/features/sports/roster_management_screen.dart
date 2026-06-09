@@ -35,6 +35,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
   String _selectedSeason = '';
   String _searchQuery = '';
   String _filterStatus = 'all';
+  String _categoryFilter = 'all';
 
   @override
   void initState() {
@@ -126,8 +127,22 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
           });
         }
       }
+      final categoryNames = roster
+          .map((p) => p.category.trim())
+          .where((c) => c.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
       setState(() {
         _roster = roster;
+        if (categoryNames.length > 1) {
+          if (_categoryFilter == 'all' ||
+              !categoryNames.contains(_categoryFilter)) {
+            _categoryFilter = categoryNames.first;
+          }
+        } else {
+          _categoryFilter = 'all';
+        }
         _isLoading = false;
       });
     } catch (e) {
@@ -162,8 +177,22 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
     }
   }
 
+  List<String> get _rosterCategories {
+    final names = _roster
+        .map((p) => p.category.trim())
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList();
+    names.sort();
+    return names;
+  }
+
   List<PlayerRoster> get _filteredRoster {
     var filtered = _roster.where((player) {
+      if (_categoryFilter != 'all' && player.category != _categoryFilter) {
+        return false;
+      }
+
       // Filtro por búsqueda
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
@@ -470,6 +499,52 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                         ),
                       ],
                     ),
+                    if (_rosterCategories.length > 1) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Icon(Icons.category, color: Colors.white),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Categoría:',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              value: _rosterCategories.contains(_categoryFilter)
+                                  ? _categoryFilter
+                                  : 'all',
+                              dropdownColor: Colors.green.shade700,
+                              iconEnabledColor: Colors.white,
+                              style: const TextStyle(color: Colors.white),
+                              underline: Container(),
+                              items: [
+                                const DropdownMenuItem(
+                                  value: 'all',
+                                  child: Text('Todas las categorías'),
+                                ),
+                                ..._rosterCategories.map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(c),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _categoryFilter = value);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -650,7 +725,9 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            _searchQuery.isNotEmpty || _filterStatus != 'all'
+            _searchQuery.isNotEmpty ||
+                _filterStatus != 'all' ||
+                _categoryFilter != 'all'
                 ? 'No se encontraron jugadores con los filtros aplicados.'
                 : 'Agrega jugadores a la lista de buena fe para comenzar.',
             style: TextStyle(
@@ -708,6 +785,20 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                        if (player.category.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Chip(
+                            label: Text(
+                              player.category,
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            backgroundColor: Colors.blue.shade50,
+                            padding: EdgeInsets.zero,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ],
                         if (player.isGuestPlayer) ...[
                           const SizedBox(height: 4),
                           Chip(

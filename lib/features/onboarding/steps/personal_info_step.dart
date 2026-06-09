@@ -439,16 +439,28 @@ class _PersonalInfoStepState extends State<PersonalInfoStep> {
       validator: validator,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
+      style: const TextStyle(
+        color: Color(0xFF111827),
+        fontSize: 16,
+      ),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, size: 20),
+        labelStyle: const TextStyle(
+          color: Color(0xFF374151),
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: const TextStyle(
+          color: Color(0xFF111827),
+          fontWeight: FontWeight.w600,
+        ),
+        prefixIcon: Icon(icon, size: 20, color: const Color(0xFF4B5563)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: Colors.grey[400]!),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: Colors.grey[400]!),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

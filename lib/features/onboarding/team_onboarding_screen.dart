@@ -73,9 +73,15 @@ class _TeamOnboardingScreenState extends State<TeamOnboardingScreen> {
       }
       final cats =
           await _categoryService.getCategoriesBySport(sportId);
+      final selectable = cats
+          .where((c) {
+            final n = c.name.trim().toLowerCase();
+            return n != 'masculino' && n != 'femenino';
+          })
+          .toList();
       if (!mounted) return;
       setState(() {
-        _categories = cats;
+        _categories = selectable.isNotEmpty ? selectable : cats;
         _selectedCategoryIds
           ..clear()
           ..addAll(

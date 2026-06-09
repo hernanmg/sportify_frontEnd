@@ -212,27 +212,45 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
         if (newRole != null && newRole.isNotEmpty) {
           await AuthStorageService().saveRole(newRole);
         }
-        if (mounted && result['inviteCode'] != null) {
-          await showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Equipo creado'),
-              content: Text(
-                'Compartí este código con tu plantel:\n\n${result['inviteCode']}',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
-                ),
+        if (mounted) {
+          final mode = result['mode'] as String? ?? '';
+          final message = result['message'] as String?;
+          if (mode == 'join_existing' && message != null) {
+            await showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Equipo encontrado'),
+                content: Text(message),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Entendido'),
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Entendido'),
+            );
+          } else if (result['inviteCode'] != null) {
+            await showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Equipo creado'),
+                content: Text(
+                  'Compartí este código con tu plantel:\n\n${result['inviteCode']}',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
                 ),
-              ],
-            ),
-          );
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Entendido'),
+                  ),
+                ],
+              ),
+            );
+          }
         }
       }
 
