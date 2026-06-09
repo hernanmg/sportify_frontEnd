@@ -28,7 +28,9 @@ class _LoginScreenState extends State<UserLoginScreen> {
 
       if (response && context.mounted) {
         final authStatus = await authService.checkAuthStatus();
-        if (authStatus['needsOnboarding'] == true) {
+        if (authStatus['needsTeamSetup'] == true) {
+          Navigator.pushReplacementNamed(context, '/staff-team-setup');
+        } else if (authStatus['needsOnboarding'] == true) {
           Navigator.pushReplacementNamed(context, '/onboarding');
         } else {
           Navigator.pushReplacementNamed(context, '/dashboard');

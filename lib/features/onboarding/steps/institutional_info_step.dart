@@ -50,7 +50,8 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
   bool _isPlatformAdmin = false;
   bool _isDt = false;
   List<MyTeamOption> _myTeams = [];
-  Team? _matchedExistingTeam;
+  List<Team> _nameCollisions = [];
+  bool _acknowledgeDuplicateName = false;
   bool _checkingTeamName = false;
 
   static const _fieldDecoration = InputDecoration(
@@ -117,8 +118,11 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
   void _onTeamNameChanged() {
     final name = _teamNameController.text.trim();
     if (name.length < 2) {
-      if (_matchedExistingTeam != null) {
-        setState(() => _matchedExistingTeam = null);
+      if (_nameCollisions.isNotEmpty || _acknowledgeDuplicateName) {
+        setState(() {
+          _nameCollisions = [];
+          _acknowledgeDuplicateName = false;
+        });
       }
       return;
     }
@@ -130,18 +134,25 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
     setState(() => _checkingTeamName = true);
     try {
       final matches = await _teamService.searchTeams(name);
-      Team? exact;
-      for (final t in matches) {
-        if (t.name.toLowerCase() == name.toLowerCase() &&
-            t.sportId == _selectedSport!.id) {
-          exact = t;
-          break;
-        }
-      }
+      final exact = matches
+          .where(
+            (t) =>
+                t.name.toLowerCase() == name.toLowerCase() &&
+                t.sportId == _selectedSport!.id,
+          )
+          .toList();
       if (!mounted) return;
-      setState(() => _matchedExistingTeam = exact);
+      setState(() {
+        _nameCollisions = exact;
+        if (exact.isEmpty) _acknowledgeDuplicateName = false;
+      });
     } catch (_) {
-      if (mounted) setState(() => _matchedExistingTeam = null);
+      if (mounted) {
+        setState(() {
+          _nameCollisions = [];
+          _acknowledgeDuplicateName = false;
+        });
+      }
     } finally {
       if (mounted) setState(() => _checkingTeamName = false);
     }
@@ -254,6 +265,12 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
         _snack('Seleccioná al menos una categoría');
         return;
       }
+      if (_nameCollisions.isNotEmpty && !_acknowledgeDuplicateName) {
+        _snack(
+          'Ya hay otro equipo con este nombre. Marcá la confirmación o usá el código de invitación.',
+        );
+        return;
+      }
     }
     if (_mode == TeamSetupMode.join &&
         _inviteCodeController.text.trim().length < 4) {
@@ -271,6 +288,7 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
       'sportId': _selectedSport?.id,
       'categoryIds': _selectedCategoryIds.toList(),
       'inviteCode': _inviteCodeController.text.trim().toUpperCase(),
+      'acknowledgeDuplicateName': _acknowledgeDuplicateName,
     });
   }
 
@@ -363,23 +381,24 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
                   if (_isDt && _myTeams.isEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Si el administrador ya creó el equipo, usá el código de invitación '
-                      'o cargá el mismo nombre del equipo para unirte automáticamente.',
+                      'Si el administrador ya creó el equipo, pedile el código de invitación '
+                      'y unite desde la opción de abajo.',
                       style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                     ),
                   ],
                   const SizedBox(height: 12),
-                  _modeTile(
-                    TeamSetupMode.create,
-                    _isPlatformAdmin
-                        ? 'Crear equipo del club'
-                        : 'Administro / creo un equipo',
-                    _isPlatformAdmin
-                        ? 'Definís deporte, categorías y recibís el código para el plantel'
-                        : 'Quedás como encargado y recibís un código para invitar al plantel',
-                    Icons.shield,
-                    recommended: _isPlatformAdmin,
-                  ),
+                  if (!_isDt || _isPlatformAdmin)
+                    _modeTile(
+                      TeamSetupMode.create,
+                      _isPlatformAdmin
+                          ? 'Crear equipo del club'
+                          : 'Administro / creo un equipo',
+                      _isPlatformAdmin
+                          ? 'Definís deporte, categorías y recibís el código para el plantel'
+                          : 'Quedás como encargado y recibís un código para invitar al plantel',
+                      Icons.shield,
+                      recommended: _isPlatformAdmin,
+                    ),
                   if (!_isPlatformAdmin)
                     _modeTile(
                       TeamSetupMode.join,
@@ -410,19 +429,60 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
                         padding: EdgeInsets.only(top: 8),
                         child: LinearProgressIndicator(),
                       )
-                    else if (_matchedExistingTeam != null)
+                    else if (_nameCollisions.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          'El equipo «${_matchedExistingTeam!.name}» ya existe. '
-                          'Al continuar te unirás como encargado (no se creará otro).',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue.shade800,
-                            fontWeight: FontWeight.w500,
+                        child: Card(
+                          color: Colors.amber.shade50,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Ya hay ${_nameCollisions.length} equipo(s) con este nombre:',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.amber.shade900,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                ..._nameCollisions.map((t) {
+                                  final admins = t.adminEmails.isNotEmpty
+                                      ? t.adminEmails.join(', ')
+                                      : 'sin admin registrado';
+                                  return Text(
+                                    '• ${t.name} — admin: $admins',
+                                    style: const TextStyle(fontSize: 12),
+                                  );
+                                }),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Si es el tuyo, pedí el código al administrador. '
+                                  'Si es otro club distinto, confirmá abajo.',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Confirmo que es un club distinto con el mismo nombre',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                        value: _acknowledgeDuplicateName,
+                        onChanged: (v) => setState(
+                          () => _acknowledgeDuplicateName = v ?? false,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     if (_loadingSports)
                       const LinearProgressIndicator()

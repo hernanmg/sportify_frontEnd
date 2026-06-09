@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sportify_amateur/widgets/invite_code_share_sheet.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/services/category_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
@@ -321,6 +322,21 @@ class _TeamOnboardingScreenState extends State<TeamOnboardingScreen> {
               ),
             ),
           const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _inviteCode == null
+                ? null
+                : () {
+                    final team = _selectedTeam;
+                    showInviteCodeShareSheet(
+                      context,
+                      inviteCode: _inviteCode!,
+                      teamName: team?.name,
+                    );
+                  },
+            icon: const Icon(Icons.share),
+            label: const Text('Compartir código'),
+          ),
+          const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: _inviteCode == null ? null : _copyCode,
             icon: const Icon(Icons.copy),

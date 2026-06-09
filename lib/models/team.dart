@@ -12,6 +12,7 @@ class Team {
   final int? foundedYear;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final List<String> adminEmails;
 
   Team({
     required this.id,
@@ -27,6 +28,7 @@ class Team {
     this.foundedYear,
     required this.createdAt,
     required this.updatedAt,
+    this.adminEmails = const [],
   });
 
   factory Team.fromJson(Map<String, dynamic> json) {
@@ -70,6 +72,10 @@ class Team {
       foundedYear: json['foundedYear'] ?? json['founded_year'],
       createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
       updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at']),
+      adminEmails: (json['adminEmails'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
     );
   }
 

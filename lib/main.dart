@@ -26,6 +26,7 @@ import 'package:sportify_amateur/features/sports/sports_management_args.dart';
 import 'package:sportify_amateur/features/sports/post_match_screen.dart';
 import 'package:sportify_amateur/features/teams/teams_management_screen.dart';
 import 'package:sportify_amateur/features/onboarding/onboarding_wizard.dart';
+import 'package:sportify_amateur/features/onboarding/staff_team_setup_screen.dart';
 import 'package:sportify_amateur/features/teams/team_form_screen.dart';
 import 'package:sportify_amateur/features/dashboard/secondaryHome_screen.dart';
 import 'package:sportify_amateur/features/gameStats/comparePlayerStats_screen.dart';
@@ -102,6 +103,7 @@ class MainApp extends StatelessWidget {
         '/login': (context) => const UserLoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/onboarding': (context) => const OnboardingWizard(),
+        '/staff-team-setup': (context) => const StaffTeamSetupScreen(),
         '/team-form': (context) => const TeamFormScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/profile/info': (context) => const ProfileInfoScreen(),

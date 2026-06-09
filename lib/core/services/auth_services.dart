@@ -9,6 +9,7 @@ import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
 import 'package:sportify_amateur/core/services/push_registration_service.dart';
+import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/user_profile_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 
@@ -230,12 +231,34 @@ class AuthService {
       final profile = await profileService.getProfile();
       final completion = profile.profileCompletion;
       final onboardingDone = profile.estadoRegistro == 'completed';
+      final role = await storageService.getRole();
+      const staffRoles = {'dt', 'super_admin', 'manager', 'admin'};
+      final isStaff = staffRoles.contains(role);
+      final hasBasicIdentity = (profile.firstName?.trim().isNotEmpty ?? false) &&
+          (profile.lastName?.trim().isNotEmpty ?? false);
+
+      var hasTeams = false;
+      try {
+        final teams = await TeamService().getMyTeams();
+        hasTeams = teams.isNotEmpty;
+      } catch (_) {}
+
+      var needsOnboarding = !onboardingDone && completion < 80;
+      if (hasTeams) {
+        needsOnboarding = false;
+      } else if (isStaff && hasBasicIdentity) {
+        // DT / admin de seed: no repetir datos personales; solo alta en equipo.
+        needsOnboarding = false;
+      }
 
       return {
         'isAuthenticated': true,
-        'needsOnboarding': !onboardingDone && completion < 80,
+        'needsOnboarding': needsOnboarding,
+        'needsTeamSetup': isStaff && !hasTeams,
+        'isStaffRole': isStaff,
         'profileCompletion': completion,
         'estadoRegistro': profile.estadoRegistro,
+        'role': role,
       };
     } catch (e) {
       print('Error checking auth status: $e');

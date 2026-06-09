@@ -7,6 +7,8 @@ import 'package:sportify_amateur/core/services/user_profile_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/models/user_profile.dart';
+import 'package:sportify_amateur/widgets/invite_code_share_sheet.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 
 class OnboardingWizard extends StatefulWidget {
   const OnboardingWizard({super.key});
@@ -31,6 +33,7 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
 
   bool isLoading = false;
   UserProfile? currentProfile;
+  bool _isStaffRole = false;
 
   @override
   void initState() {
@@ -43,12 +46,25 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
     try {
       currentProfile = await profileService.getProfile();
       _prefillWizardData();
+      final role = await AuthStorageService().getRole();
+      _isStaffRole = {'dt', 'super_admin', 'manager', 'admin'}.contains(role);
+      if (_isStaffRole && _hasBasicProfile) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          pageController.jumpToPage(2);
+          setState(() => currentStep = 2);
+        });
+      }
     } catch (e) {
       _showError('Error al cargar perfil: $e');
     } finally {
       setState(() => isLoading = false);
     }
   }
+
+  bool get _hasBasicProfile =>
+      (currentProfile?.firstName?.trim().isNotEmpty ?? false) &&
+      (currentProfile?.lastName?.trim().isNotEmpty ?? false);
 
   void _prefillWizardData() {
     if (currentProfile != null) {
@@ -204,10 +220,28 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
           payload['name'] = institutional['teamName'];
           payload['sportId'] = institutional['sportId'];
           payload['categoryIds'] = institutional['categoryIds'];
+          if (institutional['acknowledgeDuplicateName'] == true) {
+            payload['acknowledgeDuplicateName'] = true;
+          }
         } else if (mode == 'join') {
           payload['inviteCode'] = institutional['inviteCode'];
         }
-        final result = await _teamService.completeOnboarding(payload);
+        Map<String, dynamic> result;
+        try {
+          result = await _teamService.completeOnboarding(payload);
+        } catch (e) {
+          final msg = TeamService.errorMessage(e);
+          if (msg.contains('DUPLICATE_TEAM_NAME') ||
+              msg.contains('Ya existe otro equipo')) {
+            _showError(
+              'Ya hay un equipo con ese nombre administrado por otro usuario. '
+              'Pedí el código de invitación o confirmá que es un club distinto.',
+            );
+          } else {
+            _showError('Error al finalizar: $msg');
+          }
+          return;
+        }
         final newRole = result['role'] as String?;
         if (newRole != null && newRole.isNotEmpty) {
           await AuthStorageService().saveRole(newRole);
@@ -230,25 +264,14 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
               ),
             );
           } else if (result['inviteCode'] != null) {
-            await showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Equipo creado'),
-                content: Text(
-                  'Compartí este código con tu plantel:\n\n${result['inviteCode']}',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Entendido'),
-                  ),
-                ],
-              ),
+            final teamJson = result['team'];
+            final teamName = teamJson is Map
+                ? teamJson['name']?.toString()
+                : null;
+            await showInviteCodeShareSheet(
+              context,
+              inviteCode: result['inviteCode'].toString(),
+              teamName: teamName,
             );
           }
         }
