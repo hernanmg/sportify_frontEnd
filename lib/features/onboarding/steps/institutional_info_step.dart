@@ -5,6 +5,7 @@ import 'package:sportify_amateur/core/services/category_service.dart';
 import 'package:sportify_amateur/core/services/sport_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/features/onboarding/widgets/onboarding_step_buttons.dart';
+import 'package:sportify_amateur/core/utils/category_label.dart';
 import 'package:sportify_amateur/models/category.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 import 'package:sportify_amateur/models/sport.dart';
@@ -158,10 +159,8 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
     }
   }
 
-  bool _isGenericGenderCategory(String name) {
-    final n = name.trim().toLowerCase();
-    return n == 'masculino' || n == 'femenino';
-  }
+  bool _isGenericGenderCategory(String name) =>
+      CategoryLabels.isGenericGenderOnly(name);
 
   @override
   void dispose() {
@@ -514,7 +513,7 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Elegí al menos una (ej. Masculino +35, Masculino +40)',
+                      'Elegí al menos una (ej. M+35, M+40, M-Libre)',
                       style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                     ),
                     const SizedBox(height: 8),

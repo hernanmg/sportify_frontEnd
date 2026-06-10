@@ -1,3 +1,4 @@
+import 'package:sportify_amateur/core/utils/category_label.dart';
 import 'package:sportify_amateur/models/team.dart';
 
 class PlayerRoster {
@@ -64,7 +65,7 @@ class PlayerRoster {
       documentNumber: json['documentNumber'] ?? json['document_number'] ?? '',
       emergencyContact: json['emergencyContact'] ?? json['emergency_contact'],
       season: json['season'] ?? '',
-      category: json['category'] ?? '',
+      category: CategoryLabels.short(json['category']?.toString()),
       medicalStatus:
           json['medicalStatus'] ?? json['medical_status'] ?? 'pending',
       notes: json['notes'],
@@ -111,6 +112,7 @@ class PlayerRoster {
   bool get hasAppAccount => !isGuestPlayer;
 
   String get playerName => player?.name ?? 'Jugador #$playerId';
+  String get categoryDisplay => CategoryLabels.short(category);
   String? get avatarUrl => player?.avatarUrl;
   String get teamName => team?.name ?? 'Equipo #$teamId';
 

@@ -1,3 +1,5 @@
+import 'package:sportify_amateur/core/utils/category_label.dart';
+
 class Category {
   final int id;
   final String name;
@@ -53,15 +55,8 @@ class Category {
   }
 
   String get displayName {
-    String display = name;
-    if (ageMin != null) {
-      display += ' (${ageMin}+ años)';
-    } else if (ageMax != null) {
-      display += ' (hasta $ageMax años)';
-    }
-    if (gender != null && gender != 'mixto') {
-      display += ' - ${gender?.toUpperCase()}';
-    }
-    return display;
+    final short = CategoryLabels.short(name);
+    if (short.isNotEmpty) return short;
+    return name;
   }
 }
