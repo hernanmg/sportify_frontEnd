@@ -225,6 +225,10 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
           }
         } else if (mode == 'join') {
           payload['inviteCode'] = institutional['inviteCode'];
+          final catIds = institutional['categoryIds'];
+          if (catIds is List && catIds.isNotEmpty) {
+            payload['categoryIds'] = catIds;
+          }
         }
         Map<String, dynamic> result;
         try {

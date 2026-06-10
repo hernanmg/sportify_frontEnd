@@ -54,6 +54,10 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
   List<Team> _nameCollisions = [];
   bool _acknowledgeDuplicateName = false;
   bool _checkingTeamName = false;
+  bool _joinAlsoPlayOnRoster = false;
+  List<int> _joinInviteCategoryIds = [];
+  List<String> _joinInviteCategoryNames = [];
+  final Set<int> _joinSelectedCategoryIds = {};
 
   static const _fieldDecoration = InputDecoration(
     border: OutlineInputBorder(),
@@ -239,12 +243,33 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
     });
     try {
       final data = await _teamService.previewInvite(code);
+      final names = (data['categoryNames'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [];
+      final ids = (data['categoryIds'] as List?)
+              ?.map((e) => int.tryParse(e.toString()))
+              .whereType<int>()
+              .toList() ??
+          [];
       setState(() {
         _invitePreview =
-            '${data['teamName']} — ${(data['categoryNames'] as List?)?.join(', ') ?? 'Sin categoría'}';
+            '${data['teamName']} — ${names.isNotEmpty ? names.join(', ') : 'Sin categoría'}';
+        _joinInviteCategoryIds = ids;
+        _joinInviteCategoryNames = names;
+        _joinSelectedCategoryIds
+          ..clear()
+          ..addAll(ids);
+        _joinAlsoPlayOnRoster = false;
       });
     } catch (e) {
-      setState(() => _invitePreview = 'Código no válido');
+      setState(() {
+        _invitePreview = 'Código no válido';
+        _joinInviteCategoryIds = [];
+        _joinInviteCategoryNames = [];
+        _joinSelectedCategoryIds.clear();
+        _joinAlsoPlayOnRoster = false;
+      });
     } finally {
       if (mounted) setState(() => _previewLoading = false);
     }
@@ -276,6 +301,17 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
       _snack('Ingresá el código de invitación');
       return;
     }
+    if (_mode == TeamSetupMode.join &&
+        _isDt &&
+        _joinAlsoPlayOnRoster &&
+        _joinSelectedCategoryIds.isEmpty) {
+      _snack('Seleccioná al menos una categoría para el plantel');
+      return;
+    }
+
+    final joinCategoryIds = _isDt && _joinAlsoPlayOnRoster
+        ? _joinSelectedCategoryIds.toList()
+        : <int>[];
 
     widget.onNext({
       'onboardingMode': _mode == TeamSetupMode.create
@@ -285,7 +321,9 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
               : 'skip',
       'teamName': _teamNameController.text.trim(),
       'sportId': _selectedSport?.id,
-      'categoryIds': _selectedCategoryIds.toList(),
+      'categoryIds': _mode == TeamSetupMode.create
+          ? _selectedCategoryIds.toList()
+          : joinCategoryIds,
       'inviteCode': _inviteCodeController.text.trim().toUpperCase(),
       'acknowledgeDuplicateName': _acknowledgeDuplicateName,
     });
@@ -616,6 +654,44 @@ class _InstitutionalInfoStepState extends State<InstitutionalInfoStep> {
                           ),
                         ),
                       ),
+                    if (_isDt && _invitePreview != null && !_invitePreview!.contains('no válido')) ...[
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('También juego en el plantel'),
+                        subtitle: const Text(
+                          'Si solo dirigís, dejalo apagado. Si jugás, elegí categoría.',
+                        ),
+                        value: _joinAlsoPlayOnRoster,
+                        onChanged: (v) =>
+                            setState(() => _joinAlsoPlayOnRoster = v),
+                      ),
+                      if (_joinAlsoPlayOnRoster &&
+                          _joinInviteCategoryIds.isNotEmpty)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: List.generate(_joinInviteCategoryIds.length, (i) {
+                            final id = _joinInviteCategoryIds[i];
+                            final label = i < _joinInviteCategoryNames.length
+                                ? _joinInviteCategoryNames[i]
+                                : 'Cat. $id';
+                            return FilterChip(
+                              label: Text(label),
+                              selected: _joinSelectedCategoryIds.contains(id),
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _joinSelectedCategoryIds.add(id);
+                                  } else {
+                                    _joinSelectedCategoryIds.remove(id);
+                                  }
+                                });
+                              },
+                            );
+                          }),
+                        ),
+                    ],
                   ],
                 ],
               ),

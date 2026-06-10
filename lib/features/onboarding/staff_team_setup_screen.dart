@@ -99,8 +99,8 @@ class _StaffTeamSetupScreenState extends State<StaffTeamSetupScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Como $_roleLabel, unite al equipo que creó el administrador '
-                        'con el código de invitación que te comparta. '
+                        'Como $_roleLabel, unite al equipo con el código que te comparta. '
+                        'Si además jugás, activá «También juego en el plantel» y elegí tu categoría. '
                         'También podés crear un equipo nuevo más adelante desde Gestión de equipos.',
                         style: TextStyle(
                           color: Colors.grey.shade800,

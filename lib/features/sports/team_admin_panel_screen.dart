@@ -120,7 +120,7 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
                   .map(
                     (t) => DropdownMenuItem(
                       value: t,
-                      child: Text(t.listLabel(teams)),
+                      child: Text(t.listLabel(_teams)),
                     ),
                   )
                   .toList(),

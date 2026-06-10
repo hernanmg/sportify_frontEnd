@@ -27,9 +27,14 @@ class TeamService {
     return Map<String, dynamic>.from(response.data as Map);
   }
 
-  Future<Map<String, dynamic>> joinWithCode(String inviteCode) async {
+  Future<Map<String, dynamic>> joinWithCode(
+    String inviteCode, {
+    List<int>? categoryIds,
+  }) async {
     final response = await _dio.post('/teams/join', data: {
       'inviteCode': inviteCode.trim().toUpperCase(),
+      if (categoryIds != null && categoryIds.isNotEmpty)
+        'categoryIds': categoryIds,
     });
     return Map<String, dynamic>.from(response.data as Map);
   }
