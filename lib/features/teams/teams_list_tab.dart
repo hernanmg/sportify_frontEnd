@@ -245,9 +245,10 @@ class TeamsListTabState extends State<TeamsListTab> {
                                   color: isMine ? Colors.green.shade800 : null,
                                 ),
                               ),
-                              title: Text(team.name),
+                              title: Text(Team.listLabel(team, _teams)),
                               subtitle: Text(
                                 [
+                                  'ID ${team.id}',
                                   team.sport,
                                   team.categoryNames.isNotEmpty
                                       ? team.categoryNames.join(', ')

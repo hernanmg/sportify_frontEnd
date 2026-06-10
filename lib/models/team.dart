@@ -122,6 +122,18 @@ class Team {
   // Helpers para UI
   String get displayName => name;
 
+  /// Si hay varios equipos con el mismo nombre, incluye el id (ej. ZFC (#2)).
+  static String listLabel(Team team, Iterable<Team> all) {
+    final dup = all
+            .where(
+              (t) => t.name.toLowerCase() == team.name.toLowerCase(),
+            )
+            .length >
+        1;
+    if (dup) return '${team.name} (#${team.id})';
+    return team.name;
+  }
+
   String get fullName {
     final parts = <String>[name];
     if (category != null) parts.add(category!);

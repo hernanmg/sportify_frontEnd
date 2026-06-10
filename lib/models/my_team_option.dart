@@ -24,6 +24,16 @@ class MyTeamOption {
     return '$name (${categories.join(', ')})';
   }
 
+  /// Etiqueta en listas; distingue equipos homónimos por id.
+  String listLabel(Iterable<MyTeamOption> all) {
+    final dup =
+        all.where((t) => t.name.toLowerCase() == name.toLowerCase()).length > 1;
+    final base = dup ? '$name (#$teamId)' : name;
+    if (categories.isEmpty) return base;
+    if (categories.length == 1) return '$base · ${categories.first}';
+    return '$base · ${categories.join(', ')}';
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

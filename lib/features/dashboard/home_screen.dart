@@ -203,6 +203,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.deepPurple,
                     onTap: () => _switchTab(context, 3),
                   ),
+                  if (_role == 'super_admin' ||
+                      _role == 'manager' ||
+                      _role == 'admin')
+                    _QuickTile(
+                      icon: Icons.groups_3,
+                      title: 'Gestión de equipos',
+                      subtitle: 'Clubes, deportes, categorías, duplicados',
+                      color: Colors.blue,
+                      onTap: () => Navigator.pushNamed(context, '/teams'),
+                    ),
+                  if (_role == 'super_admin' ||
+                      _role == 'manager' ||
+                      _role == 'admin')
+                    _QuickTile(
+                      icon: Icons.dashboard_customize,
+                      title: 'Panel del equipo',
+                      subtitle: 'Morosos, caja del mes, asistencias',
+                      color: Colors.teal,
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        '/sports/admin-panel',
+                      ),
+                    ),
                 ],
               ),
             ),

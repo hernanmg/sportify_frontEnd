@@ -38,13 +38,19 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
         role == 'super_admin' ||
         role == 'team_captain' ||
         role == 'admin';
+    final isPlatformAdmin =
+        role == 'super_admin' || role == 'manager' || role == 'admin';
 
     List<Team> teams = [];
     try {
-      final mine = await _teamService.getMyTeams();
-      teams = mine.map((o) => o.team).toList();
-      if (teams.isEmpty) {
+      if (isPlatformAdmin) {
         teams = await _teamService.getAllTeams();
+      } else {
+        final mine = await _teamService.getMyTeams();
+        teams = mine.map((o) => o.team).toList();
+        if (teams.isEmpty) {
+          teams = await _teamService.getAllTeams();
+        }
       }
     } catch (_) {
       teams = [];
@@ -106,7 +112,10 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
               .map(
                 (team) => DropdownMenuItem(
                   value: team.id,
-                  child: Text(team.name, overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    Team.listLabel(team, _teams),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               )
               .toList(),

@@ -264,7 +264,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
               children: teams
                   .map(
                     (t) => ListTile(
-                      title: Text(t.name),
+                      title: Text(t.listLabel(teams)),
                       onTap: () => Navigator.pop(ctx, t),
                     ),
                   )
@@ -305,7 +305,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
               children: teams
                   .map(
                     (t) => ListTile(
-                      title: Text(t.name),
+                      title: Text(t.listLabel(teams)),
                       onTap: () => Navigator.pop(ctx, t),
                     ),
                   )

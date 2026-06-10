@@ -8,6 +8,7 @@ import 'package:sportify_amateur/features/finance/quota_overview_screen.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
 import 'package:sportify_amateur/models/finance.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 
 class TeamAdminPanelScreen extends StatefulWidget {
@@ -29,6 +30,7 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
   TeamAdminPanel? _panel;
   bool _loading = true;
   String? _error;
+  bool _isPlatformAdmin = false;
 
   @override
   void initState() {
@@ -38,6 +40,9 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
 
   Future<void> _init() async {
     try {
+      final role = await AuthStorageService().getRole();
+      _isPlatformAdmin =
+          role == 'super_admin' || role == 'manager' || role == 'admin';
       var teams = await _teamService.getMyTeams();
       teams = MyTeamOption.dedupeByTeamId(teams);
       final selected = widget.initialTeamId != null
@@ -115,7 +120,7 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
                   .map(
                     (t) => DropdownMenuItem(
                       value: t,
-                      child: Text(t.name),
+                      child: Text(t.listLabel(teams)),
                     ),
                   )
                   .toList(),
@@ -215,6 +220,12 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
             ),
           ),
         ),
+        if (_isPlatformAdmin)
+          ActionChip(
+            avatar: const Icon(Icons.groups_3, size: 18),
+            label: const Text('Gestión de equipos'),
+            onPressed: () => Navigator.pushNamed(context, '/teams'),
+          ),
       ],
     );
   }
