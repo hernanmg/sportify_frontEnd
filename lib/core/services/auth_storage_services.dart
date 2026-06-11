@@ -34,12 +34,29 @@ class AuthStorageService {
     return await secureStorage.read(key: 'refreshToken');
   }
 
+  static const _skippedTeamSetupKey = 'skipped_staff_team_setup';
+
+  Future<void> setSkippedTeamSetup(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (value) {
+      await prefs.setBool(_skippedTeamSetupKey, true);
+    } else {
+      await prefs.remove(_skippedTeamSetupKey);
+    }
+  }
+
+  Future<bool> hasSkippedTeamSetup() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_skippedTeamSetupKey) ?? false;
+  }
+
   Future<void> logout() async {
     await secureStorage.delete(key: 'authToken');
     await secureStorage.delete(key: 'refreshToken');
     await secureStorage.delete(key: 'role');
     await secureStorage.delete(key: 'userId');
     await secureStorage.delete(key: 'userName');
+    await setSkippedTeamSetup(false);
   }
 
   Future<Map<String, String>> getHeaders() async {

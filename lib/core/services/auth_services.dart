@@ -244,6 +244,10 @@ class AuthService {
         hasTeams = teams.isNotEmpty;
       } catch (_) {}
 
+      final isPlatformAdmin =
+          role == 'super_admin' || role == 'manager' || role == 'admin';
+      final skippedTeamSetup = await storageService.hasSkippedTeamSetup();
+
       var needsOnboarding = !onboardingDone && completion < 80;
       if (hasTeams) {
         needsOnboarding = false;
@@ -252,10 +256,14 @@ class AuthService {
         needsOnboarding = false;
       }
 
+      // Solo DT debe unirse con código; platform admin crea equipos desde Gestión.
+      var needsTeamSetup = role == 'dt' && !hasTeams && !skippedTeamSetup;
+
       return {
         'isAuthenticated': true,
         'needsOnboarding': needsOnboarding,
-        'needsTeamSetup': isStaff && !hasTeams,
+        'needsTeamSetup': needsTeamSetup,
+        'isPlatformAdmin': isPlatformAdmin,
         'isStaffRole': isStaff,
         'profileCompletion': completion,
         'estadoRegistro': profile.estadoRegistro,

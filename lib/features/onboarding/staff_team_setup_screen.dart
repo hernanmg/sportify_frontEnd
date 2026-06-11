@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/features/teams/join_team_screen.dart';
 
-/// Pantalla corta para DT / admin que ya tienen cuenta pero aún no están en un equipo.
+/// Pantalla corta para DT sin equipo. Platform admin va directo al inicio.
 class StaffTeamSetupScreen extends StatefulWidget {
   const StaffTeamSetupScreen({super.key});
 
@@ -13,6 +13,9 @@ class StaffTeamSetupScreen extends StatefulWidget {
 class _StaffTeamSetupScreenState extends State<StaffTeamSetupScreen> {
   String _role = 'dt';
   String? _displayName;
+
+  bool get _isPlatformAdmin =>
+      _role == 'super_admin' || _role == 'manager' || _role == 'admin';
 
   @override
   void initState() {
@@ -29,6 +32,12 @@ class _StaffTeamSetupScreenState extends State<StaffTeamSetupScreen> {
       _role = role ?? 'dt';
       _displayName = name;
     });
+    if (_isPlatformAdmin) {
+      await storage.setSkippedTeamSetup(true);
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
+    }
   }
 
   String get _roleLabel {
@@ -51,12 +60,25 @@ class _StaffTeamSetupScreenState extends State<StaffTeamSetupScreen> {
       MaterialPageRoute(builder: (_) => const JoinTeamScreen()),
     );
     if (ok == true && mounted) {
+      await AuthStorageService().setSkippedTeamSetup(false);
       Navigator.pushReplacementNamed(context, '/dashboard');
     }
   }
 
+  Future<void> _goToDashboard() async {
+    await AuthStorageService().setSkippedTeamSetup(true);
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/dashboard');
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isPlatformAdmin) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final greeting = _displayName?.trim().isNotEmpty == true
         ? 'Hola, $_displayName'
         : 'Hola';
@@ -99,9 +121,9 @@ class _StaffTeamSetupScreenState extends State<StaffTeamSetupScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Como $_roleLabel, unite al equipo con el código que te comparta. '
-                        'Si además jugás, activá «También juego en el plantel» y elegí tu categoría. '
-                        'También podés crear un equipo nuevo más adelante desde Gestión de equipos.',
+                        'Como $_roleLabel, unite al equipo con el código que te comparta el '
+                        'administrador del club. Si además jugás, activá «También juego en el '
+                        'plantel» y elegí tu categoría.',
                         style: TextStyle(
                           color: Colors.grey.shade800,
                           height: 1.4,
@@ -122,8 +144,7 @@ class _StaffTeamSetupScreenState extends State<StaffTeamSetupScreen> {
               ),
               const SizedBox(height: 12),
               TextButton(
-                onPressed: () =>
-                    Navigator.pushReplacementNamed(context, '/dashboard'),
+                onPressed: _goToDashboard,
                 child: const Text('Ir al inicio y configurar después'),
               ),
             ],
