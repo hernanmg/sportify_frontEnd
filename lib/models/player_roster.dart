@@ -142,7 +142,7 @@ class PlayerRoster {
   String get medicalStatusDisplayName {
     switch (medicalStatus) {
       case 'pending':
-        return 'Pendiente';
+        return 'Apto pendiente';
       case 'approved':
         return 'Aprobado';
       case 'expired':

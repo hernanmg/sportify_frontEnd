@@ -248,6 +248,31 @@ class RosterService {
     ];
   }
 
+  /// Opciones de temporada para dropdowns; incluye la actual del registro si es legado.
+  static List<String> seasonOptions({String? include}) {
+    final seasons = getSeasons().toList();
+    final normalized = include != null ? normalizeSeason(include) : null;
+    if (normalized != null &&
+        normalized.isNotEmpty &&
+        !seasons.contains(normalized)) {
+      seasons.insert(0, normalized);
+    }
+    return seasons;
+  }
+
+  /// Convierte temporadas legado (`2025-2026`) al formato Apertura/Clausura.
+  static String normalizeSeason(String season) {
+    final trimmed = season.trim();
+    final legacy = RegExp(r'^(\d{4})-(\d{4})$').firstMatch(trimmed);
+    if (legacy != null) {
+      final start = int.parse(legacy.group(1)!);
+      final month = DateTime.now().month;
+      final half = month <= 6 ? 'Apertura' : 'Clausura';
+      return '$start-$half';
+    }
+    return trimmed;
+  }
+
   static List<String> getCategories() {
     return ['+35', '+40', '+45', 'Primera', 'Reserva', 'Juveniles'];
   }

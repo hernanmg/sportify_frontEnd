@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
+import 'package:sportify_amateur/core/services/auth_services.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
@@ -38,6 +39,15 @@ class _AppShellScreenState extends State<AppShellScreen> {
     _notificationService.startBackgroundSync();
     _loadRole();
     context.read<SeasonProvider>().load();
+    _guardStaffTeamSetup();
+  }
+
+  Future<void> _guardStaffTeamSetup() async {
+    final authStatus = await AuthService().checkAuthStatus();
+    if (!mounted) return;
+    if (authStatus['needsTeamSetup'] == true) {
+      Navigator.pushReplacementNamed(context, '/staff-team-setup');
+    }
   }
 
   Future<void> _loadRole() async {

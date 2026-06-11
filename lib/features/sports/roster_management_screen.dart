@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/user_service.dart';
@@ -38,11 +39,14 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
   String _filterStatus = 'all';
   String _categoryFilter = 'all';
   bool _filtersExpanded = false;
+  bool _categoryFilterInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedSeason = widget.season ?? RosterService.getSeasons().first;
+    _selectedSeason = RosterService.normalizeSeason(
+      widget.season ?? RosterService.getSeasons().first,
+    );
     _loadRoster();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || widget.season != null) return;
@@ -72,54 +76,63 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
     super.dispose();
   }
 
+  Future<List<int>> _teamIdsToLoad() async {
+    if (widget.teamId != null) return [widget.teamId!];
+    final role = await AuthStorageService().getRole();
+    final isPlatformAdmin = role == 'super_admin' ||
+        role == 'manager' ||
+        role == 'admin';
+    if (isPlatformAdmin) {
+      final all = await _teamService.getAllTeams();
+      return all.map((t) => t.id).toList();
+    }
+    final teams = await _teamService.getMyTeams();
+    return teams.map((t) => t.teamId).toList();
+  }
+
   Future<void> _loadRoster() async {
     setState(() => _isLoading = true);
     try {
       List<PlayerRoster> roster;
-      if (widget.teamId != null) {
-        roster = await _rosterService.getRosterByTeam(widget.teamId!,
-            season: _selectedSeason);
+      final teamIds = await _teamIdsToLoad();
+      if (teamIds.isEmpty) {
+        roster = [];
+      } else if (widget.teamId != null && teamIds.length == 1) {
+        roster = await _rosterService.getRosterByTeam(
+          widget.teamId!,
+          season: _selectedSeason,
+        );
       } else {
-        final teams = await _teamService.getMyTeams();
-        if (teams.isEmpty) {
-          roster = [];
-        } else {
-          final seen = <int>{};
-          roster = [];
-          for (final t in teams) {
-            try {
-              var chunk = await _rosterService.getRosterByTeam(
-                t.teamId,
-                season: _selectedSeason,
-              );
-              if (chunk.isEmpty) {
-                chunk = await _rosterService.getRosterByTeam(t.teamId);
-              }
-              for (final row in chunk) {
-                if (seen.add(row.id)) {
-                  roster.add(row);
-                }
-              }
-            } catch (e) {
-              debugPrint('Roster equipo ${t.teamId}: $e');
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'No se pudo cargar plantel (${t.name}): $e',
-                    ),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+        final seen = <int>{};
+        roster = [];
+        for (final teamId in teamIds) {
+          try {
+            final chunk = await _rosterService.getRosterByTeam(
+              teamId,
+              season: _selectedSeason,
+            );
+            for (final row in chunk) {
+              if (seen.add(row.id)) {
+                roster.add(row);
               }
             }
+          } catch (e) {
+            debugPrint('Roster equipo $teamId: $e');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('No se pudo cargar plantel (equipo $teamId): $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           }
-          roster.sort((a, b) {
-            final c = a.teamId.compareTo(b.teamId);
-            if (c != 0) return c;
-            return a.jerseyNumber.compareTo(b.jerseyNumber);
-          });
         }
+        roster.sort((a, b) {
+          final c = a.teamId.compareTo(b.teamId);
+          if (c != 0) return c;
+          return a.jerseyNumber.compareTo(b.jerseyNumber);
+        });
       }
       final categoryNames = roster
           .map((p) => p.categoryDisplay)
@@ -127,12 +140,23 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
           .toSet()
           .toList()
         ..sort();
+      var nextFilter = _categoryFilter;
+      if (!_categoryFilterInitialized && categoryNames.isNotEmpty) {
+        nextFilter = categoryNames.first;
+        _categoryFilterInitialized = true;
+      } else if (nextFilter != 'all' &&
+          !categoryNames.contains(nextFilter)) {
+        nextFilter = categoryNames.isNotEmpty ? categoryNames.first : 'all';
+      }
+      if (roster.isNotEmpty && nextFilter != 'all') {
+        final visible = roster
+            .where((p) => p.categoryDisplay == nextFilter)
+            .length;
+        if (visible == 0) nextFilter = 'all';
+      }
       setState(() {
         _roster = roster;
-        if (_categoryFilter != 'all' &&
-            !categoryNames.contains(_categoryFilter)) {
-          _categoryFilter = 'all';
-        }
+        _categoryFilter = nextFilter;
         _isLoading = false;
       });
     } catch (e) {

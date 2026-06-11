@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
-import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/features/dashboard/team_membership_banner.dart';
-import 'package:sportify_amateur/widgets/season_selector_chip.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
 import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
 
@@ -34,26 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _role = role;
         _userName = name;
       });
-    }
-  }
-
-  String get _roleLabel {
-    if (_role == null) return 'Usuario';
-    return RoleService.getRoleDisplayName(_role!);
-  }
-
-  String get _welcomeSubtitle {
-    switch (_role) {
-      case 'super_admin':
-      case 'manager':
-        return 'Administrá ligas, equipos y finanzas desde la barra inferior.';
-      case 'dt':
-      case 'team_captain':
-        return 'Panel del equipo y asistencias están en el menú «Más».';
-      case 'player':
-        return 'Confirmá eventos, revisá cuotas y tu plantel.';
-      default:
-        return 'Usá la barra inferior para navegar.';
     }
   }
 
@@ -147,32 +125,6 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Chip(
-                                avatar: const Icon(Icons.badge, size: 18),
-                                label: Text(_roleLabel),
-                              ),
-                              const Spacer(),
-                              const SeasonSelectorChip(),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _welcomeSubtitle,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                   const TeamMembershipBanner(),
                   const SizedBox(height: 8),
                   Text(

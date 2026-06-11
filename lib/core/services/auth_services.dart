@@ -11,6 +11,7 @@ import 'package:sportify_amateur/core/services/notification_service.dart';
 import 'package:sportify_amateur/core/services/push_registration_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/user_profile_service.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 
 class AuthService {
@@ -263,6 +264,19 @@ class AuthService {
     } catch (e) {
       print('Error checking auth status: $e');
       return {'isAuthenticated': false, 'needsOnboarding': false};
+    }
+  }
+
+  /// Navegación post-login/registro según onboarding y alta en equipo.
+  Future<void> navigateAfterAuth(BuildContext context) async {
+    final authStatus = await checkAuthStatus();
+    if (!context.mounted) return;
+    if (authStatus['needsTeamSetup'] == true) {
+      Navigator.pushReplacementNamed(context, '/staff-team-setup');
+    } else if (authStatus['needsOnboarding'] == true) {
+      Navigator.pushReplacementNamed(context, '/onboarding');
+    } else {
+      Navigator.pushReplacementNamed(context, '/dashboard');
     }
   }
 

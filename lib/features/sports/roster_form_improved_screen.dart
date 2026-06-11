@@ -72,9 +72,10 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   @override
   void initState() {
     super.initState();
-    _season = widget.roster?.season ??
+    final rawSeason = widget.roster?.season ??
         widget.season ??
         RosterService.getSeasons().first;
+    _season = RosterService.normalizeSeason(rawSeason);
     _loadInitialData();
   }
 
@@ -309,7 +310,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     _medicalCertificateExpires = roster.medicalCertificateExpires;
     _isEnabled = roster.isEnabled;
     _position = roster.position;
-    _season = roster.season;
+    _season = RosterService.normalizeSeason(roster.season);
     _selectedCategories
       ..clear()
       ..add(roster.category);
@@ -1112,7 +1113,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
         border: OutlineInputBorder(),
         prefixIcon: Icon(Icons.calendar_today),
       ),
-      items: RosterService.getSeasons().map((season) {
+      items: RosterService.seasonOptions(include: _season).map((season) {
         return DropdownMenuItem(
           value: season,
           child: Text(

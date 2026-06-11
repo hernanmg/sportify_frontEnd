@@ -219,7 +219,10 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
             child: TabBarView(
         controller: _tabController,
         children: [
-          RosterManagementScreen(key: _rosterListKey),
+          RosterManagementScreen(
+            key: _rosterListKey,
+            teamId: widget.initialTeamId,
+          ),
           EventsManagementScreen(key: _eventsKey),
           ConvocationsScreen(key: _convocationsKey),
           PlayerStatusScreen(

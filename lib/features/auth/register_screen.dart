@@ -49,12 +49,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
 
         // Verificar si necesita onboarding (debería ser true para usuarios nuevos)
-        final authStatus = await authService.checkAuthStatus();
-        if (authStatus['needsOnboarding'] == true) {
-          Navigator.pushReplacementNamed(context, '/onboarding');
-        } else {
-          Navigator.pushReplacementNamed(context, '/dashboard');
-        }
+        await authService.navigateAfterAuth(context);
       } else {
         throw Exception('Error en el registro');
       }

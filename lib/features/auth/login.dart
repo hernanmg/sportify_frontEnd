@@ -24,14 +24,7 @@ class LoginScreen extends StatelessWidget {
               onPressed: () async {
                 final success = await authService.signInWithGoogle();
                 if (success && context.mounted) {
-                  // Verificar si necesita onboarding
-                  final authStatus = await authService.checkAuthStatus();
-                  // Navigator.pushReplacementNamed(context, '/onboarding');
-                  if (authStatus['needsOnboarding'] == true) {
-                    Navigator.pushReplacementNamed(context, '/onboarding');
-                  } else {
-                    Navigator.pushReplacementNamed(context, '/dashboard');
-                  }
+                  await authService.navigateAfterAuth(context);
                 }
               },
               label: Text('Login with Google'),
@@ -47,13 +40,7 @@ class LoginScreen extends StatelessWidget {
               onPressed: () async {
                 final success = await authService.signInWithFacebook();
                 if (success && context.mounted) {
-                  // Verificar si necesita onboarding
-                  final authStatus = await authService.checkAuthStatus();
-                  if (authStatus['needsOnboarding'] == true) {
-                    Navigator.pushReplacementNamed(context, '/onboarding');
-                  } else {
-                    Navigator.pushReplacementNamed(context, '/dashboard');
-                  }
+                  await authService.navigateAfterAuth(context);
                 }
               },
               label: Text('Login with FaceBook'),
