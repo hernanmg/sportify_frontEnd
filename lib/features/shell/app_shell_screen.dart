@@ -448,6 +448,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
 
     return AppShellScope(
       selectTab: _selectTab,
+      activeTabIndex: _index,
       child: Scaffold(
       resizeToAvoidBottomInset: false,
       extendBody: true,

@@ -7,8 +7,9 @@ class DioClient {
 
   static final Dio _dio = Dio(BaseOptions(
     baseUrl: backendUrl,
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
+    // Render free tier puede tardar >30s en despertar (cold start).
+    connectTimeout: const Duration(seconds: 90),
+    receiveTimeout: const Duration(seconds: 60),
     headers: {'Content-Type': 'application/json'},
   ));
   static const FlutterSecureStorage _storage = FlutterSecureStorage();

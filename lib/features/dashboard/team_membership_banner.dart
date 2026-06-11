@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
+import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 
 /// Muestra los equipos del usuario en el dashboard.
@@ -16,6 +17,7 @@ class _TeamMembershipBannerState extends State<TeamMembershipBanner> {
   List<MyTeamOption> _teams = [];
   bool _loading = true;
   bool _isPlatformAdmin = false;
+  int? _lastHomeVisitTab;
 
   @override
   void initState() {
@@ -23,15 +25,46 @@ class _TeamMembershipBannerState extends State<TeamMembershipBanner> {
     _load();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scope = AppShellScope.maybeOf(context);
+    final tab = scope?.activeTabIndex;
+    if (tab == AppShellScope.homeTabIndex && _lastHomeVisitTab != tab) {
+      _load();
+    }
+    _lastHomeVisitTab = tab;
+  }
+
   Future<void> _load() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
     try {
       final role = await AuthStorageService().getRole();
-      final teams = await _teamService.getMyTeams();
+      final isPlatformAdmin =
+          role == 'super_admin' || role == 'manager' || role == 'admin';
+
+      var teams = await _teamService.getMyTeams();
+      if (teams.isEmpty && isPlatformAdmin) {
+        final all = await _teamService.getAllTeams();
+        teams = all
+            .map(
+              (t) => MyTeamOption(
+                teamId: t.id,
+                name: t.name,
+                categories: t.categoryNames,
+                categoryIds: t.categoryIds,
+                isTeamAdmin: true,
+                team: t,
+              ),
+            )
+            .toList();
+      }
+
       if (mounted) {
         setState(() {
-          _isPlatformAdmin =
-              role == 'super_admin' || role == 'manager' || role == 'admin';
-          _teams = teams;
+          _isPlatformAdmin = isPlatformAdmin;
+          _teams = MyTeamOption.dedupeByTeamId(teams);
           _loading = false;
         });
       }
@@ -59,21 +92,27 @@ class _TeamMembershipBannerState extends State<TeamMembershipBanner> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.groups, color: Colors.green),
-                SizedBox(width: 8),
-                Text(
-                  'Mis equipos',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                const Icon(Icons.groups, color: Colors.green),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Mis equipos',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Actualizar',
+                  icon: const Icon(Icons.refresh, size: 20),
+                  onPressed: _load,
+                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
             const SizedBox(height: 8),
             ..._teams.map((t) {
-              final cats = t.categories.isEmpty
-                  ? ''
-                  : ' · ${t.categories.join(', ')}';
+              final label = t.listLabel(_teams);
               final admin = t.isTeamAdmin ? ' (encargado)' : '';
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
@@ -83,7 +122,7 @@ class _TeamMembershipBannerState extends State<TeamMembershipBanner> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '${t.name}$cats$admin',
+                        '$label$admin',
                         style: const TextStyle(fontSize: 14),
                       ),
                     ),
@@ -134,7 +173,8 @@ class _TeamMembershipBannerState extends State<TeamMembershipBanner> {
             const SizedBox(height: 8),
             Text(
               _isPlatformAdmin
-                  ? 'Si ya creaste el equipo en Gestión de equipos, abrí la pestaña Equipos → menú ⋮ del club → Asignarme como encargado.'
+                  ? 'Creá tu club desde Gestión de equipos o el botón de abajo. '
+                      'Al crearlo quedás como encargado automáticamente.'
                   : 'Pedile el código a tu capitán o director técnico para unirte al plantel.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: fg.withValues(alpha: 0.92),
@@ -148,19 +188,26 @@ class _TeamMembershipBannerState extends State<TeamMembershipBanner> {
               children: [
                 if (_isPlatformAdmin) ...[
                   FilledButton.icon(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/team-form'),
+                    onPressed: () async {
+                      await Navigator.pushNamed(context, '/team-form');
+                      if (mounted) _load();
+                    },
                     icon: const Icon(Icons.add, size: 18),
                     label: const Text('Crear equipo'),
                   ),
                   OutlinedButton(
-                    onPressed: () => Navigator.pushNamed(context, '/teams'),
+                    onPressed: () async {
+                      await Navigator.pushNamed(context, '/teams');
+                      if (mounted) _load();
+                    },
                     child: const Text('Gestión de equipos'),
                   ),
                 ] else
                   OutlinedButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/join-team'),
+                    onPressed: () async {
+                      await Navigator.pushNamed(context, '/join-team');
+                      if (mounted) _load();
+                    },
                     child: const Text('Unirme con código'),
                   ),
               ],

@@ -26,16 +26,17 @@ class _LoginScreenState extends State<UserLoginScreen> {
         _passwordController.text.trim(),
       );
 
-      if (response && context.mounted) {
+      if (!response) {
+        throw Exception('No se pudo iniciar sesión');
+      }
+      if (context.mounted) {
         await authService.navigateAfterAuth(context);
-      } else {
-        throw Exception('Credenciales incorrectas');
       }
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text(AuthService.loginErrorMessage(e)),
           backgroundColor: Colors.red.shade700,
         ),
       );

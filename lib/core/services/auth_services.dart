@@ -130,59 +130,85 @@ class AuthService {
     }
   }
 
-  Future<bool> signInWithEmail(String email, String password) async {
-    try {
-      print('🔐 Iniciando login con email: $email');
-      print('🌐 URL base configurada: ${_dio.options.baseUrl}');
-      print('📤 Datos a enviar: {email: $email, password: [OCULTA]}');
+  static bool _isConnectionTimeout(DioException e) {
+    return e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout;
+  }
 
-      // Usar Dio en lugar de http directo para consistencia
-      final response = await _dio.post('/auth/login', data: {
-        'email': email.trim(),
-        'password': password,
-      });
-
-      print('📡 Respuesta del servidor: ${response.statusCode}');
-      print('📦 Datos recibidos: ${response.data}');
-
-      if (response.statusCode == 200) {
-        // Procesar la respuesta del backend y guardar tokens
-        final data = Map<String, dynamic>.from(response.data as Map);
-        final token = data['accessToken'];
-        final refreshToken = data['refreshToken'];
-        final userId = data['userId'];
-        final userName = data['userName'];
-        final role = data['role'];
-
-        // Guardar los tokens y datos del usuario en almacenamiento seguro
-        await secureStorage.write(key: 'authToken', value: token);
-        await secureStorage.write(key: 'refreshToken', value: refreshToken);
-        await secureStorage.write(key: 'userId', value: userId.toString());
-        await secureStorage.write(key: 'userName', value: userName);
-        await secureStorage.write(key: 'role', value: role);
-
-        print('✅ Tokens guardados exitosamente');
-        print('👤 Usuario: $userName, Rol: $role');
-
-        await PushRegistrationService.instance.registerAfterLogin();
-        NotificationService().startBackgroundSync();
-
-        return true;
-      } else {
-        print('❌ Error de autenticación: ${response.data}');
-        return false;
+  static String loginErrorMessage(Object error) {
+    if (error is DioException) {
+      if (_isConnectionTimeout(error)) {
+        return 'El servidor tardó en responder (Render puede estar despertando). '
+            'Esperá unos segundos e intentá de nuevo.';
       }
-    } on DioException catch (e) {
-      final data = e.response?.data;
-      print('💥 Error en autenticación con Email: $e');
-      if (data != null) {
-        print('📛 Cuerpo del servidor (401/otros): $data');
+      final data = error.response?.data;
+      if (data is Map && data['message'] != null) {
+        final msg = data['message'];
+        if (msg is List) return msg.join('\n');
+        return msg.toString();
       }
-      return false;
-    } catch (e) {
-      print('💥 Error en autenticación con Email: $e');
-      return false;
+      if (error.response?.statusCode == 401) {
+        return 'Email o contraseña incorrectos';
+      }
     }
+    return error.toString();
+  }
+
+  Future<bool> signInWithEmail(String email, String password) async {
+    print('🔐 Iniciando login con email: $email');
+    print('🌐 URL base configurada: ${_dio.options.baseUrl}');
+
+    final payload = {
+      'email': email.trim(),
+      'password': password,
+    };
+    Response<dynamic> response;
+    try {
+      response = await _dio.post('/auth/login', data: payload);
+    } on DioException catch (e) {
+      if (_isConnectionTimeout(e)) {
+        print('⏳ Cold start / red lenta; reintentando login…');
+        await Future<void>.delayed(const Duration(seconds: 3));
+        try {
+          response = await _dio.post('/auth/login', data: payload);
+        } on DioException catch (retryError) {
+          throw Exception(loginErrorMessage(retryError));
+        }
+      } else {
+        throw Exception(loginErrorMessage(e));
+      }
+    }
+
+    print('📡 Respuesta del servidor: ${response.statusCode}');
+
+    if (response.statusCode != 200) {
+      throw Exception('No se pudo iniciar sesión (${response.statusCode})');
+    }
+
+    final data = Map<String, dynamic>.from(response.data as Map);
+    final token = data['accessToken']?.toString();
+    final refreshToken = data['refreshToken']?.toString();
+    if (token == null || token.isEmpty || refreshToken == null) {
+      throw Exception('Respuesta del servidor incompleta');
+    }
+
+    await secureStorage.write(key: 'authToken', value: token);
+    await secureStorage.write(key: 'refreshToken', value: refreshToken);
+    await secureStorage.write(key: 'userId', value: '${data['userId']}');
+    await secureStorage.write(key: 'userName', value: data['userName']?.toString());
+    await secureStorage.write(key: 'role', value: data['role']?.toString());
+
+    print('✅ Login OK — rol: ${data['role']}');
+
+    try {
+      await PushRegistrationService.instance.registerAfterLogin();
+      NotificationService().startBackgroundSync();
+    } catch (e) {
+      print('FCM post-login (no bloquea): $e');
+    }
+
+    return true;
   }
 
   Future<void> signOut() async {
