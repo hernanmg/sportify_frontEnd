@@ -751,7 +751,7 @@ class _SummaryTab extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             AspectRatio(
-              aspectRatio: 1.5,
+              aspectRatio: 0.68,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -768,6 +768,7 @@ class _SummaryTab extends StatelessWidget {
                           ),
                     formation: data.formation,
                     compact: true,
+                    showFormationLabel: true,
                   ),
                   FieldDrawingOverlay(
                     strokes: data.boardStrokes,

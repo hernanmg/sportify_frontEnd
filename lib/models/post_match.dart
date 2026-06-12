@@ -127,8 +127,18 @@ class PostMatchLineupRow {
       role: json['role']?.toString() ?? 'player',
       isStarter: json['isStarter'] as bool? ?? false,
       attended: json['attended'] as bool?,
-      confirmed: json['confirmed'] as bool? ?? false,
+      confirmed: _parseBool(json['confirmed']),
     );
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final v = value.toLowerCase().trim();
+      return v == 'true' || v == '1' || v == 'confirmed';
+    }
+    return false;
   }
 
   String get roleLabel {

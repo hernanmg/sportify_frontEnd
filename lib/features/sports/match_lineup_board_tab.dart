@@ -48,11 +48,6 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
   bool _isWide(BuildContext context) =>
       MediaQuery.sizeOf(context).width >= 720;
 
-  bool _isTablet(BuildContext context) {
-    final w = MediaQuery.sizeOf(context).width;
-    return w >= 600 && w < 720;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -469,45 +464,68 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
   }
 
   Widget _playerPool({required bool horizontal}) {
+    final confirmed = _confirmed;
+    final others =
+        widget.data.lineup.where((p) => !p.confirmed).toList(growable: false);
+
+    if (horizontal) {
+      final chips = <Widget>[];
+      void addGroup(String label, List<PostMatchLineupRow> players) {
+        if (players.isEmpty) return;
+        chips.add(
+          Padding(
+            padding: const EdgeInsets.only(right: 6, top: 2),
+            child: Chip(
+              label: Text(
+                label,
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+              ),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: EdgeInsets.zero,
+            ),
+          ),
+        );
+        for (final p in players) {
+          chips.add(Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: _playerChip(p, horizontal: true),
+          ));
+        }
+      }
+
+      addGroup('Confirmados (${confirmed.length})', confirmed);
+      addGroup('Otros convocados (${others.length})', others);
+
+      if (chips.isEmpty) {
+        return Center(
+          child: Text(
+            'Sin jugadores convocados',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        );
+      }
+
+      return ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        children: chips,
+      );
+    }
+
     final sections = <Widget>[
       _poolSection(
-        title: 'Confirmados (${_confirmed.length})',
-        players: _confirmed,
+        title: 'Confirmados (${confirmed.length})',
+        players: confirmed,
         horizontal: horizontal,
       ),
-      if (widget.data.lineup.any((p) => !p.confirmed))
+      if (others.isNotEmpty)
         _poolSection(
-          title: 'Otros convocados',
-          players: widget.data.lineup.where((p) => !p.confirmed).toList(),
+          title: 'Otros convocados (${others.length})',
+          players: others,
           horizontal: horizontal,
         ),
     ];
-
-    if (horizontal) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-            child: Text(
-              'Tocá un jugador para sumarlo a la cancha.',
-              style: Theme.of(context).textTheme.bodySmall,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: sections,
-              ),
-            ),
-          ),
-        ],
-      );
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -542,19 +560,30 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-          child: Text(title, style: Theme.of(context).textTheme.labelLarge),
-        ),
+        if (!horizontal)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: Text(title, style: Theme.of(context).textTheme.labelLarge),
+          ),
+        if (horizontal)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
         if (horizontal)
           SizedBox(
-            height: 76,
+            height: 68,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               children: chips
                   .map((c) => Padding(
-                        padding: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.only(right: 4),
                         child: c,
                       ))
                   .toList(),
@@ -603,7 +632,7 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
           ),
           child: horizontal
               ? SizedBox(
-                  width: 58,
+                  width: 52,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -614,7 +643,7 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
                           PlayerAvatar(
                             avatarUrl: p.avatarUrl,
                             displayName: p.userName,
-                            radius: 18,
+                            radius: 16,
                             badgeText: p.jerseyNumber?.toString(),
                           ),
                           if (onField)
@@ -636,9 +665,9 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 9,
+                          fontSize: 8,
                           fontWeight: FontWeight.w600,
-                          height: 1.1,
+                          height: 1.0,
                         ),
                       ),
                     ],
@@ -735,7 +764,6 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
     }
 
     final wide = _isWide(context);
-    final tablet = _isTablet(context);
 
     return Column(
       children: [
@@ -757,15 +785,30 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
                     Expanded(flex: 2, child: _playerPool(horizontal: false)),
                   ],
                 )
-              : Column(
+              : Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Expanded(
-                      flex: tablet ? 5 : 4,
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 104),
                       child: _fieldArea(wide: false),
                     ),
-                    Flexible(
-                      flex: tablet ? 3 : 2,
-                      child: _playerPool(horizontal: true),
+                    Positioned(
+                      left: 8,
+                      right: 8,
+                      bottom: 8,
+                      child: Material(
+                        elevation: 8,
+                        shadowColor: Colors.black45,
+                        borderRadius: BorderRadius.circular(16),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surface
+                            .withValues(alpha: 0.96),
+                        child: SizedBox(
+                          height: 96,
+                          child: _playerPool(horizontal: true),
+                        ),
+                      ),
                     ),
                   ],
                 ),

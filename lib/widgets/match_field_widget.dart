@@ -118,8 +118,8 @@ class _PitchStack extends StatelessWidget {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         final h = constraints.maxHeight;
-        final avatarR = compact ? 14.0 : 20.0;
-        final marker = avatarR * 2 + 4;
+        final avatarR = compact ? 11.0 : 18.0;
+        final marker = avatarR * 2 + (compact ? 2 : 4);
 
         return Stack(
           fit: StackFit.expand,
@@ -186,6 +186,27 @@ class _PitchStack extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
                             ),
+                          ),
+                        ),
+                      if (compact && h > 100)
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: marker + 10),
+                          child: Text(
+                            p.userName.split(' ').first,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 7,
+                              fontWeight: FontWeight.w600,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black87,
+                                  blurRadius: 2,
+                                ),
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
                           ),
                         ),
                     ],

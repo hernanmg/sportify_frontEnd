@@ -46,6 +46,7 @@ import 'package:sportify_amateur/features/sports/team_admin_panel_screen.dart';
 import 'package:sportify_amateur/features/finance/quota_overview_screen.dart';
 import 'package:sportify_amateur/features/sports/attendance_screen.dart';
 import 'package:sportify_amateur/features/sports/team_calendar_screen.dart';
+import 'package:sportify_amateur/features/help/help_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
@@ -109,6 +110,21 @@ class MainApp extends StatelessWidget {
         '/staff-team-setup': (context) => const StaffTeamSetupScreen(),
         '/team-form': (context) => const TeamFormScreen(),
         '/profile': (context) => const ProfileScreen(),
+        '/help': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          String? query;
+          String? articleId;
+          if (args is Map) {
+            query = args['query']?.toString();
+            articleId = args['articleId']?.toString();
+          } else if (args is String) {
+            query = args;
+          }
+          return HelpScreen(
+            initialQuery: query,
+            highlightArticleId: articleId,
+          );
+        },
         '/profile/info': (context) => const ProfileInfoScreen(),
         '/profile/security': (context) => const SecurityScreen(),
         '/profile/admin': (context) => const AdminConfigScreen(),

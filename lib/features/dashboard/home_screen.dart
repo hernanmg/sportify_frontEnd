@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
+import 'package:sportify_amateur/core/services/auth_services.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/features/dashboard/team_membership_banner.dart';
+import 'package:sportify_amateur/features/help/home_help_search_bar.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
 import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
 
@@ -16,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String? _role;
   String? _userName;
+  bool _helpSearchOpen = false;
 
   @override
   void initState() {
@@ -25,7 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _load() async {
     final auth = AuthStorageService();
-    final role = await auth.getRole();
+    final syncedRole = await AuthService().syncStoredRoleFromServer();
+    final role = syncedRole ?? await auth.getRole();
     final name = await auth.getUserName();
     if (mounted) {
       setState(() {
@@ -33,6 +38,20 @@ class _HomeScreenState extends State<HomeScreen> {
         _userName = name;
       });
     }
+  }
+
+  bool get _isPlatformAdmin =>
+      _role == 'super_admin' || _role == 'manager' || _role == 'admin';
+
+  bool get _isTeamStaff =>
+      _isPlatformAdmin || _role == 'dt' || _role == 'team_captain';
+
+  void _openHelp(String query) {
+    Navigator.pushNamed(
+      context,
+      '/help',
+      arguments: {'query': query},
+    );
   }
 
   @override
@@ -45,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 128,
+            expandedHeight: _userName != null && _userName!.isNotEmpty ? 148 : 128,
             pinned: true,
             stretch: false,
             elevation: 0,
@@ -55,6 +74,11 @@ class _HomeScreenState extends State<HomeScreen> {
             iconTheme: const IconThemeData(color: Colors.white),
             actionsIconTheme: const IconThemeData(color: Colors.white),
             actions: [
+              HomeHelpSearchBar(
+                expanded: _helpSearchOpen,
+                onExpandedChanged: (v) => setState(() => _helpSearchOpen = v),
+                onSearch: _openHelp,
+              ),
               IconButton(
                 icon: const Icon(Icons.account_circle),
                 onPressed: () => Navigator.pushNamed(context, '/profile'),
@@ -95,25 +119,71 @@ class _HomeScreenState extends State<HomeScreen> {
                     start: 16,
                     bottom: 14,
                   ),
-                  title: Text(
-                    _userName != null && _userName!.isNotEmpty
-                        ? 'Hola, $_userName'
-                        : 'Sportify Amateur',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black38,
-                          blurRadius: 8,
-                          offset: Offset(0, 1),
+                  title: _userName != null && _userName!.isNotEmpty
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Hola, $_userName',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black38,
+                                    blurRadius: 8,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_role != null && _role!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                child: Text(
+                                  RoleService.getRoleDisplayName(_role!),
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.95),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        )
+                      : const Text(
+                          'Sportify Amateur',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black38,
+                                blurRadius: 8,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
                   background: const SizedBox.shrink(),
                 ),
               ],
@@ -155,9 +225,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.deepPurple,
                     onTap: () => _switchTab(context, 3),
                   ),
-                  if (_role == 'super_admin' ||
-                      _role == 'manager' ||
-                      _role == 'admin')
+                  _QuickTile(
+                    icon: Icons.help_outline,
+                    title: 'Centro de ayuda',
+                    subtitle: 'Guías paso a paso de cada función',
+                    color: Colors.orange,
+                    onTap: () => _openHelp(''),
+                  ),
+                  if (_isPlatformAdmin)
                     _QuickTile(
                       icon: Icons.groups_3,
                       title: 'Gestión de equipos',
@@ -165,9 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.blue,
                       onTap: () => Navigator.pushNamed(context, '/teams'),
                     ),
-                  if (_role == 'super_admin' ||
-                      _role == 'manager' ||
-                      _role == 'admin')
+                  if (_isTeamStaff)
                     _QuickTile(
                       icon: Icons.dashboard_customize,
                       title: 'Panel del equipo',
