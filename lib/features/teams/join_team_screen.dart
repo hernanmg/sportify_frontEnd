@@ -116,6 +116,10 @@ class _JoinTeamScreenState extends State<JoinTeamScreen> {
         code,
         categoryIds: categoryIds.isNotEmpty ? categoryIds : null,
       );
+      final newRole = result['role']?.toString();
+      if (newRole != null && newRole.isNotEmpty) {
+        await AuthStorageService().saveRole(newRole);
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

@@ -51,7 +51,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
   }
 
   Future<void> _loadRole() async {
-    final role = await AuthStorageService().getRole();
+    final role = await AuthService().syncStoredRoleFromServer();
     if (mounted) setState(() => _role = role);
   }
 

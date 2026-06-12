@@ -30,9 +30,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       setState(() => _isLoading = true);
 
-      // Cargar datos del usuario
-      final role = await _authStorage.getRole();
       final profile = await _profileService.getProfile();
+      final role = profile.role?.trim().isNotEmpty == true
+          ? profile.role
+          : await _authStorage.getRole();
+      if (profile.role != null && profile.role!.isNotEmpty) {
+        await _authStorage.saveRole(profile.role!);
+      }
 
       setState(() {
         _userRole = role;

@@ -22,6 +22,7 @@ class UserProfile {
   final DateTime? ultimoLogin;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? role;
 
   UserProfile({
     required this.id,
@@ -47,6 +48,7 @@ class UserProfile {
     this.ultimoLogin,
     required this.createdAt,
     required this.updatedAt,
+    this.role,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -79,6 +81,7 @@ class UserProfile {
       ultimoLogin: parseDate(json['ultimoLogin']),
       createdAt: parseDate(json['createdAt']) ?? DateTime.now(),
       updatedAt: parseDate(json['updatedAt']) ?? DateTime.now(),
+      role: json['role']?.toString(),
     );
   }
 

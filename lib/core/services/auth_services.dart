@@ -244,8 +244,25 @@ class AuthService {
 
   Future<String?> getUserRole() async {
     final profile = await getProfile();
-    return profile[
-        'role']; // Asumiendo que el backend incluye "role" en el perfil
+    return profile['role']?.toString();
+  }
+
+  /// Actualiza el rol local si el servidor reporta uno distinto (p. ej. tras fix en BD).
+  Future<String?> syncStoredRoleFromServer() async {
+    try {
+      final profile = await profileService.getProfile();
+      final serverRole = profile.role?.trim();
+      if (serverRole == null || serverRole.isEmpty) {
+        return await storageService.getRole();
+      }
+      final local = await storageService.getRole();
+      if (local != serverRole) {
+        await storageService.saveRole(serverRole);
+      }
+      return serverRole;
+    } catch (_) {
+      return await storageService.getRole();
+    }
   }
 
   Future<Map<String, dynamic>> checkAuthStatus() async {
@@ -258,7 +275,15 @@ class AuthService {
       final profile = await profileService.getProfile();
       final completion = profile.profileCompletion;
       final onboardingDone = profile.estadoRegistro == 'completed';
-      final role = await storageService.getRole();
+      var role = profile.role?.trim();
+      if (role == null || role.isEmpty) {
+        role = await storageService.getRole();
+      } else {
+        final local = await storageService.getRole();
+        if (local != role) {
+          await storageService.saveRole(role);
+        }
+      }
       const staffRoles = {'dt', 'super_admin', 'manager', 'admin'};
       final isStaff = staffRoles.contains(role);
       final hasBasicIdentity = (profile.firstName?.trim().isNotEmpty ?? false) &&
