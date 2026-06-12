@@ -26,6 +26,8 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
   late TextEditingController _paisController;
   late TextEditingController _bioController;
   late TextEditingController _experienciaController;
+  late TextEditingController _fichaOrigenController;
+  DateTime? _fechaNacimiento;
 
   @override
   void initState() {
@@ -43,6 +45,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
     _paisController = TextEditingController();
     _bioController = TextEditingController();
     _experienciaController = TextEditingController();
+    _fichaOrigenController = TextEditingController();
   }
 
   Future<void> _loadProfile() async {
@@ -79,7 +82,33 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
       _paisController.text = _userProfile!.pais ?? '';
       _bioController.text = _userProfile!.bio ?? '';
       _experienciaController.text = _userProfile!.experienciaDeportiva ?? '';
+      _fichaOrigenController.text = _userProfile!.fichaOrigen ?? '';
+      _fechaNacimiento = _userProfile!.fechaNacimiento;
     }
+  }
+
+  Future<void> _pickBirthDate() async {
+    if (!_isEditing) return;
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _fechaNacimiento ?? DateTime(now.year - 25),
+      firstDate: DateTime(1940),
+      lastDate: now,
+      locale: const Locale('es', 'ES'),
+    );
+    if (picked != null) {
+      setState(() => _fechaNacimiento = picked);
+    }
+  }
+
+  String _birthDateLabel() {
+    if (_fechaNacimiento == null) return 'Sin fecha cargada';
+    const months = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+    ];
+    return '${_fechaNacimiento!.day} de ${months[_fechaNacimiento!.month - 1]}';
   }
 
   Future<void> _saveProfile() async {
@@ -97,6 +126,12 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
         'pais': _paisController.text.trim(),
         'bio': _bioController.text.trim(),
         'experienciaDeportiva': _experienciaController.text.trim(),
+        'fichaOrigen': _fichaOrigenController.text.trim().isEmpty
+            ? null
+            : _fichaOrigenController.text.trim(),
+        if (_fechaNacimiento != null)
+          'fechaNacimiento':
+              '${_fechaNacimiento!.year.toString().padLeft(4, '0')}-${_fechaNacimiento!.month.toString().padLeft(2, '0')}-${_fechaNacimiento!.day.toString().padLeft(2, '0')}',
       };
 
       await _profileService.updateProfile(updateData);
@@ -160,6 +195,33 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (!_isEditing)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.blue.shade100),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit_outlined,
+                                    color: Colors.blue.shade700, size: 20),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Tocá el ícono de editar arriba para cargar o cambiar tus datos, incluido «De qué hincha soy».',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.blue.shade900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         // Información básica
                         _buildSection(
                           'Información Básica',
@@ -181,6 +243,25 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
                               _phoneController,
                               Icons.phone_outlined,
                               keyboardType: TextInputType.phone,
+                            ),
+                            _buildTextField(
+                              'De qué hincha soy',
+                              _fichaOrigenController,
+                              Icons.sports_soccer,
+                              hintText: 'Ej: Boca Juniors, River, San Lorenzo…',
+                            ),
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.cake_outlined),
+                              title: const Text('Fecha de nacimiento'),
+                              subtitle: Text(
+                                _birthDateLabel(),
+                                style: TextStyle(color: Colors.grey[700]),
+                              ),
+                              trailing: _isEditing
+                                  ? const Icon(Icons.edit_calendar)
+                                  : null,
+                              onTap: _pickBirthDate,
                             ),
                           ],
                         ),
@@ -276,6 +357,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
     IconData icon, {
     TextInputType? keyboardType,
     int maxLines = 1,
+    String? hintText,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -286,14 +368,16 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
         maxLines: maxLines,
         decoration: InputDecoration(
           labelText: label,
+          hintText: hintText,
           prefixIcon: Icon(icon),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           filled: true,
-          fillColor: _isEditing
-              ? const Color.fromARGB(255, 82, 75, 75)
-              : const Color.fromARGB(255, 24, 22, 22),
+          fillColor: _isEditing ? Colors.white : Colors.grey.shade100,
+        ),
+        style: TextStyle(
+          color: _isEditing ? Colors.black87 : Colors.grey.shade800,
         ),
       ),
     );
@@ -367,6 +451,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
     _paisController.dispose();
     _bioController.dispose();
     _experienciaController.dispose();
+    _fichaOrigenController.dispose();
     super.dispose();
   }
 }

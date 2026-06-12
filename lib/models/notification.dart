@@ -14,7 +14,8 @@ enum NotificationType {
   eventCompleted('event_completed'),
   eventStarted('event_started'),
   impedimentCleared('impediment_cleared'),
-  playerEligible('player_eligible');
+  playerEligible('player_eligible'),
+  birthday('birthday');
 
   const NotificationType(this.value);
   final String value;
@@ -189,6 +190,8 @@ class NotificationModel {
         return 'Alta médica';
       case NotificationType.playerEligible:
         return 'Habilitado';
+      case NotificationType.birthday:
+        return 'Cumpleaños';
     }
   }
 

@@ -13,11 +13,17 @@ import 'package:sportify_amateur/models/sport_event.dart';
 class ConvocationFormScreen extends StatefulWidget {
   final SportEvent? existing;
   final bool isOfficial;
+  final DateTime? initialMatchDate;
+  final TimeOfDay? initialMatchTime;
+  final int? initialTeamId;
 
   const ConvocationFormScreen({
     super.key,
     this.existing,
     this.isOfficial = false,
+    this.initialMatchDate,
+    this.initialMatchTime,
+    this.initialTeamId,
   });
 
   @override
@@ -55,6 +61,12 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
   void initState() {
     super.initState();
     _isOfficial = widget.isOfficial;
+    if (widget.initialMatchDate != null) {
+      _matchDate = widget.initialMatchDate!;
+    }
+    if (widget.initialMatchTime != null) {
+      _matchTime = widget.initialMatchTime!;
+    }
     _loadTeams();
     if (widget.existing != null) {
       _draft = widget.existing;
@@ -83,7 +95,8 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
       }
       teams = MyTeamOption.dedupeByTeamId(teams);
       final picks = TeamCategoryPick.fromMyTeams(teams);
-      final draftTeamId = widget.existing?.teamId ?? _draft?.teamId;
+      final draftTeamId =
+          widget.existing?.teamId ?? _draft?.teamId ?? widget.initialTeamId;
       final meta = widget.existing?.metadata ?? _draft?.metadata;
       final draftCatId = meta?['categoryId'] as int?;
       final selected = (draftTeamId != null

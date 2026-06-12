@@ -1,8 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/category_service.dart';
 import 'package:sportify_amateur/core/services/sport_service.dart';
+import 'package:sportify_amateur/core/utils/team_colors.dart';
+import 'package:sportify_amateur/core/widgets/image_from_url_or_data.dart';
 import 'package:sportify_amateur/models/team.dart';
 import 'package:sportify_amateur/models/category.dart';
 import 'package:sportify_amateur/models/sport.dart';
@@ -31,8 +36,13 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
 
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
-  late TextEditingController _colorsController;
   late TextEditingController _foundedYearController;
+  final ImagePicker _imagePicker = ImagePicker();
+
+  String? _logoUrl;
+  Color? _primaryColor;
+  Color? _secondaryColor;
+  String? _legacyColorsLabel;
 
   List<Sport> _sports = [];
   Sport? _selectedSport;
@@ -54,9 +64,55 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
         text: widget.team?.name ?? widget.initialName ?? '');
     _descriptionController =
         TextEditingController(text: widget.team?.description ?? '');
-    _colorsController = TextEditingController(text: widget.team?.colors ?? '');
     _foundedYearController =
         TextEditingController(text: widget.team?.foundedYear?.toString() ?? '');
+    _logoUrl = widget.team?.logoUrl;
+    final parsed = parseTeamColors(widget.team?.colors);
+    if (parsed != null) {
+      _primaryColor = parsed.primary;
+      _secondaryColor = parsed.secondary;
+    } else {
+      _legacyColorsLabel = legacyTeamColorsLabel(widget.team?.colors);
+    }
+  }
+
+  Future<String?> _pickLogoDataUri() async {
+    final picked = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 80,
+    );
+    if (picked == null) return null;
+    final bytes = await picked.readAsBytes();
+    final mime = picked.mimeType ?? 'image/jpeg';
+    return 'data:$mime;base64,${base64Encode(bytes)}';
+  }
+
+  Future<void> _pickColor({required bool primary}) async {
+    final selected = await showDialog<Color>(
+      context: context,
+      builder: (ctx) => _ColorPickerDialog(
+        title: primary ? 'Color principal' : 'Color secundario',
+        initial: primary ? _primaryColor : _secondaryColor,
+      ),
+    );
+    if (selected == null) return;
+    setState(() {
+      if (primary) {
+        _primaryColor = selected;
+      } else {
+        _secondaryColor = selected;
+      }
+      _legacyColorsLabel = null;
+    });
+  }
+
+  String? _serializeColors() {
+    if (_primaryColor != null && _secondaryColor != null) {
+      return serializeTeamColors(_primaryColor!, _secondaryColor!);
+    }
+    return _legacyColorsLabel;
   }
 
   Future<void> _loadSports() async {
@@ -147,9 +203,8 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
         'founded_year': _foundedYearController.text.trim().isEmpty
             ? null
             : int.parse(_foundedYearController.text.trim()),
-        'colors': _colorsController.text.trim().isEmpty
-            ? null
-            : _colorsController.text.trim(),
+        'colors': _serializeColors(),
+        if (_logoUrl != null && _logoUrl!.isNotEmpty) 'logoUrl': _logoUrl,
       };
 
       Team savedTeam;
@@ -327,42 +382,34 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Año de fundación y colores
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTextFormField(
-                            controller: _foundedYearController,
-                            label: 'Año fundación',
-                            icon: Icons.calendar_today,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(4),
-                            ],
-                            validator: (value) {
-                              if (value != null && value.isNotEmpty) {
-                                final year = int.tryParse(value);
-                                if (year == null ||
-                                    year < 1800 ||
-                                    year > DateTime.now().year) {
-                                  return 'Año inválido';
-                                }
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildTextFormField(
-                            controller: _colorsController,
-                            label: 'Colores',
-                            icon: Icons.palette,
-                            hintText: 'Ej: Azul y amarillo',
-                          ),
-                        ),
+                    _buildShieldSection(),
+
+                    const SizedBox(height: 20),
+
+                    _buildColorsSection(),
+
+                    const SizedBox(height: 20),
+
+                    _buildTextFormField(
+                      controller: _foundedYearController,
+                      label: 'Año fundación',
+                      icon: Icons.calendar_today,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(4),
                       ],
+                      validator: (value) {
+                        if (value != null && value.isNotEmpty) {
+                          final year = int.tryParse(value);
+                          if (year == null ||
+                              year < 1800 ||
+                              year > DateTime.now().year) {
+                            return 'Año inválido';
+                          }
+                        }
+                        return null;
+                      },
                     ),
 
                     const SizedBox(height: 40),
@@ -453,6 +500,207 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
         fillColor: Colors.white,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+    );
+  }
+
+  Widget _buildShieldSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Escudo del equipo',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            GestureDetector(
+              onTap: () async {
+                final uri = await _pickLogoDataUri();
+                if (uri != null) setState(() => _logoUrl = uri);
+              },
+              child: Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(11),
+                  child: _logoUrl != null && _logoUrl!.isNotEmpty
+                      ? ImageFromUrlOrData(
+                          imageUrl: _logoUrl,
+                          width: 96,
+                          height: 96,
+                          placeholder: const Center(
+                            child: Icon(Icons.shield, size: 40),
+                          ),
+                        )
+                      : const Center(
+                          child: Icon(Icons.add_photo_alternate_outlined,
+                              size: 36, color: Colors.grey),
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Tocá para elegir una imagen',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Se guarda en la nube de la app. Más adelante podés migrar a un bucket sin cambiar el flujo.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  if (_logoUrl != null && _logoUrl!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () => setState(() => _logoUrl = null),
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Quitar escudo'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildColorsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Colores del equipo',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (_legacyColorsLabel != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Colores anteriores: $_legacyColorsLabel',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ),
+        Row(
+          children: [
+            Expanded(
+              child: _buildColorTile(
+                label: 'Principal',
+                color: _primaryColor,
+                onTap: () => _pickColor(primary: true),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildColorTile(
+                label: 'Secundario',
+                color: _secondaryColor,
+                onTap: () => _pickColor(primary: false),
+              ),
+            ),
+          ],
+        ),
+        if (_primaryColor != null && _secondaryColor != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            height: 12,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              gradient: LinearGradient(
+                colors: [_primaryColor!, _secondaryColor!],
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: teamColorPresets.map((preset) {
+            return ActionChip(
+              label: Text(preset.label),
+              avatar: CircleAvatar(
+                radius: 8,
+                backgroundColor: preset.colors.primary,
+                child: CircleAvatar(
+                  radius: 4,
+                  backgroundColor: preset.colors.secondary,
+                ),
+              ),
+              onPressed: () {
+                setState(() {
+                  _primaryColor = preset.colors.primary;
+                  _secondaryColor = preset.colors.secondary;
+                  _legacyColorsLabel = null;
+                });
+              },
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildColorTile({
+    required String label,
+    required Color? color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color ?? Colors.grey.shade200,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.shade400),
+              ),
+              child: color == null
+                  ? const Icon(Icons.palette_outlined, size: 18)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 20),
+          ],
+        ),
       ),
     );
   }
@@ -602,8 +850,80 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
-    _colorsController.dispose();
     _foundedYearController.dispose();
     super.dispose();
+  }
+}
+
+class _ColorPickerDialog extends StatelessWidget {
+  final String title;
+  final Color? initial;
+
+  const _ColorPickerDialog({
+    required this.title,
+    this.initial,
+  });
+
+  static const _palette = [
+    Color(0xFF1B5E20),
+    Color(0xFF0D47A1),
+    Color(0xFFC62828),
+    Color(0xFF03A9F4),
+    Color(0xFF880E4F),
+    Color(0xFF212121),
+    Color(0xFFFFC107),
+    Color(0xFFFFFFFF),
+    Color(0xFF4E342E),
+    Color(0xFF6A1B9A),
+    Color(0xFF00695C),
+    Color(0xFFE65100),
+    Color(0xFF37474F),
+    Color(0xFFAD1457),
+    Color(0xFF1565C0),
+    Color(0xFF2E7D32),
+    Color(0xFF5D4037),
+    Color(0xFF827717),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(title),
+      content: SizedBox(
+        width: 280,
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: _palette.map((color) {
+            final selected = initial != null &&
+                initial!.red == color.red &&
+                initial!.green == color.green &&
+                initial!.blue == color.blue;
+            return InkWell(
+              onTap: () => Navigator.pop(context, color),
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected ? Colors.black : Colors.grey.shade400,
+                    width: selected ? 3 : 1,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+      ],
+    );
   }
 }

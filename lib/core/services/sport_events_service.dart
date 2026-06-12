@@ -57,10 +57,13 @@ class SportEventsService {
       if (e is DioException) {
         if (e.response?.statusCode == 401) {
           throw Exception(
-              'No tienes permisos para crear eventos. Verifica que estés logueado como manager o administrador.');
+              'Tenés que iniciar sesión para crear eventos.');
         } else if (e.response?.statusCode == 403) {
+          final message = e.response?.data?['message'];
           throw Exception(
-              'No tienes los permisos necesarios para crear eventos.');
+            message?.toString() ??
+                'No podés crear eventos para este equipo. Verificá que seas miembro del club.',
+          );
         } else if (e.response?.statusCode == 400) {
           final message = e.response?.data['message'] ?? 'Datos inválidos';
           throw Exception('Error en los datos: $message');

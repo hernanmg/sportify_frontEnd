@@ -11,6 +11,7 @@ class UserProfile {
   final String? pais;
   final String? bio;
   final String? experienciaDeportiva;
+  final String? fichaOrigen;
   final String? avatarUrl;
   final int profileCompletion;
   final String estadoRegistro;
@@ -37,6 +38,7 @@ class UserProfile {
     this.pais,
     this.bio,
     this.experienciaDeportiva,
+    this.fichaOrigen,
     this.avatarUrl,
     required this.profileCompletion,
     required this.estadoRegistro,
@@ -70,6 +72,7 @@ class UserProfile {
       pais: json['pais']?.toString(),
       bio: json['bio']?.toString(),
       experienciaDeportiva: json['experienciaDeportiva']?.toString(),
+      fichaOrigen: json['fichaOrigen']?.toString(),
       avatarUrl: json['avatarUrl']?.toString(),
       profileCompletion: (json['profileCompletion'] as num?)?.toInt() ?? 0,
       estadoRegistro: json['estadoRegistro']?.toString() ?? 'pending',
@@ -99,6 +102,7 @@ class UserProfile {
       'pais': pais,
       'bio': bio,
       'experienciaDeportiva': experienciaDeportiva,
+      'fichaOrigen': fichaOrigen,
       'avatarUrl': avatarUrl,
       'profileCompletion': profileCompletion,
       'estadoRegistro': estadoRegistro,

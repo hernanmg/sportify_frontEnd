@@ -45,6 +45,8 @@ import 'package:sportify_amateur/features/teams/join_team_screen.dart';
 import 'package:sportify_amateur/features/sports/team_admin_panel_screen.dart';
 import 'package:sportify_amateur/features/finance/quota_overview_screen.dart';
 import 'package:sportify_amateur/features/sports/attendance_screen.dart';
+import 'package:sportify_amateur/features/sports/team_calendar_screen.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +55,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   DioClient.initialize();
+  await initializeDateFormatting('es');
   // FCM: no debe bloquear el arranque si no hay sesión o el JWT expiró.
   try {
     await PushRegistrationService.instance.initialize();
@@ -125,6 +128,16 @@ class MainApp extends StatelessWidget {
         '/teams': (context) => const TeamsManagementScreen(),
         '/notifications': (context) => const NotificationsScreen(),
         '/my-events': (context) => const MyEventsScreen(),
+        '/sports/calendar': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          int? teamId;
+          if (args is Map) {
+            final raw = args['teamId'];
+            if (raw is int) teamId = raw;
+            if (raw != null && teamId == null) teamId = int.tryParse('$raw');
+          }
+          return TeamCalendarScreen(initialTeamId: teamId);
+        },
         '/sports/my-matches': (context) => const MyMatchesScreen(),
         '/join-team': (context) => const JoinTeamScreen(),
         '/finances': (context) => const FinanceHubScreen(),

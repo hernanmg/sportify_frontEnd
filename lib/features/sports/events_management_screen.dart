@@ -5,6 +5,7 @@ import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
 import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
+import 'package:sportify_amateur/features/sports/team_calendar_screen.dart';
 
 class EventsManagementScreen extends StatefulWidget {
   const EventsManagementScreen({Key? key}) : super(key: key);
@@ -169,7 +170,19 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
               },
             ),
           ),
-          const SizedBox(width: 16),
+          IconButton(
+            tooltip: 'Calendario',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (context) => const TeamCalendarScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.calendar_month),
+          ),
+          const SizedBox(width: 8),
           ElevatedButton.icon(
             onPressed: _createEvent,
             icon: const Icon(Icons.add),

@@ -9,7 +9,9 @@ class Team {
   final int? sportId;
   final int? categoryId;
   final String? colors;
+  final String? logoUrl;
   final int? foundedYear;
+  final int birthdayNotificationHour;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<String> adminEmails;
@@ -25,7 +27,9 @@ class Team {
     this.sportId,
     this.categoryId,
     this.colors,
+    this.logoUrl,
     this.foundedYear,
+    this.birthdayNotificationHour = 9,
     required this.createdAt,
     required this.updatedAt,
     this.adminEmails = const [],
@@ -69,7 +73,13 @@ class Team {
               json['category_id'] ??
               json['category']?['id']),
       colors: json['colors'],
+      logoUrl: json['logoUrl']?.toString() ?? json['logo_url']?.toString(),
       foundedYear: json['foundedYear'] ?? json['founded_year'],
+      birthdayNotificationHour:
+          ((json['birthdayNotificationHour'] ??
+                      json['birthday_notification_hour']) as num?)
+                  ?.toInt() ??
+              9,
       createdAt: DateTime.parse(json['createdAt'] ?? json['created_at']),
       updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at']),
       adminEmails: (json['adminEmails'] as List<dynamic>?)
@@ -89,7 +99,9 @@ class Team {
       'sportId': sportId,
       'categoryId': categoryId,
       'colors': colors,
+      'logoUrl': logoUrl,
       'foundedYear': foundedYear,
+      'birthdayNotificationHour': birthdayNotificationHour,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -103,6 +115,7 @@ class Team {
       'sportId': sportId,
       'categoryId': categoryId,
       'colors': colors,
+      'logoUrl': logoUrl,
       'foundedYear': foundedYear,
     };
   }
@@ -115,6 +128,7 @@ class Team {
       'sportId': sportId,
       'categoryId': categoryId,
       'colors': colors,
+      'logoUrl': logoUrl,
       'foundedYear': foundedYear,
     };
   }
@@ -176,7 +190,9 @@ class Team {
     int? sportId,
     int? categoryId,
     String? colors,
+    String? logoUrl,
     int? foundedYear,
+    int? birthdayNotificationHour,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -189,7 +205,10 @@ class Team {
       sportId: sportId ?? this.sportId,
       categoryId: categoryId ?? this.categoryId,
       colors: colors ?? this.colors,
+      logoUrl: logoUrl ?? this.logoUrl,
       foundedYear: foundedYear ?? this.foundedYear,
+      birthdayNotificationHour:
+          birthdayNotificationHour ?? this.birthdayNotificationHour,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

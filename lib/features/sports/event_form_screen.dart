@@ -11,8 +11,17 @@ import 'package:sportify_amateur/features/sports/social_event_expenses_screen.da
 
 class EventFormScreen extends StatefulWidget {
   final SportEvent? event;
+  final DateTime? initialDate;
+  final TimeOfDay? initialTime;
+  final int? initialTeamId;
 
-  const EventFormScreen({Key? key, this.event}) : super(key: key);
+  const EventFormScreen({
+    Key? key,
+    this.event,
+    this.initialDate,
+    this.initialTime,
+    this.initialTeamId,
+  }) : super(key: key);
 
   @override
   _EventFormScreenState createState() => _EventFormScreenState();
@@ -60,6 +69,12 @@ class _EventFormScreenState extends State<EventFormScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDate != null) {
+      _selectedDate = widget.initialDate!;
+    }
+    if (widget.initialTime != null) {
+      _selectedTime = widget.initialTime!;
+    }
     _loadTeams();
     if (widget.event != null) {
       _loadEventData();
@@ -85,7 +100,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
       teams = MyTeamOption.dedupeByTeamId(teams);
       final MyTeamOption? selected = widget.event != null
           ? MyTeamOption.findInList(teams, widget.event!.teamId)
-          : null;
+          : (widget.initialTeamId != null
+              ? MyTeamOption.findInList(teams, widget.initialTeamId!)
+              : null);
       final resolved = selected ?? (teams.isNotEmpty ? teams.first : null);
       setState(() {
         _myTeams = teams;

@@ -335,6 +335,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         iconData = Icons.celebration;
         iconColor = Colors.pink;
         break;
+      case NotificationType.birthday:
+        iconData = Icons.cake;
+        iconColor = Colors.deepPurple;
+        break;
       case NotificationType.rosterUpdate:
         iconData = Icons.list_alt;
         iconColor = Colors.blue;
@@ -740,6 +744,10 @@ class _NotificationDetailSheetState extends State<NotificationDetailSheet> {
       case NotificationType.socialEvent:
         iconData = Icons.celebration;
         iconColor = Colors.pink;
+        break;
+      case NotificationType.birthday:
+        iconData = Icons.cake;
+        iconColor = Colors.deepPurple;
         break;
       default:
         if (notification.opensPlayerStatus) {

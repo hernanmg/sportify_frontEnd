@@ -3,6 +3,8 @@ import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
 import 'package:sportify_amateur/features/sports/social_event_expenses_screen.dart';
+import 'package:sportify_amateur/features/sports/event_form_screen.dart';
+import 'package:sportify_amateur/features/sports/team_calendar_screen.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 
 class MyEventsScreen extends StatefulWidget {
@@ -100,8 +102,58 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
       appBar: AppBar(
         title: const Text('Mis eventos'),
         actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'calendar') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (context) => const TeamCalendarScreen(),
+                  ),
+                );
+              } else if (value == 'create_event') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (context) => const EventFormScreen(),
+                  ),
+                ).then((_) => _load());
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'create_event',
+                child: ListTile(
+                  leading: Icon(Icons.add_circle_outline),
+                  title: Text('Crear evento'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'calendar',
+                child: ListTile(
+                  leading: Icon(Icons.calendar_month),
+                  title: Text('Ver calendario'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (context) => const EventFormScreen(),
+            ),
+          ).then((_) => _load());
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Crear evento'),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -112,7 +164,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                       child: Padding(
                         padding: EdgeInsets.all(24),
                         child: Text(
-                          'No tenés invitaciones a eventos.\nCuando te inviten a un evento social o entrenamiento, aparecerá acá.',
+                          'No tenés invitaciones a eventos.\nCuando te inviten a un evento social o entrenamiento, aparecerá acá.\n\nTambién podés crear uno desde el menú ⋮ o en Gestión deportiva.',
                           textAlign: TextAlign.center,
                         ),
                       ),

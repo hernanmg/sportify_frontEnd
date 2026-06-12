@@ -170,6 +170,22 @@ class TeamService {
     }
   }
 
+  Future<Team> updateBirthdayNotificationHour(int teamId, int hour) async {
+    try {
+      final response = await _dio.patch(
+        '/teams/$teamId/birthday-notification-hour',
+        data: {'birthdayNotificationHour': hour},
+      );
+      if (response.statusCode == 200) {
+        final data = Map<String, dynamic>.from(response.data as Map);
+        return Team.fromJson(data);
+      }
+      throw Exception('Error al guardar hora de cumpleaños');
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
   // Eliminar equipo
   Future<void> deleteTeam(int id) async {
     try {

@@ -19,6 +19,7 @@ import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
+import 'package:sportify_amateur/features/sports/team_calendar_screen.dart';
 import 'package:sportify_amateur/widgets/season_selector_chip.dart';
 
 class SportsManagementScreen extends StatefulWidget {
@@ -175,6 +176,14 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
                 child: ListTile(
                   leading: Icon(Icons.celebration),
                   title: Text('Evento Social'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'calendar',
+                child: ListTile(
+                  leading: Icon(Icons.calendar_month),
+                  title: Text('Calendario del equipo'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
@@ -347,6 +356,16 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
           break;
         case 'social_event':
           await _createSocialEvent();
+          break;
+        case 'calendar':
+          await Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (context) => TeamCalendarScreen(
+                initialTeamId: widget.initialTeamId,
+              ),
+            ),
+          );
           break;
         case 'manage_teams':
           await Navigator.pushNamed(context, '/teams');

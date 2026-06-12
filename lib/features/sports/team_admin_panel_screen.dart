@@ -10,6 +10,7 @@ import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
 import 'package:sportify_amateur/models/finance.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
+import 'package:sportify_amateur/models/team.dart';
 
 class TeamAdminPanelScreen extends StatefulWidget {
   final int? initialTeamId;
@@ -28,6 +29,9 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
   List<MyTeamOption> _teams = [];
   MyTeamOption? _selected;
   TeamAdminPanel? _panel;
+  Team? _team;
+  int? _birthdayHour;
+  bool _savingBirthdayHour = false;
   bool _loading = true;
   String? _error;
   bool _isPlatformAdmin = false;
@@ -68,9 +72,12 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
     });
     try {
       final panel = await _service.getAdminPanel(teamId);
+      final team = await _teamService.getTeamById(teamId);
       if (!mounted) return;
       setState(() {
         _panel = panel;
+        _team = team;
+        _birthdayHour = team.birthdayNotificationHour;
         _loading = false;
       });
     } catch (e) {
@@ -158,6 +165,8 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
         children: [
           _quickActions(panel.teamId),
           const SizedBox(height: 16),
+          _birthdaySettingsCard(panel.teamId),
+          const SizedBox(height: 16),
           _sectionTitle('Finanzas del mes'),
           _financeCard(panel.monthFinance),
           const SizedBox(height: 16),
@@ -193,6 +202,101 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
         ],
       ),
     );
+  }
+
+  Widget _birthdaySettingsCard(int teamId) {
+    final hour = _birthdayHour ?? 9;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.cake_outlined, color: Colors.purple.shade700),
+                const SizedBox(width: 8),
+                const Text(
+                  'Avisos de cumpleaños',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Cada día, a la hora elegida, el plantel recibe un aviso si alguien cumple años. El cumpleañero recibe un mensaje especial del equipo.',
+              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int>(
+              value: hour,
+              decoration: const InputDecoration(
+                labelText: 'Hora de envío (Argentina)',
+                border: OutlineInputBorder(),
+              ),
+              items: List.generate(
+                24,
+                (h) => DropdownMenuItem(
+                  value: h,
+                  child: Text('${h.toString().padLeft(2, '0')}:00'),
+                ),
+              ),
+              onChanged: _savingBirthdayHour
+                  ? null
+                  : (v) => setState(() => _birthdayHour = v ?? hour),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: _savingBirthdayHour || _birthdayHour == null
+                    ? null
+                    : () => _saveBirthdayHour(teamId),
+                icon: _savingBirthdayHour
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save),
+                label: const Text('Guardar hora'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveBirthdayHour(int teamId) async {
+    final hour = _birthdayHour;
+    if (hour == null) return;
+    setState(() => _savingBirthdayHour = true);
+    try {
+      final team =
+          await _teamService.updateBirthdayNotificationHour(teamId, hour);
+      if (!mounted) return;
+      setState(() {
+        _team = team;
+        _birthdayHour = team.birthdayNotificationHour;
+        _savingBirthdayHour = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Hora de cumpleaños actualizada'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _savingBirthdayHour = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(TeamAdminService.errorMessage(e)),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _quickActions(int teamId) {

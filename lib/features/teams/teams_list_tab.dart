@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/team.dart';
+import 'package:sportify_amateur/core/widgets/team_logo_avatar.dart';
 import 'package:sportify_amateur/features/teams/team_form_screen.dart';
 
 class TeamsListTab extends StatefulWidget {
@@ -236,14 +237,11 @@ class TeamsListTabState extends State<TeamsListTab> {
                           final isMine = _myTeamIds.contains(team.id);
                           return Card(
                             child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: isMine
-                                    ? Colors.green.shade100
-                                    : null,
-                                child: Icon(
-                                  Icons.groups,
-                                  color: isMine ? Colors.green.shade800 : null,
-                                ),
+                              leading: TeamLogoAvatar(
+                                logoUrl: team.logoUrl,
+                                colorsRaw: team.colors,
+                                radius: 24,
+                                highlight: isMine,
                               ),
                               title: Text(Team.listLabel(team, _teams)),
                               subtitle: Text(
