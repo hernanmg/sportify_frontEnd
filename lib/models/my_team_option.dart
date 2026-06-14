@@ -8,6 +8,8 @@ class MyTeamOption {
   final List<int> categoryIds;
   final bool isTeamAdmin;
   final Team team;
+  final String? teamMemberRole;
+  final bool canManageFinance;
 
   MyTeamOption({
     required this.teamId,
@@ -16,6 +18,8 @@ class MyTeamOption {
     this.categoryIds = const [],
     this.isTeamAdmin = false,
     required this.team,
+    this.teamMemberRole,
+    this.canManageFinance = false,
   });
 
   String get displayLabel {
@@ -63,6 +67,8 @@ class MyTeamOption {
           categories: [name],
           categoryIds: [id],
           isTeamAdmin: t.isTeamAdmin,
+          teamMemberRole: t.teamMemberRole,
+          canManageFinance: t.canManageFinance,
           team: t.team,
         ));
       }
@@ -104,6 +110,8 @@ class MyTeamOption {
       categories: cats,
       categoryIds: catIds,
       isTeamAdmin: json['isTeamAdmin'] == true,
+      teamMemberRole: json['teamMemberRole']?.toString(),
+      canManageFinance: json['canManageFinance'] == true,
       team: team,
     );
   }

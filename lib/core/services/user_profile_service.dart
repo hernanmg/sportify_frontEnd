@@ -5,6 +5,23 @@ import 'package:sportify_amateur/models/user_profile.dart';
 class UserProfileService {
   final Dio _dio = DioClient.instance;
 
+  static String errorMessage(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map && data['message'] != null) {
+        final message = data['message'];
+        if (message is List) {
+          return message.map((e) => e.toString()).join('\n');
+        }
+        return message.toString();
+      }
+      if (error.response?.statusCode == 403) {
+        return 'No tenés permiso para esta acción.';
+      }
+    }
+    return error.toString();
+  }
+
   Future<UserProfile> getProfile() async {
     try {
       final response = await _dio.get('/users/profile');
@@ -13,8 +30,10 @@ class UserProfileService {
         return UserProfile.fromJson(data);
       }
       throw Exception('Error al obtener perfil');
+    } on DioException {
+      rethrow;
     } catch (e) {
-      throw Exception('Error de conexión: $e');
+      throw Exception('Error al obtener perfil: $e');
     }
   }
 
@@ -26,8 +45,10 @@ class UserProfileService {
         return UserProfile.fromJson(data);
       }
       throw Exception('Error al actualizar perfil');
+    } on DioException {
+      rethrow;
     } catch (e) {
-      throw Exception('Error de conexión: $e');
+      throw Exception('Error al actualizar perfil: $e');
     }
   }
 

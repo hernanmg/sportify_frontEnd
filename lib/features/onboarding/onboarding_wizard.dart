@@ -190,7 +190,7 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
       // Ubicación
       'ciudad', 'provincia', 'pais',
       // Biografía y experiencia
-      'bio', 'experienciaDeportiva',
+      'bio', 'experienciaDeportiva', 'fichaOrigen',
       // Estado
       'estadoRegistro', 'profileCompletion',
     };

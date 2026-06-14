@@ -302,8 +302,8 @@ class AuthService {
       var needsOnboarding = !onboardingDone && completion < 80;
       if (hasTeams) {
         needsOnboarding = false;
-      } else if (isStaff && hasBasicIdentity) {
-        // DT / admin de seed: no repetir datos personales; solo alta en equipo.
+      } else if (hasBasicIdentity) {
+        // Con nombre/apellido puede usar la app y completar perfil en /profile/info.
         needsOnboarding = false;
       }
 

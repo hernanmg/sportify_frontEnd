@@ -6,6 +6,7 @@ import 'package:sportify_amateur/features/finance/ledger_tab.dart';
 import 'package:sportify_amateur/features/finance/my_account_tab.dart';
 import 'package:sportify_amateur/features/finance/team_finance_tab.dart';
 import 'package:sportify_amateur/features/finance/quota_overview_screen.dart';
+import 'package:sportify_amateur/models/my_team_option.dart';
 import 'package:sportify_amateur/models/team.dart';
 
 class FinanceHubScreen extends StatefulWidget {
@@ -22,9 +23,33 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
   final _ledgerKey = GlobalKey<LedgerTabState>();
 
   List<Team> _teams = [];
+  List<MyTeamOption> _teamOptions = [];
   Team? _selectedTeam;
-  bool _isManager = false;
+  bool _canManageFinance = false;
   bool _ready = false;
+
+  static const _globalFinanceRoles = {
+    'super_admin',
+    'manager',
+    'admin',
+    'dt',
+    'tesorero',
+    'delegado',
+    'team_captain',
+  };
+
+  bool _userCanManageFinanceForTeam(String? role, Team? team) {
+    if (team == null) return false;
+    if (role == 'super_admin' || role == 'manager' || role == 'admin') {
+      return true;
+    }
+    final opt = MyTeamOption.findInList(_teamOptions, team.id);
+    if (opt?.canManageFinance == true) return true;
+    if (role != null && _globalFinanceRoles.contains(role)) {
+      return _teamOptions.any((t) => t.teamId == team.id);
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -34,42 +59,43 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
 
   Future<void> _loadInitialData() async {
     final role = await AuthStorageService().getRole();
-    final isManager = role == 'manager' ||
-        role == 'super_admin' ||
-        role == 'team_captain' ||
-        role == 'admin';
     final isPlatformAdmin =
         role == 'super_admin' || role == 'manager' || role == 'admin';
 
+    List<MyTeamOption> teamOptions = [];
     List<Team> teams = [];
     try {
       if (isPlatformAdmin) {
         teams = await _teamService.getAllTeams();
       } else {
-        final mine = await _teamService.getMyTeams();
-        teams = mine.map((o) => o.team).toList();
-        if (teams.isEmpty) {
-          teams = await _teamService.getAllTeams();
-        }
+        teamOptions = MyTeamOption.dedupeByTeamId(await _teamService.getMyTeams());
+        teams = teamOptions.map((o) => o.team).toList();
       }
     } catch (_) {
       teams = [];
     }
 
+    final selected = teams.isNotEmpty ? teams.first : null;
+
     if (!mounted) return;
 
     setState(() {
-      _isManager = isManager;
+      _teamOptions = teamOptions;
       _teams = teams;
-      _selectedTeam = teams.isNotEmpty ? teams.first : null;
+      _selectedTeam = selected;
+      _canManageFinance = _userCanManageFinanceForTeam(role, selected);
       _ready = true;
     });
   }
 
-  void _onTeamChanged(int? teamId) {
+  void _onTeamChanged(int? teamId) async {
     if (teamId == null) return;
     final team = _teams.firstWhere((t) => t.id == teamId);
-    setState(() => _selectedTeam = team);
+    final role = await AuthStorageService().getRole();
+    setState(() {
+      _selectedTeam = team;
+      _canManageFinance = _userCanManageFinanceForTeam(role, team);
+    });
     _myAccountKey.currentState?.reload();
     _teamFinanceKey.currentState?.reload();
     _ledgerKey.currentState?.reload();
@@ -79,7 +105,7 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
     final index = controller.index;
     if (index == 0) {
       await _myAccountKey.currentState?.reload();
-    } else if (_isManager && index == 1) {
+    } else if (_canManageFinance && index == 1) {
       await _teamFinanceKey.currentState?.reload();
     } else {
       await _ledgerKey.currentState?.reload();
@@ -138,7 +164,7 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
       );
     }
 
-    final tabCount = _isManager ? 3 : 2;
+    final tabCount = _canManageFinance ? 3 : 2;
 
     return DefaultTabController(
       length: tabCount,
@@ -157,7 +183,7 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
                 unselectedLabelColor: Colors.white70,
                 tabs: [
                   const Tab(icon: Icon(Icons.person), text: 'Mi cuenta'),
-                  if (_isManager)
+                  if (_canManageFinance)
                     const Tab(icon: Icon(Icons.groups), text: 'Equipo'),
                   const Tab(
                     icon: Icon(Icons.receipt_long),
@@ -200,7 +226,7 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
                         key: _myAccountKey,
                         teamId: _selectedTeam?.id,
                       ),
-                      if (_isManager)
+                      if (_canManageFinance)
                         TeamFinanceTab(
                           key: _teamFinanceKey,
                           teamId: _selectedTeam?.id,

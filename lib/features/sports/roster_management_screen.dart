@@ -10,6 +10,7 @@ import 'package:sportify_amateur/models/player_roster.dart';
 import 'package:sportify_amateur/models/user.dart';
 import 'package:sportify_amateur/features/sports/roster_form_improved_screen.dart';
 import 'package:sportify_amateur/core/utils/category_label.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/widgets/player_avatar.dart';
 
 class RosterManagementScreen extends StatefulWidget {
@@ -142,7 +143,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
         ..sort();
       var nextFilter = _categoryFilter;
       if (!_categoryFilterInitialized && categoryNames.isNotEmpty) {
-        nextFilter = categoryNames.first;
+        nextFilter = 'all';
         _categoryFilterInitialized = true;
       } else if (nextFilter != 'all' &&
           !categoryNames.contains(nextFilter)) {
@@ -257,6 +258,23 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
   }
 
   Future<void> _editPlayer(PlayerRoster player) async {
+    final role = await AuthStorageService().getRole();
+    final userIdStr = await AuthStorageService().getUserId();
+    final userId = int.tryParse(userIdStr ?? '');
+
+    if (!UserCapabilities.canManageRoster(role) &&
+        player.player?.userId != userId) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Solo podés editar tu propia ficha'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(

@@ -48,7 +48,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cargar perfil: $e'),
+            content: Text(
+              'Error al cargar perfil: ${UserProfileService.errorMessage(e)}',
+            ),
             backgroundColor: Colors.red,
           ),
         );

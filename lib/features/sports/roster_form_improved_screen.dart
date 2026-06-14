@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/core/services/sport_positions_service.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/models/sport_position.dart';
 import 'package:dio/dio.dart';
 import 'package:sportify_amateur/core/services/user_service.dart';
@@ -60,6 +62,8 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   String _medicalStatus = 'pending';
   bool _isLoading = false;
   bool _isLoadingData = true;
+  int? _currentUserId;
+  String? _currentUserRole;
 
   // Data lists
   List<User> _availableUsers = [];
@@ -83,6 +87,11 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     setState(() => _isLoadingData = true);
 
     try {
+      final auth = AuthStorageService();
+      _currentUserRole = await auth.getRole();
+      final userIdStr = await auth.getUserId();
+      _currentUserId = int.tryParse(userIdStr ?? '');
+
       List<Team> teams = [];
       try {
         final mine = await _teamService.getMyTeams();
@@ -380,6 +389,12 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   bool get _canSwitchPlayerType =>
       widget.roster == null || widget.roster!.isGuestPlayer;
 
+  bool get _isSelfEditMode =>
+      widget.roster != null &&
+      _currentUserId != null &&
+      widget.roster!.player?.userId == _currentUserId &&
+      !UserCapabilities.canManageRoster(_currentUserRole);
+
   bool _isFullyAssigned(int userId) {
     final assigned = _assignedCategoriesFor(userId);
     if (assigned.isEmpty) return false;
@@ -551,6 +566,32 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     setState(() => _isLoading = true);
 
     try {
+      if (_isSelfEditMode && widget.roster != null) {
+        await _rosterService.updateRoster(widget.roster!.id, {
+          'documentNumber': _documentNumberController.text.trim(),
+          'emergencyContact': _emergencyContactController.text.trim().isEmpty
+              ? null
+              : _emergencyContactController.text.trim(),
+          'position': _position,
+          if (_medicalCertificateDate != null)
+            'medicalCertificateDate':
+                _medicalCertificateDate!.toIso8601String(),
+          if (_medicalCertificateExpires != null)
+            'medicalCertificateExpires':
+                _medicalCertificateExpires!.toIso8601String(),
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tu ficha fue actualizada'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context, true);
+        }
+        return;
+      }
+
       final baseData = <String, dynamic>{
         'teamId': _selectedTeam!.id,
         'jerseyNumber': int.parse(_jerseyNumberController.text),
@@ -760,8 +801,13 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(widget.roster == null ? 'Agregar Jugador' : 'Editar Jugador'),
+        title: Text(
+          widget.roster == null
+              ? 'Agregar Jugador'
+              : _isSelfEditMode
+                  ? 'Mi ficha'
+                  : 'Editar Jugador',
+        ),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
@@ -772,30 +818,37 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle('Equipo y Temporada'),
-              _buildTeamSelector(),
-              const SizedBox(height: 16),
-              _buildSeasonSelector(),
-              const SizedBox(height: 24),
-
-              _buildSectionTitle('Seleccionar Jugador'),
-              if (_canSwitchPlayerType) ...[
-                _buildPlayerTypeSelector(),
-                const SizedBox(height: 12),
-              ],
-              if (_isGuestMode) _buildGuestNameFields() else _buildUserSelector(),
-              if (_isGuestMode)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'Sin cuenta en la app. Podés vincularlo después desde el plantel.',
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 13,
+              if (!_isSelfEditMode) ...[
+                _buildSectionTitle('Equipo y Temporada'),
+                _buildTeamSelector(),
+                const SizedBox(height: 16),
+                _buildSeasonSelector(),
+                const SizedBox(height: 24),
+                _buildSectionTitle('Seleccionar Jugador'),
+                if (_canSwitchPlayerType) ...[
+                  _buildPlayerTypeSelector(),
+                  const SizedBox(height: 12),
+                ],
+                if (_isGuestMode)
+                  _buildGuestNameFields()
+                else
+                  _buildUserSelector(),
+                if (_isGuestMode)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Sin cuenta en la app. Podés vincularlo después desde el plantel.',
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
-                ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
+              ] else ...[
+                _buildSelfEditSummary(),
+                const SizedBox(height: 24),
+              ],
 
               // Información del jugador
               _buildSectionTitle('Información del Jugador'),
@@ -1203,34 +1256,70 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     );
   }
 
+  Widget _buildSelfEditSummary() {
+    final roster = widget.roster!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            roster.playerName,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Text('Equipo: ${_selectedTeam?.name ?? roster.teamName}'),
+          Text('Temporada: $_season'),
+          Text('Categoría: ${roster.categoryDisplay.isNotEmpty ? roster.categoryDisplay : roster.category}'),
+          Text('Camiseta: #${roster.jerseyNumber}'),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPlayerInfo() {
+    final jerseyField = TextFormField(
+      controller: _jerseyNumberController,
+      readOnly: _isSelfEditMode,
+      decoration: InputDecoration(
+        labelText: 'Número de Camiseta',
+        border: const OutlineInputBorder(),
+        prefixIcon: const Icon(Icons.sports_soccer),
+        helperText: _isSelfEditMode
+            ? 'Lo define el cuerpo técnico'
+            : _availableNumbers.isNotEmpty
+                ? 'Disp.: ${_availableNumbers.take(8).join(', ')}${_availableNumbers.length > 8 ? '…' : ''}'
+                : null,
+        helperMaxLines: 2,
+      ),
+      keyboardType: TextInputType.number,
+      validator: (value) {
+        if (_isSelfEditMode) return null;
+        if (value == null || value.isEmpty) {
+          return 'El número de camiseta es requerido';
+        }
+        final number = int.tryParse(value);
+        if (number == null || number < 1 || number > 99) {
+          return 'Debe ser un número entre 1 y 99';
+        }
+        return null;
+      },
+    );
+
     return Column(
       children: [
-        _responsiveFieldRow([
-          TextFormField(
-            controller: _jerseyNumberController,
-            decoration: InputDecoration(
-              labelText: 'Número de Camiseta',
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.sports_soccer),
-              helperText: _availableNumbers.isNotEmpty
-                  ? 'Disp.: ${_availableNumbers.take(8).join(', ')}${_availableNumbers.length > 8 ? '…' : ''}'
-                  : null,
-              helperMaxLines: 2,
-            ),
-            keyboardType: TextInputType.number,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'El número de camiseta es requerido';
-              }
-              final number = int.tryParse(value);
-              if (number == null || number < 1 || number > 99) {
-                return 'Debe ser un número entre 1 y 99';
-              }
-              return null;
-            },
-          ),
-          DropdownButtonFormField<String>(
+        if (_isSelfEditMode)
+          jerseyField
+        else
+          _responsiveFieldRow([
+            jerseyField,
+            DropdownButtonFormField<String>(
             value: _position,
             isExpanded: true,
             decoration: const InputDecoration(
@@ -1287,7 +1376,45 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
               }
             },
           ),
-        ]),
+          ]),
+        if (_isSelfEditMode) ...[
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: _position,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Posición',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.sports),
+            ),
+            items: (_sportPositions.isNotEmpty
+                    ? _sportPositions
+                    : [
+                        SportPosition(
+                          id: 0,
+                          sportId: 0,
+                          code: 'player',
+                          label: 'Jugador',
+                        ),
+                      ])
+                .map((pos) {
+              return DropdownMenuItem(
+                value: pos.code,
+                child: Text(
+                  pos.label,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _position = value;
+                });
+              }
+            },
+          ),
+        ],
         const SizedBox(height: 16),
         TextFormField(
           controller: _documentNumberController,
@@ -1347,32 +1474,47 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
             ),
           ),
         ]),
-        const SizedBox(height: 16),
-        DropdownButtonFormField<String>(
-          value: _medicalStatus,
-          isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Estado del Apto Médico',
-            border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.health_and_safety),
+        if (!_isSelfEditMode) ...[
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: _medicalStatus,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Estado del Apto Médico',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.health_and_safety),
+            ),
+            items: RosterService.getMedicalStatuses().map((status) {
+              return DropdownMenuItem(
+                value: status,
+                child: Text(
+                  RosterService.getMedicalStatusDisplayName(status),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _medicalStatus = value;
+                });
+              }
+            },
           ),
-          items: RosterService.getMedicalStatuses().map((status) {
-            return DropdownMenuItem(
-              value: status,
-              child: Text(
-                RosterService.getMedicalStatusDisplayName(status),
-                overflow: TextOverflow.ellipsis,
-              ),
-            );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _medicalStatus = value;
-              });
-            }
-          },
-        ),
+        ] else ...[
+          const SizedBox(height: 16),
+          InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Estado del Apto Médico',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.health_and_safety),
+              helperText: 'Lo valida el cuerpo técnico',
+            ),
+            child: Text(
+              RosterService.getMedicalStatusDisplayName(_medicalStatus),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1390,28 +1532,30 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        TextFormField(
-          controller: _notesController,
-          decoration: const InputDecoration(
-            labelText: 'Notas (Opcional)',
-            border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.note),
-            helperText: 'Observaciones adicionales',
+        if (!_isSelfEditMode) ...[
+          TextFormField(
+            controller: _notesController,
+            decoration: const InputDecoration(
+              labelText: 'Notas (Opcional)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.note),
+              helperText: 'Observaciones adicionales',
+            ),
+            maxLines: 3,
           ),
-          maxLines: 3,
-        ),
-        const SizedBox(height: 16),
-        SwitchListTile(
-          title: const Text('Jugador Habilitado'),
-          subtitle: const Text('Puede participar en eventos del equipo'),
-          value: _isEnabled,
-          onChanged: (value) {
-            setState(() {
-              _isEnabled = value;
-            });
-          },
-          activeColor: Colors.green,
-        ),
+          const SizedBox(height: 16),
+          SwitchListTile(
+            title: const Text('Jugador Habilitado'),
+            subtitle: const Text('Puede participar en eventos del equipo'),
+            value: _isEnabled,
+            onChanged: (value) {
+              setState(() {
+                _isEnabled = value;
+              });
+            },
+            activeColor: Colors.green,
+          ),
+        ],
       ],
     );
   }
@@ -1434,7 +1578,9 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
         label: Text(
           widget.roster == null
               ? 'Agregar a Lista de Buena Fe'
-              : 'Guardar Cambios',
+              : _isSelfEditMode
+                  ? 'Guardar mi ficha'
+                  : 'Guardar Cambios',
           style: const TextStyle(color: Colors.white),
         ),
         style: ElevatedButton.styleFrom(

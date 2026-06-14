@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
+import 'package:sportify_amateur/core/common/team_branding_provider.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/dashboard/team_membership_banner.dart';
 import 'package:sportify_amateur/features/help/home_help_search_bar.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
-import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
+import 'package:sportify_amateur/widgets/team_header_background.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,6 +27,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<TeamBrandingProvider>().load();
+      }
+    });
   }
 
   Future<void> _load() async {
@@ -40,11 +47,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  bool get _isPlatformAdmin =>
-      _role == 'super_admin' || _role == 'manager' || _role == 'admin';
+  bool get _isPlatformAdmin => UserCapabilities.isPlatformAdmin(_role);
 
-  bool get _isTeamStaff =>
-      _isPlatformAdmin || _role == 'dt' || _role == 'team_captain';
+  bool get _isTeamStaff => UserCapabilities.isStaff(_role);
+
+  bool get _isPlayer =>
+      _role != null && UserCapabilities.isPlayer(_role) && !_isTeamStaff;
 
   void _openHelp(String query) {
     Navigator.pushNamed(
@@ -95,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
             flexibleSpace: Stack(
               fit: StackFit.expand,
               children: [
-                SmoothHeaderGradient.primary(primary),
+                TeamHeaderBackground(primary: primary),
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
@@ -232,6 +240,30 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.orange,
                     onTap: () => _openHelp(''),
                   ),
+                  if (_isPlayer) ...[
+                    _QuickTile(
+                      icon: Icons.person,
+                      title: 'Mi perfil',
+                      subtitle: 'Editá tus datos y de qué hincha sos',
+                      color: Colors.blue,
+                      onTap: () => Navigator.pushNamed(context, '/profile/info'),
+                    ),
+                    _QuickTile(
+                      icon: Icons.vpn_key,
+                      title: 'Unirme con código',
+                      subtitle: 'Sumate al plantel de tu equipo',
+                      color: Colors.amber.shade800,
+                      onTap: () => Navigator.pushNamed(context, '/join-team'),
+                    ),
+                    _QuickTile(
+                      icon: Icons.how_to_vote,
+                      title: 'Mis partidos',
+                      subtitle: 'Confirmá convocatorias y asistencia',
+                      color: Colors.green,
+                      onTap: () =>
+                          Navigator.pushNamed(context, '/sports/my-matches'),
+                    ),
+                  ],
                   if (_isPlatformAdmin)
                     _QuickTile(
                       icon: Icons.groups_3,

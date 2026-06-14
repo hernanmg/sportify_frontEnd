@@ -9,7 +9,6 @@ import 'package:sportify_amateur/features/sports/roster_form_improved_screen.dar
 import 'package:sportify_amateur/features/teams/join_team_screen.dart';
 import 'package:sportify_amateur/features/teams/team_invite_screen.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
-import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 import 'package:sportify_amateur/features/sports/team_admin_panel_screen.dart';
@@ -19,6 +18,7 @@ import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/sports/team_calendar_screen.dart';
 import 'package:sportify_amateur/widgets/season_selector_chip.dart';
 
@@ -50,6 +50,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
       GlobalKey<PlayerStatusScreenState>();
 
   String? _userRole;
+  bool _hasTeams = false;
 
   @override
   void initState() {
@@ -65,17 +66,20 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
 
   Future<void> _loadRole() async {
     final role = await AuthStorageService().getRole();
-    if (mounted) setState(() => _userRole = role);
+    var hasTeams = false;
+    try {
+      final teams = await TeamService().getMyTeams();
+      hasTeams = teams.isNotEmpty;
+    } catch (_) {}
+    if (mounted) {
+      setState(() {
+        _userRole = role;
+        _hasTeams = hasTeams;
+      });
+    }
   }
 
-  bool get _isStaff {
-    final r = _userRole;
-    return r == 'super_admin' ||
-        r == 'manager' ||
-        r == 'admin' ||
-        r == 'team_captain' ||
-        r == 'dt';
-  }
+  bool get _isStaff => UserCapabilities.isStaff(_userRole);
 
   @override
   void dispose() {
@@ -309,18 +313,21 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
   Widget? _buildFloatingActionButton() {
     switch (_tabController.index) {
       case 0: // Lista de Buena Fe
+        if (!UserCapabilities.canManageRoster(_userRole)) return null;
         return FloatingActionButton(
           onPressed: () => _addToRoster(),
           tooltip: 'Agregar Jugador',
           child: const Icon(Icons.person_add),
         );
       case 1: // Eventos
+        if (!_isStaff && !_hasTeams) return null;
         return FloatingActionButton(
           onPressed: () => _createEvent(),
           tooltip: 'Crear Evento',
           child: const Icon(Icons.add_circle),
         );
       case 2: // Convocatorias
+        if (!UserCapabilities.canManageConvocations(_userRole)) return null;
         return FloatingActionButton(
           onPressed: () => _createConvocation(),
           tooltip: 'Nueva Convocatoria',

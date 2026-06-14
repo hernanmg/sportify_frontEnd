@@ -15,7 +15,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
 
   UserProfile? _userProfile;
   bool _isLoading = true;
-  bool _isEditing = false;
+  bool _isSaving = false;
 
   // Controllers
   late TextEditingController _firstNameController;
@@ -50,7 +50,10 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
 
   Future<void> _loadProfile() async {
     try {
-      setState(() => _isLoading = true);
+      setState(() {
+        _isLoading = true;
+        _isSaving = false;
+      });
       final profile = await _profileService.getProfile();
 
       setState(() {
@@ -64,7 +67,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al cargar perfil: $e'),
+            content: Text('Error al cargar perfil: ${UserProfileService.errorMessage(e)}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -88,7 +91,6 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
   }
 
   Future<void> _pickBirthDate() async {
-    if (!_isEditing) return;
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -115,7 +117,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
-      setState(() => _isLoading = true);
+      setState(() => _isSaving = true);
 
       final updateData = {
         'firstName': _firstNameController.text.trim(),
@@ -136,11 +138,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
 
       await _profileService.updateProfile(updateData);
 
-      setState(() {
-        _isEditing = false;
-        _isLoading = false;
-      });
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Perfil actualizado exitosamente'),
@@ -148,16 +146,20 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
         ),
       );
 
-      // Recargar perfil
-      _loadProfile();
+      await _loadProfile();
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al actualizar perfil: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error al actualizar perfil: ${UserProfileService.errorMessage(e)}',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
     }
   }
 
@@ -169,19 +171,22 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
-          if (!_isEditing)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => setState(() => _isEditing = true),
-            )
-          else
-            TextButton(
-              onPressed: _isLoading ? null : _saveProfile,
-              child: const Text(
-                'Guardar',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
+          TextButton(
+            onPressed: _isSaving ? null : _saveProfile,
+            child: _isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'Guardar',
+                    style: TextStyle(color: Colors.white),
+                  ),
+          ),
         ],
       ),
       body: _isLoading
@@ -195,33 +200,23 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (!_isEditing)
-                          Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.blue.shade100),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit_outlined,
-                                    color: Colors.blue.shade700, size: 20),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    'Tocá el ícono de editar arriba para cargar o cambiar tus datos, incluido «De qué hincha soy».',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.blue.shade900,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue.shade100),
+                          ),
+                          child: Text(
+                            'Completá tus datos y tocá Guardar arriba a la derecha.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.blue.shade900,
                             ),
                           ),
+                        ),
                         // Información básica
                         _buildSection(
                           'Información Básica',
@@ -258,9 +253,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
                                 _birthDateLabel(),
                                 style: TextStyle(color: Colors.grey[700]),
                               ),
-                              trailing: _isEditing
-                                  ? const Icon(Icons.edit_calendar)
-                                  : null,
+                              trailing: const Icon(Icons.edit_calendar),
                               onTap: _pickBirthDate,
                             ),
                           ],
@@ -363,7 +356,6 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: controller,
-        enabled: _isEditing,
         keyboardType: keyboardType,
         maxLines: maxLines,
         decoration: InputDecoration(
@@ -374,10 +366,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           filled: true,
-          fillColor: _isEditing ? Colors.white : Colors.grey.shade100,
-        ),
-        style: TextStyle(
-          color: _isEditing ? Colors.black87 : Colors.grey.shade800,
+          fillColor: Colors.white,
         ),
       ),
     );

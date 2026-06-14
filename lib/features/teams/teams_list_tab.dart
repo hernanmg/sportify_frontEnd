@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/team_branding_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/team.dart';
@@ -79,6 +81,9 @@ class TeamsListTabState extends State<TeamsListTab> {
       MaterialPageRoute(builder: (context) => const TeamFormScreen()),
     );
     if (result != null) {
+      if (result is Team && mounted) {
+        context.read<TeamBrandingProvider>().applyTeam(result);
+      }
       _loadTeams();
     }
   }
@@ -89,6 +94,9 @@ class TeamsListTabState extends State<TeamsListTab> {
       MaterialPageRoute(builder: (context) => TeamFormScreen(team: team)),
     );
     if (result != null) {
+      if (result is Team && mounted) {
+        context.read<TeamBrandingProvider>().applyTeam(result);
+      }
       _loadTeams();
     }
   }

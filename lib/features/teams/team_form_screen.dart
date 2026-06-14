@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/team_branding_provider.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/category_service.dart';
 import 'package:sportify_amateur/core/services/sport_service.dart';
@@ -224,6 +226,10 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
         _showSuccess(
           'Equipo creado. Ya quedaste asignado como encargado del club.',
         );
+      }
+
+      if (mounted) {
+        context.read<TeamBrandingProvider>().applyTeam(savedTeam);
       }
 
       if (widget.isFromOnboarding) {

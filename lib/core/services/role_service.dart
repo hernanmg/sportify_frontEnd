@@ -65,6 +65,10 @@ class RoleService {
         return 'Capitán de Equipo';
       case 'dt':
         return 'Director Técnico (DT)';
+      case 'tesorero':
+        return 'Tesorero';
+      case 'delegado':
+        return 'Delegado';
       case 'player':
         return 'Jugador';
       case 'guest':

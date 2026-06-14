@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/features/help/help_article.dart';
 import 'package:sportify_amateur/features/help/help_content.dart';
+import 'package:sportify_amateur/features/help/help_navigation.dart';
+import 'package:sportify_amateur/features/help/help_previews.dart';
 
 class HelpScreen extends StatefulWidget {
   final String? initialQuery;
@@ -338,6 +340,21 @@ class _HelpArticleCardState extends State<_HelpArticleCard> {
                           ),
                         ),
                       ),
+                  if (article.previewType == 'lineup') ...[
+                    const SizedBox(height: 12),
+                    const LineupHelpPreview(),
+                  ],
+                  if (HelpNavigation.forArticle(article.id) != null) ...[
+                    const SizedBox(height: 4),
+                    FilledButton.tonalIcon(
+                      onPressed: () => HelpNavigation.go(
+                        context,
+                        HelpNavigation.forArticle(article.id)!,
+                      ),
+                      icon: const Icon(Icons.open_in_new, size: 18),
+                      label: Text(HelpNavigation.forArticle(article.id)!.label),
+                    ),
+                  ],
                   if (article.tip != null)
                     Container(
                       width: double.infinity,

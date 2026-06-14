@@ -13,6 +13,7 @@ import 'package:sportify_amateur/features/auth/login.dart';
 import 'package:sportify_amateur/features/auth/user_login.dart';
 import 'package:sportify_amateur/features/auth/register_screen.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
+import 'package:sportify_amateur/core/common/team_branding_provider.dart';
 import 'package:sportify_amateur/features/shell/app_shell_screen.dart';
 import 'package:sportify_amateur/features/profile/profile_screen.dart';
 import 'package:sportify_amateur/features/profile/profile_info_screen.dart';
@@ -70,6 +71,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => SeasonProvider()),
+        ChangeNotifierProvider(create: (_) => TeamBrandingProvider()),
       ],
       child: const MainApp(),
     ),

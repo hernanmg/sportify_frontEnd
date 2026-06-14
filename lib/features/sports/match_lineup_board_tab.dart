@@ -41,6 +41,15 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
   bool _penEnabled = false;
   List<TacticalBoard> _savedBoards = [];
   bool _loadingBoards = false;
+  bool _lineupModalOpen = false;
+  StateSetter? _modalSetState;
+
+  /// Actualiza estado local y, si hay modal abierto, refresca su UI también.
+  void _syncLineupUi(VoidCallback mutate) {
+    if (!mounted) return;
+    setState(mutate);
+    _modalSetState?.call(() {});
+  }
 
   List<PostMatchLineupRow> get _confirmed =>
       widget.data.lineup.where((p) => p.confirmed).toList();
@@ -78,7 +87,7 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
   }
 
   Future<void> _save() async {
-    setState(() => _saving = true);
+    _syncLineupUi(() => _saving = true);
     try {
       final items = widget.data.lineup
           .map(
@@ -102,12 +111,12 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
     } catch (e) {
       widget.onMessage(PostMatchService.errorMessage(e), error: true);
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) _syncLineupUi(() => _saving = false);
     }
   }
 
   void _applyFormation(String f, {bool notify = false}) {
-    setState(() {
+    _syncLineupUi(() {
       _formation = f;
       final ids = _slots.keys.toList();
       if (ids.isEmpty) {
@@ -131,17 +140,17 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
     if (_penEnabled) return;
     final ids = [..._slots.keys.where((id) => id != userId), userId];
     final positioned = defaultSlotsForFormation(_formation, ids);
-    setState(() {
+    _syncLineupUi(() {
       _slots[userId] = positioned[userId] ?? const Offset(0.5, 0.55);
     });
   }
 
   void _removeFromField(int userId) {
-    setState(() => _slots.remove(userId));
+    _syncLineupUi(() => _slots.remove(userId));
   }
 
   void _applyTacticalBoard(TacticalBoard board) {
-    setState(() {
+    _syncLineupUi(() {
       if (board.formation != null && board.formation!.isNotEmpty) {
         _formation = board.formation!;
       }
@@ -158,7 +167,9 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
     final local = box.globalToLocal(details.offset);
     final nx = (local.dx / box.size.width).clamp(0.05, 0.95);
     final ny = (local.dy / box.size.height).clamp(0.05, 0.95);
-    setState(() => _slots[details.data] = Offset(nx, ny));
+    _syncLineupUi(
+      () => _slots[details.data] = Offset(nx, ny),
+    );
   }
 
   Future<void> _saveAsTactic() async {
@@ -407,20 +418,22 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
                 : 'Lápiz: dibujar jugadas en la cancha',
             icon: _penEnabled ? Icons.pan_tool_alt : Icons.draw,
             color: _penEnabled ? Colors.amber.shade800 : null,
-            onPressed: () => setState(() => _penEnabled = !_penEnabled),
+            onPressed: () => _syncLineupUi(() => _penEnabled = !_penEnabled),
           ),
           if (_penEnabled) ...[
             _toolBtn(
               tooltip: 'Deshacer último trazo',
               icon: Icons.undo,
-              onPressed:
-                  _strokes.isEmpty ? null : () => setState(() => _strokes.removeLast()),
+              onPressed: _strokes.isEmpty
+                  ? null
+                  : () => _syncLineupUi(() => _strokes.removeLast()),
             ),
             _toolBtn(
               tooltip: 'Borrar todos los dibujos',
               icon: Icons.delete_outline,
-              onPressed:
-                  _strokes.isEmpty ? null : () => setState(() => _strokes.clear()),
+              onPressed: _strokes.isEmpty
+                  ? null
+                  : () => _syncLineupUi(() => _strokes.clear()),
             ),
           ],
           _toolBtn(
@@ -452,7 +465,7 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
                       : null,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: _fieldStack(readOnly: false),
+                child: _fieldStack(readOnly: false, trackDrop: true),
               );
             },
           );
@@ -745,6 +758,153 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
     );
   }
 
+  Future<void> _openFullscreenLineup() async {
+    if (!mounted || _lineupModalOpen) return;
+    setState(() => _lineupModalOpen = true);
+    try {
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'Cerrar alineación',
+        pageBuilder: (ctx, _, __) {
+          final h = MediaQuery.sizeOf(ctx).height;
+          return StatefulBuilder(
+            builder: (ctx, setModalState) {
+              _modalSetState = setModalState;
+              return Align(
+                alignment: Alignment.bottomCenter,
+                child: Material(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16)),
+                  clipBehavior: Clip.antiAlias,
+                  child: SizedBox(
+                    height: h * 0.94,
+                    width: double.infinity,
+                    child: _LineupFullscreenSheet(
+                      toolbar: _toolbar(),
+                      penHint: _penEnabled
+                          ? Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              child: Text(
+                                'Modo lápiz activo. Desactivá el lápiz para mover jugadores.',
+                                style: Theme.of(ctx).textTheme.bodySmall,
+                              ),
+                            )
+                          : null,
+                      field: _fieldArea(wide: false),
+                      pool: _playerPool(horizontal: true),
+                      saveBar: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: FilledButton.icon(
+                            onPressed: _saving
+                                ? null
+                                : () async {
+                                    await _save();
+                                    if (ctx.mounted) Navigator.pop(ctx);
+                                  },
+                            icon: _saving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.save),
+                            label: const Text('Guardar y cerrar'),
+                          ),
+                        ),
+                      ),
+                      onClose: () => Navigator.pop(ctx),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      _modalSetState = null;
+      if (mounted) setState(() => _lineupModalOpen = false);
+    }
+  }
+
+  Widget _mobileLineupPreview() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                  child: _lineupModalOpen
+                      ? Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2D5A27)
+                                .withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFF2D5A27)
+                                  .withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.fullscreen,
+                                  size: 40,
+                                  color: Colors.green.shade700,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Editando en pantalla completa…',
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : IgnorePointer(
+                          child: _fieldStack(readOnly: true),
+                        ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                child: FilledButton.tonalIcon(
+                  onPressed: _lineupModalOpen ? null : _openFullscreenLineup,
+                  icon: const Icon(Icons.fullscreen),
+                  label: Text(
+                    'Abrir cancha (${_slots.length} en campo)',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Material(
+          elevation: 8,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          child: SizedBox(
+            height: 96,
+            child: _playerPool(horizontal: true),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.data.lineup.isEmpty) {
@@ -785,33 +945,7 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
                     Expanded(flex: 2, child: _playerPool(horizontal: false)),
                   ],
                 )
-              : Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 104),
-                      child: _fieldArea(wide: false),
-                    ),
-                    Positioned(
-                      left: 8,
-                      right: 8,
-                      bottom: 8,
-                      child: Material(
-                        elevation: 8,
-                        shadowColor: Colors.black45,
-                        borderRadius: BorderRadius.circular(16),
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surface
-                            .withValues(alpha: 0.96),
-                        child: SizedBox(
-                          height: 96,
-                          child: _playerPool(horizontal: true),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              : _mobileLineupPreview(),
         ),
         SafeArea(
           child: Padding(
@@ -833,9 +967,13 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
     );
   }
 
-  Widget _fieldStack({required bool readOnly, bool drawOnly = false}) {
+  Widget _fieldStack({
+    required bool readOnly,
+    bool drawOnly = false,
+    bool trackDrop = false,
+  }) {
     return Stack(
-      key: _fieldKey,
+      key: trackDrop ? _fieldKey : null,
       fit: StackFit.expand,
       children: [
         MatchFieldWidget(
@@ -848,14 +986,70 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
           onSlotMoved: readOnly || _penEnabled
               ? null
               : (userId, offset) {
-                  setState(() => _slots[userId] = offset);
+                  _syncLineupUi(() => _slots[userId] = offset);
                 },
         ),
         FieldDrawingOverlay(
           strokes: _strokes,
           drawEnabled: !readOnly && (_penEnabled || drawOnly),
-          onStrokesChanged: (s) => setState(() => _strokes = s),
+          onStrokesChanged: (s) => _syncLineupUi(() => _strokes = s),
         ),
+      ],
+    );
+  }
+}
+
+class _LineupFullscreenSheet extends StatelessWidget {
+  final Widget toolbar;
+  final Widget? penHint;
+  final Widget field;
+  final Widget pool;
+  final Widget saveBar;
+  final VoidCallback onClose;
+
+  const _LineupFullscreenSheet({
+    required this.toolbar,
+    this.penHint,
+    required this.field,
+    required this.pool,
+    required this.saveBar,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Material(
+          color: Theme.of(context).colorScheme.surface,
+          elevation: 2,
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: 'Cerrar',
+                onPressed: onClose,
+                icon: const Icon(Icons.close),
+              ),
+              Expanded(
+                child: Text(
+                  'Alineación — pantalla completa',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        toolbar,
+        if (penHint != null) penHint!,
+        Expanded(child: field),
+        Material(
+          elevation: 8,
+          child: SizedBox(height: 104, child: pool),
+        ),
+        saveBar,
       ],
     );
   }

@@ -79,7 +79,7 @@ class HelpContent {
         'Filtrá por categoría o temporada según necesites.',
         'Agregá jugadores con app (vinculados) o sin app (invitados/guest).',
         'Asigná número de camiseta y estado de buena fe cuando corresponda.',
-        'Los cambios impactan en convocatorias y alineaciones.',
+        'Los cambios impactan en convocatorias y partidos.',
       ],
       tip: 'Un jugador sin app puede sumarse al plantel y vincularse después.',
     ),
@@ -110,26 +110,36 @@ class HelpContent {
     HelpArticle(
       id: 'alineacion',
       title: 'Alineación y táctica',
-      summary: 'Armá la formación en la cancha antes o después del partido.',
+      summary:
+          'Pestaña dentro de Gestionar partido: armá la formación en la cancha con jugadores confirmados.',
       icon: Icons.sports_soccer,
       color: Colors.teal,
+      previewType: 'lineup',
       keywords: [
+        'alineacion',
         'alineación',
         'táctica',
+        'tactica',
         'formación',
+        'formacion',
         'cancha',
+        'tablero',
         '4-4-2',
         'titular',
         'suplente',
         'dibujo',
         'lápiz',
+        'gestionar partido',
+        'pantalla completa',
+        'modal',
       ],
       steps: [
-        'Abrí Gestionar partido → pestaña Alineación.',
-        'Elegí formación (4-4-2, 4-3-3, 3-5-2) y tocá jugadores en la barra inferior.',
-        'Arrastrá jugadores en la cancha para ajustar posiciones.',
-        'Usá el lápiz para marcar jugadas; guardá tácticas con nombre para reutilizar.',
-        'Confirmá con Guardar alineación.',
+        'Ruta: Gestión Deportiva → Convocatorias → elegí un partido enviado → Gestionar partido → pestaña Alineación.',
+        'También podés entrar desde Mis partidos si ya tenés convocatorias activas.',
+        'Como DT/cuerpo técnico podés elegir formación (4-4-2, 4-3-3, 3-5-2), sumar jugadores desde la barra inferior y moverlos en la cancha.',
+        'En celular usá «Abrir cancha» para editar en pantalla casi completa.',
+        'Podés dibujar jugadas con el lápiz, guardar tácticas con nombre y confirmar con Guardar alineación.',
+        'Si solo sos jugador, la pestaña muestra la formación del partido en modo lectura.',
       ],
       tip: 'Los confirmados aparecen primero en la barra inferior; también podés sumar otros convocados.',
     ),
@@ -298,7 +308,8 @@ class HelpContent {
       ],
       steps: [
         'Jugador: confirma convocatorias, vota compañeros, ve finanzas propias.',
-        'DT: gestiona plantel, convocatorias, alineación, panel del equipo.',
+        'DT: gestiona plantel, convocatorias, alineación y finanzas del equipo.',
+        'Tesorero / Delegado: pueden cargar cuotas, pagos y movimientos de caja (rol por equipo).',
         'Admin/manager: además administra clubes, categorías y usuarios globales.',
         'Tu rol se muestra en Inicio y en tu perfil.',
       ],
@@ -353,7 +364,25 @@ class HelpContent {
   }
 
   static List<HelpArticle> search(String query) {
-    return articles.where((a) => a.matchesQuery(query)).toList();
+    final q = HelpArticle.normalize(query);
+    if (q.isEmpty) return List.from(articles);
+
+    final scored = <MapEntry<HelpArticle, int>>[];
+    for (final article in articles) {
+      if (!article.matchesQuery(query)) continue;
+      var score = 0;
+      final titleN = HelpArticle.normalize(article.title);
+      if (titleN.contains(q)) score += 100;
+      if (HelpArticle.normalize(article.id).contains(q.replaceAll(' ', ''))) {
+        score += 80;
+      }
+      for (final k in article.keywords) {
+        if (HelpArticle.normalize(k).contains(q)) score += 40;
+      }
+      scored.add(MapEntry(article, score));
+    }
+    scored.sort((a, b) => b.value.compareTo(a.value));
+    return scored.map((e) => e.key).toList();
   }
 
   static HelpArticle? byId(String id) {

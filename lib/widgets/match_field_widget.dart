@@ -130,88 +130,17 @@ class _PitchStack extends StatelessWidget {
             ),
             ...placed.map((p) {
               final pos = slots[p.userId]!;
-              final left = (pos.dx * w) - avatarR;
-              final top = (pos.dy * h) - avatarR;
-              return Positioned(
-                left: left.clamp(0, w - marker),
-                top: top.clamp(0, h - marker),
-                child: GestureDetector(
-                  onTap: onPlayerTap != null
-                      ? () => onPlayerTap!(p.userId)
-                      : null,
-                  onPanUpdate: onSlotMoved != null
-                      ? (d) {
-                          final nx =
-                              ((pos.dx * w) + d.delta.dx) / w;
-                          final ny =
-                              ((pos.dy * h) + d.delta.dy) / h;
-                          onSlotMoved!(
-                            p.userId,
-                            Offset(
-                              nx.clamp(0.05, 0.95),
-                              ny.clamp(0.05, 0.95),
-                            ),
-                          );
-                        }
-                      : null,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      PlayerAvatar(
-                        avatarUrl: p.avatarUrl,
-                        displayName: p.userName,
-                        radius: avatarR,
-                        badgeText: p.jerseyNumber?.toString(),
-                      ),
-                      if (!compact && h > 120)
-                        ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: marker + 16),
-                          child: Container(
-                            margin: const EdgeInsets.only(top: 1),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 3,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: Text(
-                              p.userName.split(' ').first,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 8,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      if (compact && h > 100)
-                        ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: marker + 10),
-                          child: Text(
-                            p.userName.split(' ').first,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 7,
-                              fontWeight: FontWeight.w600,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black87,
-                                  blurRadius: 2,
-                                ),
-                              ],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+              return _DraggablePlayerMarker(
+                key: ValueKey(p.userId),
+                player: p,
+                normalizedPosition: pos,
+                fieldWidth: w,
+                fieldHeight: h,
+                avatarR: avatarR,
+                marker: marker,
+                compact: compact,
+                onTap: onPlayerTap,
+                onMoved: onSlotMoved,
               );
             }),
           ],
@@ -272,6 +201,139 @@ class _PitchPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _DraggablePlayerMarker extends StatefulWidget {
+  final PostMatchLineupRow player;
+  final Offset normalizedPosition;
+  final double fieldWidth;
+  final double fieldHeight;
+  final double avatarR;
+  final double marker;
+  final bool compact;
+  final void Function(int userId)? onTap;
+  final void Function(int userId, Offset normalizedPosition)? onMoved;
+
+  const _DraggablePlayerMarker({
+    super.key,
+    required this.player,
+    required this.normalizedPosition,
+    required this.fieldWidth,
+    required this.fieldHeight,
+    required this.avatarR,
+    required this.marker,
+    required this.compact,
+    this.onTap,
+    this.onMoved,
+  });
+
+  @override
+  State<_DraggablePlayerMarker> createState() => _DraggablePlayerMarkerState();
+}
+
+class _DraggablePlayerMarkerState extends State<_DraggablePlayerMarker> {
+  Offset _dragDelta = Offset.zero;
+
+  Offset get _effective =>
+      widget.normalizedPosition + _dragDelta;
+
+  @override
+  void didUpdateWidget(covariant _DraggablePlayerMarker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.normalizedPosition != widget.normalizedPosition) {
+      _dragDelta = Offset.zero;
+    }
+  }
+
+  void _commitDrag() {
+    if (widget.onMoved == null) return;
+    widget.onMoved!(
+      widget.player.userId,
+      Offset(
+        _effective.dx.clamp(0.05, 0.95),
+        _effective.dy.clamp(0.05, 0.95),
+      ),
+    );
+    setState(() => _dragDelta = Offset.zero);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget.fieldWidth;
+    final h = widget.fieldHeight;
+    final pos = _effective;
+    final left = (pos.dx * w) - widget.avatarR;
+    final top = (pos.dy * h) - widget.avatarR;
+
+    return Positioned(
+      left: left.clamp(0, w - widget.marker),
+      top: top.clamp(0, h - widget.marker),
+      child: GestureDetector(
+        onTap: widget.onTap != null ? () => widget.onTap!(widget.player.userId) : null,
+        onPanStart: widget.onMoved != null
+            ? (_) => setState(() => _dragDelta = Offset.zero)
+            : null,
+        onPanUpdate: widget.onMoved != null
+            ? (d) {
+                setState(() {
+                  _dragDelta += Offset(
+                    d.delta.dx / w,
+                    d.delta.dy / h,
+                  );
+                });
+              }
+            : null,
+        onPanEnd: widget.onMoved != null ? (_) => _commitDrag() : null,
+        onPanCancel: widget.onMoved != null ? () => _commitDrag() : null,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PlayerAvatar(
+              avatarUrl: widget.player.avatarUrl,
+              displayName: widget.player.userName,
+              radius: widget.avatarR,
+              badgeText: widget.player.jerseyNumber?.toString(),
+            ),
+            if (!widget.compact && h > 120)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: widget.marker + 16),
+                child: Container(
+                  margin: const EdgeInsets.only(top: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Text(
+                    widget.player.userName.split(' ').first,
+                    style: const TextStyle(color: Colors.white, fontSize: 8),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            if (widget.compact && h > 100)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: widget.marker + 10),
+                child: Text(
+                  widget.player.userName.split(' ').first,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 7,
+                    fontWeight: FontWeight.w600,
+                    shadows: [Shadow(color: Colors.black87, blurRadius: 2)],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Posiciones por defecto según formación (x,y normalizados, y=0 arquero).

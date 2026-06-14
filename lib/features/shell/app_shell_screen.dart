@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
+import 'package:sportify_amateur/core/common/team_branding_provider.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
@@ -20,6 +21,7 @@ import 'package:sportify_amateur/features/audit/audit_log_screen.dart';
 import 'package:sportify_amateur/features/onboarding/team_onboarding_screen.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
+import 'package:sportify_amateur/widgets/team_branded_app_overlay.dart';
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -39,6 +41,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
     _notificationService.startBackgroundSync();
     _loadRole();
     context.read<SeasonProvider>().load();
+    context.read<TeamBrandingProvider>().load();
     _guardStaffTeamSetup();
   }
 
@@ -452,14 +455,16 @@ class _AppShellScreenState extends State<AppShellScreen> {
       child: Scaffold(
       resizeToAvoidBottomInset: false,
       extendBody: true,
-      body: IndexedStack(
-        index: _index.clamp(0, 3),
-        children: const [
-          SportsManagementScreen(),
-          FinanceHubScreen(),
-          HomeScreen(),
-          MyEventsScreen(),
-        ],
+      body: TeamBrandedAppOverlay(
+        child: IndexedStack(
+          index: _index.clamp(0, 3),
+          children: const [
+            SportsManagementScreen(),
+            FinanceHubScreen(),
+            HomeScreen(),
+            MyEventsScreen(),
+          ],
+        ),
       ),
       bottomNavigationBar: Builder(
         builder: (context) {
