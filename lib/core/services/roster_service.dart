@@ -238,14 +238,25 @@ class RosterService {
     }
   }
 
+  static String getCurrentSeason() {
+    final year = DateTime.now().year;
+    final half = DateTime.now().month <= 6 ? 'Apertura' : 'Clausura';
+    return '$year-$half';
+  }
+
   static List<String> getSeasons() {
+    final current = getCurrentSeason();
     final currentYear = DateTime.now().year;
-    return [
-      '$currentYear-Apertura',
-      '$currentYear-Clausura',
+    final seasons = [
+      current,
+      if (current.endsWith('Apertura'))
+        '$currentYear-Clausura'
+      else
+        '$currentYear-Apertura',
       '${currentYear - 1}-Apertura',
       '${currentYear - 1}-Clausura',
     ];
+    return seasons.toSet().toList();
   }
 
   /// Opciones de temporada para dropdowns; incluye la actual del registro si es legado.

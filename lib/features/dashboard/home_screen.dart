@@ -9,7 +9,7 @@ import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/dashboard/team_membership_banner.dart';
 import 'package:sportify_amateur/features/help/home_help_search_bar.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
-import 'package:sportify_amateur/widgets/team_header_background.dart';
+import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -103,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
             flexibleSpace: Stack(
               fit: StackFit.expand,
               children: [
-                TeamHeaderBackground(primary: primary),
+                SmoothHeaderGradient.primary(primary),
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(

@@ -46,7 +46,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
   void initState() {
     super.initState();
     _selectedSeason = RosterService.normalizeSeason(
-      widget.season ?? RosterService.getSeasons().first,
+      widget.season ?? RosterService.getCurrentSeason(),
     );
     _loadRoster();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -146,12 +146,12 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
         nextFilter = 'all';
         _categoryFilterInitialized = true;
       } else if (nextFilter != 'all' &&
-          !categoryNames.contains(nextFilter)) {
+          !categoryNames.any((c) => CategoryLabels.matches(c, nextFilter))) {
         nextFilter = categoryNames.isNotEmpty ? categoryNames.first : 'all';
       }
       if (roster.isNotEmpty && nextFilter != 'all') {
         final visible = roster
-            .where((p) => p.categoryDisplay == nextFilter)
+            .where((p) => _matchesCategoryFilter(p, nextFilter))
             .length;
         if (visible == 0) nextFilter = 'all';
       }
@@ -205,7 +205,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
   List<PlayerRoster> get _filteredRoster {
     var filtered = _roster.where((player) {
       if (_categoryFilter != 'all' &&
-          player.categoryDisplay != _categoryFilter) {
+          !_matchesCategoryFilter(player, _categoryFilter)) {
         return false;
       }
 
@@ -240,6 +240,27 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
     // Ordenar por número de camiseta
     filtered.sort((a, b) => a.jerseyNumber.compareTo(b.jerseyNumber));
     return filtered;
+  }
+
+  bool _matchesCategoryFilter(PlayerRoster player, String filter) {
+    if (filter == 'all') return true;
+    return CategoryLabels.matches(player.categoryDisplay, filter) ||
+        CategoryLabels.matches(player.category, filter);
+  }
+
+  List<_RosterGroup> get _groupedRoster {
+    final map = <String, List<PlayerRoster>>{};
+    for (final row in _filteredRoster) {
+      final uid = row.player?.userId;
+      final key = uid != null ? 'u:$uid' : 'p:${row.playerId}';
+      map.putIfAbsent(key, () => []).add(row);
+    }
+    final groups =
+        map.values.map((rows) => _RosterGroup(rows: rows)).toList();
+    groups.sort(
+      (a, b) => a.primary.jerseyNumber.compareTo(b.primary.jerseyNumber),
+    );
+    return groups;
   }
 
   Future<void> _addPlayer() async {
@@ -512,7 +533,8 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                               fontSize: 14,
                             ),
                             underline: Container(),
-                            items: RosterService.getSeasons().map((season) {
+                            items: RosterService.seasonOptions(include: _selectedSeason)
+                                .map((season) {
                               return DropdownMenuItem(
                                 value: season,
                                 child: Text(season),
@@ -546,7 +568,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 4),
                         child: Text(
-                          '${_filteredRoster.length} jugador(es)'
+                          '${_groupedRoster.length} jugador(es)'
                           '${_categoryFilter != 'all' ? ' · $_categoryFilter' : ''}',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.9),
@@ -559,7 +581,9 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                       if (_rosterCategories.length > 1)
                         DropdownButton<String>(
                           isExpanded: true,
-                          value: _rosterCategories.contains(_categoryFilter)
+                          value: _rosterCategories.any(
+                                (c) => CategoryLabels.matches(c, _categoryFilter),
+                              )
                               ? _categoryFilter
                               : 'all',
                           dropdownColor: Colors.green.shade700,
@@ -674,14 +698,13 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _filteredRoster.isEmpty
+                : _groupedRoster.isEmpty
                     ? _buildEmptyState()
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
-                        itemCount: _filteredRoster.length,
+                        itemCount: _groupedRoster.length,
                         itemBuilder: (context, index) {
-                          final player = _filteredRoster[index];
-                          return _buildPlayerCard(player);
+                          return _buildPlayerGroupCard(_groupedRoster[index]);
                         },
                       ),
           ),
@@ -769,7 +792,8 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
     );
   }
 
-  Widget _buildPlayerCard(PlayerRoster player) {
+  Widget _buildPlayerGroupCard(_RosterGroup group) {
+    final player = group.primary;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 3,
@@ -788,10 +812,9 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                     radius: 25,
                     badgeText: player.jerseyNumber.toString(),
                     backgroundColor:
-                        player.canPlay ? Colors.green : Colors.grey,
+                        group.anyCanPlay ? Colors.green : Colors.grey,
                   ),
                   const SizedBox(width: 16),
-                  // Información del jugador
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -803,18 +826,34 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        if (player.categoryDisplay.isNotEmpty) ...[
+                        if (group.categoryDisplays.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: group.categoryDisplays.map((cat) {
+                              return Chip(
+                                label: Text(
+                                  cat,
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                                visualDensity: VisualDensity.compact,
+                                backgroundColor: Colors.blue.shade50,
+                                padding: EdgeInsets.zero,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                        if (group.rows.length > 1) ...[
                           const SizedBox(height: 4),
-                          Chip(
-                            label: Text(
-                              player.categoryDisplay,
-                              style: const TextStyle(fontSize: 11),
+                          Text(
+                            '${group.rows.length} fichas (misma persona)',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade600,
                             ),
-                            visualDensity: VisualDensity.compact,
-                            backgroundColor: Colors.blue.shade50,
-                            padding: EdgeInsets.zero,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
                           ),
                         ],
                         if (player.isGuestPlayer) ...[
@@ -855,7 +894,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                               color: Colors.grey[600],
                             ),
                             Text(
-                              player.documentNumber,
+                              group.displayDocument,
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 14,
@@ -867,11 +906,10 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                       ],
                     ),
                   ),
-                  // Estado y acciones
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      _buildStatusChip(player),
+                      _buildStatusChip(group.statusRow),
                       const SizedBox(height: 8),
                       PopupMenuButton(
                         onSelected: (value) {
@@ -894,7 +932,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                               children: [
                                 Icon(Icons.edit, color: Colors.blue),
                                 SizedBox(width: 8),
-                                Text('Editar'),
+                                Text('Editar ficha'),
                               ],
                             ),
                           ),
@@ -915,7 +953,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                               children: [
                                 Icon(Icons.delete, color: Colors.red),
                                 SizedBox(width: 8),
-                                Text('Eliminar'),
+                                Text('Eliminar categoría'),
                               ],
                             ),
                           ),
@@ -925,35 +963,34 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                   ),
                 ],
               ),
-              // Información adicional del apto médico
               if (player.medicalCertificateExpires != null) ...[
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: player.isMedicalCertificateValid
-                        ? Colors.green.withOpacity(0.1)
-                        : Colors.red.withOpacity(0.1),
+                    color: player.medicalSummaryPositive
+                        ? Colors.green.withValues(alpha: 0.1)
+                        : Colors.orange.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.medical_services,
-                        color: player.isMedicalCertificateValid
+                        color: player.medicalSummaryPositive
                             ? Colors.green
-                            : Colors.red,
+                            : Colors.orange,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Apto médico ${player.isMedicalCertificateValid ? 'válido' : 'vencido'} hasta: ${_formatDate(player.medicalCertificateExpires!)}',
+                          '${player.medicalSummaryLabel} · vence ${_formatDate(player.medicalCertificateExpires!)}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: player.isMedicalCertificateValid
+                            color: player.medicalSummaryPositive
                                 ? Colors.green[700]
-                                : Colors.red[700],
+                                : Colors.orange[900],
                           ),
                         ),
                       ),
@@ -966,6 +1003,10 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildPlayerCard(PlayerRoster player) {
+    return _buildPlayerGroupCard(_RosterGroup(rows: [player]));
   }
 
   Widget _buildStatusChip(PlayerRoster player) {
@@ -983,7 +1024,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
       icon = Icons.block;
     } else if (player.medicalStatus != 'approved') {
       color = Colors.orange;
-      text = player.medicalStatusDisplayName;
+      text = player.medicalSummaryLabel;
       icon = Icons.pending;
     } else if (!player.isMedicalCertificateValid) {
       color = Colors.red;
@@ -1037,5 +1078,39 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
 
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+}
+
+/// Varias fichas (categorías) del mismo jugador en un solo renglón.
+class _RosterGroup {
+  final List<PlayerRoster> rows;
+
+  _RosterGroup({required this.rows});
+
+  PlayerRoster get primary {
+    return rows.reduce((a, b) {
+      if (a.isPlaceholderDocument && !b.isPlaceholderDocument) return b;
+      if (!a.isPlaceholderDocument && b.isPlaceholderDocument) return a;
+      return a.updatedAt.isAfter(b.updatedAt) ? a : b;
+    });
+  }
+
+  List<String> get categoryDisplays {
+    return rows
+        .map((r) => r.categoryDisplay)
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+  }
+
+  String get displayDocument => primary.displayDocument;
+
+  bool get anyCanPlay => rows.any((r) => r.canPlay);
+
+  PlayerRoster get statusRow {
+    final playable = rows.where((r) => r.canPlay).toList();
+    if (playable.isNotEmpty) return playable.first;
+    return primary;
   }
 }

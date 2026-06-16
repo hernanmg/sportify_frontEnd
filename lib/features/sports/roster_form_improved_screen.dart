@@ -568,11 +568,14 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     try {
       if (_isSelfEditMode && widget.roster != null) {
         await _rosterService.updateRoster(widget.roster!.id, {
+          'jerseyNumber': int.parse(_jerseyNumberController.text),
           'documentNumber': _documentNumberController.text.trim(),
           'emergencyContact': _emergencyContactController.text.trim().isEmpty
               ? null
               : _emergencyContactController.text.trim(),
           'position': _position,
+          'medicalStatus': _medicalStatus,
+          'isEnabled': _isEnabled,
           if (_medicalCertificateDate != null)
             'medicalCertificateDate':
                 _medicalCertificateDate!.toIso8601String(),
@@ -1284,42 +1287,33 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
   }
 
   Widget _buildPlayerInfo() {
-    final jerseyField = TextFormField(
-      controller: _jerseyNumberController,
-      readOnly: _isSelfEditMode,
-      decoration: InputDecoration(
-        labelText: 'Número de Camiseta',
-        border: const OutlineInputBorder(),
-        prefixIcon: const Icon(Icons.sports_soccer),
-        helperText: _isSelfEditMode
-            ? 'Lo define el cuerpo técnico'
-            : _availableNumbers.isNotEmpty
-                ? 'Disp.: ${_availableNumbers.take(8).join(', ')}${_availableNumbers.length > 8 ? '…' : ''}'
-                : null,
-        helperMaxLines: 2,
-      ),
-      keyboardType: TextInputType.number,
-      validator: (value) {
-        if (_isSelfEditMode) return null;
-        if (value == null || value.isEmpty) {
-          return 'El número de camiseta es requerido';
-        }
-        final number = int.tryParse(value);
-        if (number == null || number < 1 || number > 99) {
-          return 'Debe ser un número entre 1 y 99';
-        }
-        return null;
-      },
-    );
-
     return Column(
       children: [
-        if (_isSelfEditMode)
-          jerseyField
-        else
-          _responsiveFieldRow([
-            jerseyField,
-            DropdownButtonFormField<String>(
+        _responsiveFieldRow([
+          TextFormField(
+            controller: _jerseyNumberController,
+            decoration: InputDecoration(
+              labelText: 'Número de Camiseta',
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.sports_soccer),
+              helperText: _availableNumbers.isNotEmpty
+                  ? 'Disp.: ${_availableNumbers.take(8).join(', ')}${_availableNumbers.length > 8 ? '…' : ''}'
+                  : null,
+              helperMaxLines: 2,
+            ),
+            keyboardType: TextInputType.number,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'El número de camiseta es requerido';
+              }
+              final number = int.tryParse(value);
+              if (number == null || number < 1 || number > 99) {
+                return 'Debe ser un número entre 1 y 99';
+              }
+              return null;
+            },
+          ),
+          DropdownButtonFormField<String>(
             value: _position,
             isExpanded: true,
             decoration: const InputDecoration(
@@ -1376,45 +1370,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
               }
             },
           ),
-          ]),
-        if (_isSelfEditMode) ...[
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            value: _position,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Posición',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.sports),
-            ),
-            items: (_sportPositions.isNotEmpty
-                    ? _sportPositions
-                    : [
-                        SportPosition(
-                          id: 0,
-                          sportId: 0,
-                          code: 'player',
-                          label: 'Jugador',
-                        ),
-                      ])
-                .map((pos) {
-              return DropdownMenuItem(
-                value: pos.code,
-                child: Text(
-                  pos.label,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _position = value;
-                });
-              }
-            },
-          ),
-        ],
+        ]),
         const SizedBox(height: 16),
         TextFormField(
           controller: _documentNumberController,
@@ -1474,47 +1430,32 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
             ),
           ),
         ]),
-        if (!_isSelfEditMode) ...[
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            value: _medicalStatus,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Estado del Apto Médico',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.health_and_safety),
-            ),
-            items: RosterService.getMedicalStatuses().map((status) {
-              return DropdownMenuItem(
-                value: status,
-                child: Text(
-                  RosterService.getMedicalStatusDisplayName(status),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _medicalStatus = value;
-                });
-              }
-            },
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          value: _medicalStatus,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Estado del Apto Médico',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.health_and_safety),
           ),
-        ] else ...[
-          const SizedBox(height: 16),
-          InputDecorator(
-            decoration: const InputDecoration(
-              labelText: 'Estado del Apto Médico',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.health_and_safety),
-              helperText: 'Lo valida el cuerpo técnico',
-            ),
-            child: Text(
-              RosterService.getMedicalStatusDisplayName(_medicalStatus),
-            ),
-          ),
-        ],
+          items: RosterService.getMedicalStatuses().map((status) {
+            return DropdownMenuItem(
+              value: status,
+              child: Text(
+                RosterService.getMedicalStatusDisplayName(status),
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                _medicalStatus = value;
+              });
+            }
+          },
+        ),
       ],
     );
   }
@@ -1532,30 +1473,29 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        if (!_isSelfEditMode) ...[
+        if (!_isSelfEditMode)
           TextFormField(
             controller: _notesController,
             decoration: const InputDecoration(
               labelText: 'Notas (Opcional)',
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.note),
-              helperText: 'Observaciones adicionales',
+              helperText: 'Observaciones del cuerpo técnico',
             ),
             maxLines: 3,
           ),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            title: const Text('Jugador Habilitado'),
-            subtitle: const Text('Puede participar en eventos del equipo'),
-            value: _isEnabled,
-            onChanged: (value) {
-              setState(() {
-                _isEnabled = value;
-              });
-            },
-            activeColor: Colors.green,
-          ),
-        ],
+        if (!_isSelfEditMode) const SizedBox(height: 16),
+        SwitchListTile(
+          title: const Text('Jugador Habilitado'),
+          subtitle: const Text('Puede participar en eventos del equipo'),
+          value: _isEnabled,
+          onChanged: (value) {
+            setState(() {
+              _isEnabled = value;
+            });
+          },
+          activeColor: Colors.green,
+        ),
       ],
     );
   }

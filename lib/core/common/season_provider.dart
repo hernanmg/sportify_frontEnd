@@ -6,7 +6,7 @@ import 'package:sportify_amateur/core/services/roster_service.dart';
 class SeasonProvider extends ChangeNotifier {
   static const _prefKey = 'active_season';
 
-  String _season = RosterService.getSeasons().first;
+  String _season = RosterService.getCurrentSeason();
 
   String get season => _season;
 
@@ -15,9 +15,16 @@ class SeasonProvider extends ChangeNotifier {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString(_prefKey);
-    if (saved != null && availableSeasons.contains(saved)) {
+    final options = availableSeasons;
+    if (saved != null && options.contains(saved)) {
       _season = saved;
       notifyListeners();
+    } else if (saved != null && saved.isNotEmpty) {
+      final normalized = RosterService.normalizeSeason(saved);
+      if (options.contains(normalized)) {
+        _season = normalized;
+        notifyListeners();
+      }
     }
   }
 

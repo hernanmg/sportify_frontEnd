@@ -65,7 +65,7 @@ class PlayerRoster {
       documentNumber: json['documentNumber'] ?? json['document_number'] ?? '',
       emergencyContact: json['emergencyContact'] ?? json['emergency_contact'],
       season: json['season'] ?? '',
-      category: CategoryLabels.short(json['category']?.toString()),
+      category: _categoryFromJson(json),
       medicalStatus:
           json['medicalStatus'] ?? json['medical_status'] ?? 'pending',
       notes: json['notes'],
@@ -82,6 +82,15 @@ class PlayerRoster {
       player: json['player'] != null ? Player.fromJson(json['player']) : null,
       team: json['team'] != null ? Team.fromJson(json['team']) : null,
     );
+  }
+
+  static String _categoryFromJson(Map<String, dynamic> json) {
+    final ref = json['categoryRef'] ?? json['category_ref'];
+    if (ref is Map) {
+      final fromRef = CategoryLabels.short(ref['name']?.toString());
+      if (fromRef.isNotEmpty) return fromRef;
+    }
+    return CategoryLabels.short(json['category']?.toString());
   }
 
   Map<String, dynamic> toJson() {
@@ -120,6 +129,30 @@ class PlayerRoster {
     if (medicalCertificateExpires == null) return false;
     return medicalCertificateExpires!.isAfter(DateTime.now());
   }
+
+  bool get isPlaceholderDocument =>
+      documentNumber.trim().startsWith('USR-');
+
+  String get displayDocument =>
+      isPlaceholderDocument ? 'DNI sin cargar' : documentNumber;
+
+  /// Etiqueta única de apto (evita "pendiente" arriba y "válido" abajo).
+  String get medicalSummaryLabel {
+    if (medicalStatus == 'rejected') return 'Apto rechazado';
+    if (medicalCertificateExpires == null) {
+      return medicalStatusDisplayName;
+    }
+    if (!isMedicalCertificateValid) {
+      return 'Apto vencido';
+    }
+    if (medicalStatus != 'approved') {
+      return 'Falta aprobación del CT';
+    }
+    return 'Apto vigente';
+  }
+
+  bool get medicalSummaryPositive =>
+      medicalStatus == 'approved' && isMedicalCertificateValid;
 
   bool get canPlay =>
       isEnabled && medicalStatus == 'approved' && isMedicalCertificateValid;

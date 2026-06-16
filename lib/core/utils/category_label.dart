@@ -29,6 +29,18 @@ class CategoryLabels {
         .replaceAll(' ', '');
   }
 
+  /// Comparación flexible: M+40, +40, Masculino +40, etc.
+  static bool matches(String? a, String? b) {
+    if (a == null || b == null) return false;
+    final sa = short(a);
+    final sb = short(b);
+    if (sa.isNotEmpty && sb.isNotEmpty) return sa == sb;
+    final na = RegExp(r'(\d+)').firstMatch(a)?.group(1);
+    final nb = RegExp(r'(\d+)').firstMatch(b)?.group(1);
+    if (na != null && nb != null) return na == nb;
+    return a.trim().toLowerCase() == b.trim().toLowerCase();
+  }
+
   static bool isGenericGenderOnly(String? name) {
     final n = name?.trim().toLowerCase() ?? '';
     return n == 'masculino' || n == 'femenino';
