@@ -12,4 +12,18 @@ class UserCapabilities {
   static bool canManageRoster(String? role) => isStaff(role);
 
   static bool canManageConvocations(String? role) => isStaff(role);
+
+  /// Entrenamientos, partidos y gestión de eventos del equipo.
+  static bool canManageSportsEvents(String? role) => isStaff(role);
+
+  /// Generar códigos de invitación al plantel (DT / staff).
+  static bool canInviteToTeam(String? role) => isStaff(role);
+
+  /// Jugador: solo eventos sociales; staff gestiona el resto.
+  static bool canOnlyCreateSocialEvents(String? role) =>
+      !canManageSportsEvents(role);
+
+  /// Sumar jugadores a convocatorias ya enviadas (solo DT y admin de plataforma).
+  static bool canAddToSentConvocation(String? role) =>
+      isPlatformAdmin(role) || role == 'dt';
 }

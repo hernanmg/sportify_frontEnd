@@ -215,7 +215,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   _QuickTile(
                     icon: Icons.sports_soccer,
                     title: 'Gestión Deportiva',
-                    subtitle: 'Plantel, eventos, convocatorias',
+                    subtitle: _isPlayer && !_isTeamStaff
+                        ? 'Mi ficha en el plantel'
+                        : 'Plantel, eventos, convocatorias',
                     color: Colors.green,
                     onTap: () => _switchTab(context, 0),
                   ),

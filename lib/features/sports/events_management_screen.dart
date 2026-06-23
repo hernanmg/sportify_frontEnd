@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
 import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
@@ -22,6 +23,7 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
   bool _isLoading = true;
   SportEventType? _selectedFilter;
   bool _canDeleteEvents = false;
+  bool _canManageEvents = false;
 
   @override
   void initState() {
@@ -32,12 +34,14 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
 
   Future<void> _loadRole() async {
     final role = await AuthStorageService().getRole();
-    final canDelete = role == 'super_admin' ||
-        role == 'manager' ||
-        role == 'admin' ||
-        role == 'dt' ||
-        role == 'team_captain';
-    if (mounted) setState(() => _canDeleteEvents = canDelete);
+    final canManage = UserCapabilities.canManageSportsEvents(role);
+    final canDelete = canManage;
+    if (mounted) {
+      setState(() {
+        _canManageEvents = canManage;
+        _canDeleteEvents = canDelete;
+      });
+    }
   }
 
   Future<void> reloadEvents() => _loadEvents();
@@ -182,12 +186,14 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
             },
             icon: const Icon(Icons.calendar_month),
           ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: _createEvent,
-            icon: const Icon(Icons.add),
-            label: const Text('Nuevo'),
-          ),
+          if (_canManageEvents) ...[
+            const SizedBox(width: 8),
+            ElevatedButton.icon(
+              onPressed: _createEvent,
+              icon: const Icon(Icons.add),
+              label: const Text('Nuevo'),
+            ),
+          ],
         ],
       ),
     );

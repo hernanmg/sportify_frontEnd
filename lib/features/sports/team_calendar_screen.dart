@@ -4,10 +4,12 @@ import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/core/services/team_calendar_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/sports/convocation_form_screen.dart';
 import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
+import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/models/team_calendar_item.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -44,14 +46,11 @@ class _TeamCalendarScreenState extends State<TeamCalendarScreen> {
   DateTime? _lastTappedDay;
   DateTime? _lastTapAt;
 
-  bool get _canCreateConvocation {
-    final r = _userRole;
-    return r == 'super_admin' ||
-        r == 'manager' ||
-        r == 'admin' ||
-        r == 'team_captain' ||
-        r == 'dt';
-  }
+  bool get _canManageSportsEvents =>
+      UserCapabilities.canManageSportsEvents(_userRole);
+
+  bool get _canCreateConvocation =>
+      UserCapabilities.canManageConvocations(_userRole);
 
   @override
   void initState() {
@@ -206,18 +205,32 @@ class _TeamCalendarScreenState extends State<TeamCalendarScreen> {
                   ),
                 ),
               ),
-              ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.blue.shade100,
-                  child: Icon(Icons.event, color: Colors.blue.shade800),
+              if (_canManageSportsEvents)
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.blue.shade100,
+                    child: Icon(Icons.event, color: Colors.blue.shade800),
+                  ),
+                  title: const Text('Crear evento'),
+                  subtitle: const Text('Entrenamiento, partido o social'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _openCreateEvent(day);
+                  },
+                )
+              else
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.deepPurple.shade100,
+                    child: Icon(Icons.celebration, color: Colors.deepPurple.shade800),
+                  ),
+                  title: const Text('Crear evento social'),
+                  subtitle: const Text('Asado, reunión, actividad del grupo'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _openCreateSocialEvent(day);
+                  },
                 ),
-                title: const Text('Crear evento'),
-                subtitle: const Text('Entrenamiento, partido o social'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _openCreateEvent(day);
-                },
-              ),
               if (_canCreateConvocation)
                 ListTile(
                   leading: CircleAvatar(
@@ -236,6 +249,24 @@ class _TeamCalendarScreenState extends State<TeamCalendarScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openCreateSocialEvent(DateTime day) async {
+    final teamId = _teamId;
+    if (teamId == null) return;
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (context) => EventFormScreen(
+          initialDate: DateTime(day.year, day.month, day.day),
+          initialTime: const TimeOfDay(hour: 19, minute: 0),
+          initialTeamId: teamId,
+          initialEventType: SportEventType.social,
+          socialOnly: true,
+        ),
+      ),
+    );
+    if (mounted) await _loadCalendar();
   }
 
   Future<void> _openCreateEvent(DateTime day) async {
@@ -487,8 +518,10 @@ class _TeamCalendarScreenState extends State<TeamCalendarScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        'Doble toque en un día: crear evento'
-                        '${_canCreateConvocation ? ' o convocatoria' : ''}',
+                        _canManageSportsEvents
+                            ? 'Doble toque en un día: crear evento'
+                                '${_canCreateConvocation ? ' o convocatoria' : ''}'
+                            : 'Doble toque en un día: crear evento social',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                         textAlign: TextAlign.center,
                       ),

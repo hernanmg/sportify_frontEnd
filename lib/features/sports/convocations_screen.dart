@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/convocations_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/convocation_pdf_service.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/sports/convocation_form_screen.dart';
 import 'package:sportify_amateur/features/sports/post_match_screen.dart';
 import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
+import 'package:sportify_amateur/models/player_eligibility.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 
 class ConvocationsScreen extends StatefulWidget {
@@ -26,6 +29,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
   List<SportEvent> _convocations = [];
   bool _loading = true;
   String _filter = 'all';
+  String? _userRole;
 
   @override
   void initState() {
@@ -38,6 +42,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      final role = await AuthStorageService().getRole();
       var teams = await _teamService.getMyTeams();
       if (teams.isEmpty) {
         final all = await _teamService.getAllTeams();
@@ -70,6 +75,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
         _teams = teams;
         _selectedTeam = selected;
         _convocations = list;
+        _userRole = role;
         _loading = false;
       });
     } catch (e) {
@@ -160,6 +166,127 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
           ),
         );
       }
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _addPlayersToConvocation(SportEvent c) async {
+    try {
+      final results = await Future.wait([
+        _convocationsService.getEligibleRoster(c.id),
+        _convocationsService.getConvocationResponses(c.id),
+      ]);
+      final eligible = results[0] as List<PlayerEligibility>;
+      final responses = results[1] as List<EventParticipant>;
+      final convokedIds = responses
+          .where((p) => p.isConvoked)
+          .map((p) => p.userId)
+          .toSet();
+      final available =
+          eligible.where((e) => !convokedIds.contains(e.userId)).toList();
+
+      if (!mounted) return;
+      if (available.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No hay jugadores disponibles para sumar'),
+          ),
+        );
+        return;
+      }
+
+      final selected = <int>{};
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            title: const Text('Sumar jugadores'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Elegí jugadores del plantel que aún no están convocados. '
+                    'Recibirán la notificación de convocatoria.',
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: available.length,
+                      itemBuilder: (_, i) {
+                        final p = available[i];
+                        return CheckboxListTile(
+                          dense: true,
+                          value: selected.contains(p.userId),
+                          secondary: PlayerAvatar(
+                            avatarUrl: p.avatarUrl,
+                            displayName: p.playerName,
+                            radius: 16,
+                          ),
+                          title: Text(p.playerName),
+                          subtitle: Text(
+                            [
+                              if (p.jerseyNumber != null) '#${p.jerseyNumber}',
+                              if (p.category != null) p.category,
+                              p.statusLabel,
+                            ].whereType<String>().join(' · '),
+                          ),
+                          onChanged: (v) {
+                            setDialogState(() {
+                              if (v == true) {
+                                selected.add(p.userId);
+                              } else {
+                                selected.remove(p.userId);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: selected.isEmpty
+                    ? null
+                    : () => Navigator.pop(ctx, true),
+                child: Text('Sumar (${selected.length})'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (confirmed != true || selected.isEmpty) return;
+
+      final result = await _convocationsService.addConvokedPlayers(
+        c.id,
+        selected.toList(),
+      );
+
+      if (!mounted) return;
+      final msg = result.added.isEmpty
+          ? 'Los jugadores seleccionados ya estaban convocados'
+          : 'Se sumaron ${result.added.length} jugador(es)';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: Colors.green),
+      );
       await _load();
     } catch (e) {
       if (mounted) {
@@ -295,26 +422,27 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                           setState(() => _filter = v ?? 'all'),
                     ),
                   ),
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.add_circle_outline),
-                    onSelected: (v) {
-                      if (v == 'official') {
-                        _openCreate(official: true);
-                      } else {
-                        _openCreate(official: false);
-                      }
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(
-                        value: 'friendly',
-                        child: Text('Amistoso'),
-                      ),
-                      PopupMenuItem(
-                        value: 'official',
-                        child: Text('Oficial'),
-                      ),
-                    ],
-                  ),
+                  if (UserCapabilities.canManageConvocations(_userRole))
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.add_circle_outline),
+                      onSelected: (v) {
+                        if (v == 'official') {
+                          _openCreate(official: true);
+                        } else {
+                          _openCreate(official: false);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'friendly',
+                          child: Text('Amistoso'),
+                        ),
+                        PopupMenuItem(
+                          value: 'official',
+                          child: Text('Oficial'),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ],
@@ -445,6 +573,21 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                                 onPressed: () => _send(c),
                                                 icon: const Icon(Icons.send),
                                                 label: const Text('Enviar'),
+                                              ),
+                                            if (!isDraft &&
+                                                UserCapabilities
+                                                    .canAddToSentConvocation(
+                                                  _userRole,
+                                                ))
+                                              TextButton.icon(
+                                                onPressed: () =>
+                                                    _addPlayersToConvocation(c),
+                                                icon: const Icon(
+                                                  Icons.person_add_outlined,
+                                                ),
+                                                label: const Text(
+                                                  'Sumar jugadores',
+                                                ),
                                               ),
                                             TextButton.icon(
                                               onPressed: () =>

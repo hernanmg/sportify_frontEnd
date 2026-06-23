@@ -11,6 +11,7 @@ import 'package:sportify_amateur/features/teams/team_invite_screen.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
+import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/features/sports/team_admin_panel_screen.dart';
 import 'package:sportify_amateur/features/finance/quota_overview_screen.dart';
 import 'package:sportify_amateur/features/sports/attendance_screen.dart';
@@ -21,6 +22,8 @@ import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/sports/team_calendar_screen.dart';
 import 'package:sportify_amateur/widgets/season_selector_chip.dart';
+
+enum _SportsMgmtTab { roster, events, convocations, playerStatus }
 
 class SportsManagementScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -36,9 +39,7 @@ class SportsManagementScreen extends StatefulWidget {
   _SportsManagementScreenState createState() => _SportsManagementScreenState();
 }
 
-class _SportsManagementScreenState extends State<SportsManagementScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _SportsManagementScreenState extends State<SportsManagementScreen> {
   final NotificationService _notificationService = NotificationService();
   final GlobalKey<RosterManagementScreenState> _rosterListKey =
       GlobalKey<RosterManagementScreenState>();
@@ -50,41 +51,107 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
       GlobalKey<PlayerStatusScreenState>();
 
   String? _userRole;
-  bool _hasTeams = false;
+  bool _roleReady = false;
+  List<_SportsMgmtTab> _visibleTabs = [_SportsMgmtTab.roster];
+  int _selectedTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _loadRole();
-    final tab = widget.initialTabIndex.clamp(0, 3);
-    _tabController = TabController(length: 4, vsync: this, initialIndex: tab);
-    _tabController.addListener(() {
-      if (!mounted) return;
-      setState(() {});
-    });
+  }
+
+  List<_SportsMgmtTab> _tabsForRole(String? role) {
+    final tabs = <_SportsMgmtTab>[_SportsMgmtTab.roster];
+    if (UserCapabilities.canManageSportsEvents(role)) {
+      tabs.addAll([
+        _SportsMgmtTab.events,
+        _SportsMgmtTab.convocations,
+        _SportsMgmtTab.playerStatus,
+      ]);
+    }
+    return tabs;
+  }
+
+  int _initialTabIndexFor(List<_SportsMgmtTab> tabs) {
+    final requested =
+        _SportsMgmtTab.values[widget.initialTabIndex.clamp(0, 3)];
+    final idx = tabs.indexOf(requested);
+    return idx >= 0 ? idx : 0;
   }
 
   Future<void> _loadRole() async {
     final role = await AuthStorageService().getRole();
-    var hasTeams = false;
-    try {
-      final teams = await TeamService().getMyTeams();
-      hasTeams = teams.isNotEmpty;
-    } catch (_) {}
-    if (mounted) {
-      setState(() {
-        _userRole = role;
-        _hasTeams = hasTeams;
-      });
-    }
+    if (!mounted) return;
+    final tabs = _tabsForRole(role);
+    setState(() {
+      _userRole = role;
+      _visibleTabs = tabs;
+      _selectedTabIndex =
+          _initialTabIndexFor(tabs).clamp(0, tabs.length - 1);
+      _roleReady = true;
+    });
   }
 
   bool get _isStaff => UserCapabilities.isStaff(_userRole);
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  bool get _isPlatformAdmin => UserCapabilities.isPlatformAdmin(_userRole);
+
+  _SportsMgmtTab? get _currentTab {
+    if (_selectedTabIndex < 0 || _selectedTabIndex >= _visibleTabs.length) {
+      return null;
+    }
+    return _visibleTabs[_selectedTabIndex];
+  }
+
+  ({IconData icon, String label}) _tabMeta(_SportsMgmtTab tab) {
+    switch (tab) {
+      case _SportsMgmtTab.roster:
+        return (icon: Icons.list_alt, label: 'Lista de Buena Fe');
+      case _SportsMgmtTab.events:
+        return (icon: Icons.event, label: 'Eventos');
+      case _SportsMgmtTab.convocations:
+        return (icon: Icons.sports_soccer, label: 'Convocatorias');
+      case _SportsMgmtTab.playerStatus:
+        return (icon: Icons.health_and_safety, label: 'Estado Jugadores');
+    }
+  }
+
+  Widget _buildTabSelector() {
+    if (_visibleTabs.length <= 1) return const SizedBox.shrink();
+
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          children: _visibleTabs.asMap().entries.map((entry) {
+            final index = entry.key;
+            final tab = entry.value;
+            final meta = _tabMeta(tab);
+            final selected = _selectedTabIndex == index;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: FilterChip(
+                avatar: Icon(
+                  meta.icon,
+                  size: 18,
+                  color: selected
+                      ? Theme.of(context).colorScheme.onSecondaryContainer
+                      : null,
+                ),
+                label: Text(meta.label),
+                selected: selected,
+                onSelected: (_) {
+                  setState(() => _selectedTabIndex = index);
+                },
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
   }
 
   @override
@@ -94,168 +161,174 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
         title: const Text('Gestión deportiva'),
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          labelStyle:
-              const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-          unselectedLabelStyle:
-              const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-          tabs: const [
-            Tab(
-              icon: Icon(Icons.list_alt, size: 20),
-              text: 'Lista de Buena Fe',
-            ),
-            Tab(
-              icon: Icon(Icons.event, size: 20),
-              text: 'Eventos',
-            ),
-            Tab(
-              icon: Icon(Icons.sports_soccer, size: 20),
-              text: 'Convocatorias',
-            ),
-            Tab(
-              icon: Icon(Icons.health_and_safety, size: 20),
-              text: 'Estado Jugadores',
-            ),
-          ],
-        ),
         actions: [
           const SeasonSelectorChip(),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) => _handleMenuAction(value),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'admin_panel',
-                child: ListTile(
-                  leading: Icon(Icons.dashboard_customize),
-                  title: Text('Panel del equipo'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'team_quotas',
-                child: ListTile(
-                  leading: Icon(Icons.groups),
-                  title: Text('Cuotas del plantel'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'attendance',
-                child: ListTile(
-                  leading: Icon(Icons.fact_check),
-                  title: Text('Asistencias'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'send_training_reminder',
-                child: ListTile(
-                  leading: Icon(Icons.fitness_center),
-                  title: Text('Recordatorio Entrenamiento'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'send_payment_reminder',
-                child: ListTile(
-                  leading: Icon(Icons.payment),
-                  title: Text('Recordatorio Pago'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'medical_alerts',
-                child: ListTile(
-                  leading: Icon(Icons.medical_services),
-                  title: Text('Alertas Médicas'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'social_event',
-                child: ListTile(
-                  leading: Icon(Icons.celebration),
-                  title: Text('Evento Social'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'calendar',
-                child: ListTile(
-                  leading: Icon(Icons.calendar_month),
-                  title: Text('Calendario del equipo'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              if (_userRole == 'super_admin' ||
-                  _userRole == 'manager' ||
-                  _userRole == 'admin')
-                const PopupMenuItem(
-                  value: 'manage_teams',
-                  child: ListTile(
-                    leading: Icon(Icons.groups_3),
-                    title: Text('Crear / gestionar equipos'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              if (_userRole != 'super_admin' &&
-                  _userRole != 'manager' &&
-                  _userRole != 'admin')
-                const PopupMenuItem(
-                  value: 'join_team',
-                  child: ListTile(
-                    leading: Icon(Icons.vpn_key),
-                    title: Text('Unirme con código'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              const PopupMenuItem(
-                value: 'invite_team',
-                child: ListTile(
-                  leading: Icon(Icons.share),
-                  title: Text('Invitar al equipo'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildOperationsBar(),
-          Expanded(
-            child: TabBarView(
-        controller: _tabController,
-        children: [
-          RosterManagementScreen(
-            key: _rosterListKey,
-            teamId: widget.initialTeamId,
-          ),
-          EventsManagementScreen(key: _eventsKey),
-          ConvocationsScreen(key: _convocationsKey),
-          PlayerStatusScreen(
-            key: _playerStatusKey,
-            initialTeamId: widget.initialTeamId,
-          ),
-        ],
+          if (_roleReady)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) => _handleMenuAction(value),
+              itemBuilder: (context) => _buildOverflowMenuItems(),
             ),
-          ),
         ],
       ),
-      floatingActionButton: () {
-        final fab = _buildFloatingActionButton();
-        if (fab == null) return null;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: kAppShellBottomInset),
-          child: fab,
-        );
-      }(),
+      body: !_roleReady
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                _buildTabSelector(),
+                _buildOperationsBar(),
+                Expanded(
+                  child: IndexedStack(
+                    index: _selectedTabIndex,
+                    children: _visibleTabs.map(_buildTabBody).toList(),
+                  ),
+                ),
+              ],
+            ),
+      floatingActionButton: !_roleReady
+          ? null
+          : () {
+              final fab = _buildFloatingActionButton();
+              if (fab == null) return null;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: kAppShellBottomInset),
+                child: fab,
+              );
+            }(),
     );
+  }
+
+  Widget _buildTabBody(_SportsMgmtTab tab) {
+    switch (tab) {
+      case _SportsMgmtTab.roster:
+        return RosterManagementScreen(
+          key: _rosterListKey,
+          teamId: widget.initialTeamId,
+        );
+      case _SportsMgmtTab.events:
+        return EventsManagementScreen(key: _eventsKey);
+      case _SportsMgmtTab.convocations:
+        return ConvocationsScreen(key: _convocationsKey);
+      case _SportsMgmtTab.playerStatus:
+        return PlayerStatusScreen(
+          key: _playerStatusKey,
+          initialTeamId: widget.initialTeamId,
+        );
+    }
+  }
+
+  List<PopupMenuEntry<String>> _buildOverflowMenuItems() {
+    final items = <PopupMenuEntry<String>>[];
+    if (_isStaff) {
+      items.addAll(const [
+        PopupMenuItem(
+          value: 'admin_panel',
+          child: ListTile(
+            leading: Icon(Icons.dashboard_customize),
+            title: Text('Panel del equipo'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'attendance',
+          child: ListTile(
+            leading: Icon(Icons.fact_check),
+            title: Text('Asistencias'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'send_training_reminder',
+          child: ListTile(
+            leading: Icon(Icons.fitness_center),
+            title: Text('Recordatorio Entrenamiento'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'send_payment_reminder',
+          child: ListTile(
+            leading: Icon(Icons.payment),
+            title: Text('Recordatorio Pago'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'medical_alerts',
+          child: ListTile(
+            leading: Icon(Icons.medical_services),
+            title: Text('Alertas Médicas'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ]);
+    }
+    items.add(const PopupMenuItem(
+      value: 'team_quotas',
+      child: ListTile(
+        leading: Icon(Icons.groups),
+        title: Text('Cuotas del plantel'),
+        contentPadding: EdgeInsets.zero,
+      ),
+    ));
+    if (UserCapabilities.canOnlyCreateSocialEvents(_userRole)) {
+      items.add(const PopupMenuItem(
+        value: 'create_social_event',
+        child: ListTile(
+          leading: Icon(Icons.celebration),
+          title: Text('Crear evento social'),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ));
+    } else {
+      items.add(const PopupMenuItem(
+        value: 'social_event',
+        child: ListTile(
+          leading: Icon(Icons.celebration),
+          title: Text('Evento Social'),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ));
+    }
+    items.add(const PopupMenuItem(
+      value: 'calendar',
+      child: ListTile(
+        leading: Icon(Icons.calendar_month),
+        title: Text('Calendario del equipo'),
+        contentPadding: EdgeInsets.zero,
+      ),
+    ));
+    if (_isPlatformAdmin) {
+      items.add(const PopupMenuItem(
+        value: 'manage_teams',
+        child: ListTile(
+          leading: Icon(Icons.groups_3),
+          title: Text('Crear / gestionar equipos'),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ));
+    }
+    if (!_isPlatformAdmin) {
+      items.add(const PopupMenuItem(
+        value: 'join_team',
+        child: ListTile(
+          leading: Icon(Icons.vpn_key),
+          title: Text('Unirme con código'),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ));
+    }
+    if (UserCapabilities.canInviteToTeam(_userRole)) {
+      items.add(const PopupMenuItem(
+        value: 'invite_team',
+        child: ListTile(
+          leading: Icon(Icons.share),
+          title: Text('Invitar al equipo'),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ));
+    }
+    return items;
   }
 
   Widget _buildOperationsBar() {
@@ -311,31 +384,31 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
   }
 
   Widget? _buildFloatingActionButton() {
-    switch (_tabController.index) {
-      case 0: // Lista de Buena Fe
+    final tab = _currentTab;
+    switch (tab) {
+      case _SportsMgmtTab.roster:
         if (!UserCapabilities.canManageRoster(_userRole)) return null;
         return FloatingActionButton(
           onPressed: () => _addToRoster(),
           tooltip: 'Agregar Jugador',
           child: const Icon(Icons.person_add),
         );
-      case 1: // Eventos
-        if (!_isStaff && !_hasTeams) return null;
+      case _SportsMgmtTab.events:
+        if (!UserCapabilities.canManageSportsEvents(_userRole)) return null;
         return FloatingActionButton(
-          onPressed: () => _createEvent(),
+          onPressed: () => _createStaffEvent(),
           tooltip: 'Crear Evento',
           child: const Icon(Icons.add_circle),
         );
-      case 2: // Convocatorias
+      case _SportsMgmtTab.convocations:
         if (!UserCapabilities.canManageConvocations(_userRole)) return null;
         return FloatingActionButton(
           onPressed: () => _createConvocation(),
           tooltip: 'Nueva Convocatoria',
           child: const Icon(Icons.sports_soccer),
         );
-      case 3: // Estado jugadores — sin FAB (gestión en la pantalla)
-        return null;
-      default:
+      case _SportsMgmtTab.playerStatus:
+      case null:
         return null;
     }
   }
@@ -343,6 +416,9 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
   void _handleMenuAction(String action) async {
     try {
       switch (action) {
+        case 'create_social_event':
+          await _openSocialEventForm();
+          break;
         case 'admin_panel':
           await _openAdminPanel();
           break;
@@ -672,6 +748,43 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
     }
   }
 
+  Future<void> _openSocialEventForm() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const EventFormScreen(
+          initialEventType: SportEventType.social,
+          socialOnly: true,
+        ),
+      ),
+    );
+    if (result == true && mounted) {
+      _eventsKey.currentState?.reloadEvents();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Evento social creado'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  Future<void> _createStaffEvent() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const EventFormScreen()),
+    );
+    if (result == true && mounted) {
+      _eventsKey.currentState?.reloadEvents();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Evento creado'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   Future<void> _addToRoster() async {
     final season = context.read<SeasonProvider>().season;
     final result = await Navigator.push<bool>(
@@ -685,21 +798,6 @@ class _SportsManagementScreenState extends State<SportsManagementScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Jugador agregado a la lista de buena fe'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-  }
-
-  Future<void> _createEvent() async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => const EventFormScreen()),
-    );
-    if (result == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Evento creado'),
           backgroundColor: Colors.green,
         ),
       );

@@ -5,6 +5,8 @@ import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/core/services/event_expenses_service.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 import 'package:sportify_amateur/features/sports/social_event_expenses_screen.dart';
@@ -14,6 +16,9 @@ class EventFormScreen extends StatefulWidget {
   final DateTime? initialDate;
   final TimeOfDay? initialTime;
   final int? initialTeamId;
+  final SportEventType? initialEventType;
+  /// Si es true, solo permite crear/editar eventos sociales (jugadores).
+  final bool socialOnly;
 
   const EventFormScreen({
     Key? key,
@@ -21,6 +26,8 @@ class EventFormScreen extends StatefulWidget {
     this.initialDate,
     this.initialTime,
     this.initialTeamId,
+    this.initialEventType,
+    this.socialOnly = false,
   }) : super(key: key);
 
   @override
@@ -65,20 +72,46 @@ class _EventFormScreenState extends State<EventFormScreen> {
   bool _requiresConfirmation = true;
   bool _requiresPaymentUpToDate = false;
   bool _isLoading = false;
+  String? _userRole;
+
+  List<SportEventType> get _selectableEventTypes {
+    if (widget.socialOnly) return [SportEventType.social];
+    if (UserCapabilities.canManageSportsEvents(_userRole)) {
+      return SportEventType.values;
+    }
+    return [SportEventType.social];
+  }
 
   @override
   void initState() {
     super.initState();
+    if (widget.initialEventType != null) {
+      _selectedType = widget.initialEventType!;
+    } else if (widget.socialOnly) {
+      _selectedType = SportEventType.social;
+    }
     if (widget.initialDate != null) {
       _selectedDate = widget.initialDate!;
     }
     if (widget.initialTime != null) {
       _selectedTime = widget.initialTime!;
     }
+    _loadRole();
     _loadTeams();
     if (widget.event != null) {
       _loadEventData();
     }
+  }
+
+  Future<void> _loadRole() async {
+    final role = await AuthStorageService().getRole();
+    if (!mounted) return;
+    setState(() {
+      _userRole = role;
+      if (!UserCapabilities.canManageSportsEvents(role) || widget.socialOnly) {
+        _selectedType = SportEventType.social;
+      }
+    });
   }
 
   Future<void> _loadTeams() async {
@@ -319,18 +352,22 @@ class _EventFormScreenState extends State<EventFormScreen> {
               ),
             const SizedBox(height: 16),
             DropdownButtonFormField<SportEventType>(
-              value: _selectedType,
+              value: _selectableEventTypes.contains(_selectedType)
+                  ? _selectedType
+                  : _selectableEventTypes.first,
               decoration: const InputDecoration(
                 labelText: 'Tipo de evento',
                 border: OutlineInputBorder(),
               ),
-              items: SportEventType.values.map((type) {
+              items: _selectableEventTypes.map((type) {
                 return DropdownMenuItem(
                   value: type,
                   child: Text(_getEventTypeName(type)),
                 );
               }).toList(),
-              onChanged: (value) {
+              onChanged: _selectableEventTypes.length <= 1
+                  ? null
+                  : (value) {
                 setState(() {
                   _selectedType = value!;
                   // Resetear campos específicos del tipo anterior

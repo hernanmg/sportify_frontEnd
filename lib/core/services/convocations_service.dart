@@ -4,6 +4,32 @@ import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/models/player_eligibility.dart';
 import 'package:sportify_amateur/models/player_convocation_stats.dart';
 
+class AddConvocationPlayersResult {
+  final SportEvent event;
+  final List<int> added;
+  final List<int> skipped;
+
+  AddConvocationPlayersResult({
+    required this.event,
+    required this.added,
+    required this.skipped,
+  });
+
+  factory AddConvocationPlayersResult.fromJson(Map<String, dynamic> json) {
+    return AddConvocationPlayersResult(
+      event: SportEvent.fromJson(
+        Map<String, dynamic>.from(json['event'] as Map),
+      ),
+      added: (json['added'] as List<dynamic>? ?? [])
+          .map((e) => (e as num).toInt())
+          .toList(),
+      skipped: (json['skipped'] as List<dynamic>? ?? [])
+          .map((e) => (e as num).toInt())
+          .toList(),
+    );
+  }
+}
+
 class ConvocationStats {
   final int total;
   final int confirmed;
@@ -81,6 +107,19 @@ class ConvocationsService {
     return data
         .map((e) => PlayerEligibility.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
+  }
+
+  Future<AddConvocationPlayersResult> addConvokedPlayers(
+    int convocationId,
+    List<int> userIds,
+  ) async {
+    final response = await _dio.post(
+      '/convocations/$convocationId/squad/add',
+      data: {'userIds': userIds},
+    );
+    return AddConvocationPlayersResult.fromJson(
+      Map<String, dynamic>.from(response.data as Map),
+    );
   }
 
   Future<SportEvent> setSquad(

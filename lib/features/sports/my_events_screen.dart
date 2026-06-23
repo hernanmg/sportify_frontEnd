@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
 import 'package:sportify_amateur/features/sports/social_event_expenses_screen.dart';
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
@@ -20,11 +21,30 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
   bool _loading = true;
   String? _error;
   int? _userId;
+  String? _userRole;
 
   @override
   void initState() {
     super.initState();
+    _loadRole();
     _load();
+  }
+
+  Future<void> _loadRole() async {
+    final role = await AuthStorageService().getRole();
+    if (mounted) setState(() => _userRole = role);
+  }
+
+  void _openCreateSocialEvent() {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const EventFormScreen(
+          initialEventType: SportEventType.social,
+          socialOnly: true,
+        ),
+      ),
+    ).then((_) => _load());
   }
 
   Future<void> _load() async {
@@ -113,24 +133,21 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                   ),
                 );
               } else if (value == 'create_event') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (context) => const EventFormScreen(),
-                  ),
-                ).then((_) => _load());
+                _openCreateSocialEvent();
               }
             },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'create_event',
-                child: ListTile(
-                  leading: Icon(Icons.add_circle_outline),
-                  title: Text('Crear evento'),
-                  contentPadding: EdgeInsets.zero,
+            itemBuilder: (context) => [
+              if (UserCapabilities.canOnlyCreateSocialEvents(_userRole) ||
+                  UserCapabilities.canManageSportsEvents(_userRole))
+                const PopupMenuItem(
+                  value: 'create_event',
+                  child: ListTile(
+                    leading: Icon(Icons.add_circle_outline),
+                    title: Text('Crear evento social'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
-              ),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: 'calendar',
                 child: ListTile(
                   leading: Icon(Icons.calendar_month),
@@ -143,18 +160,13 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute<void>(
-              builder: (context) => const EventFormScreen(),
+      floatingActionButton: UserCapabilities.canManageSportsEvents(_userRole)
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _openCreateSocialEvent,
+              icon: const Icon(Icons.celebration),
+              label: const Text('Evento social'),
             ),
-          ).then((_) => _load());
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Crear evento'),
-      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -164,7 +176,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                       child: Padding(
                         padding: EdgeInsets.all(24),
                         child: Text(
-                          'No tenés invitaciones a eventos.\nCuando te inviten a un evento social o entrenamiento, aparecerá acá.\n\nTambién podés crear uno desde el menú ⋮ o en Gestión deportiva.',
+                          'No tenés invitaciones a eventos.\nCuando te inviten a un evento social o entrenamiento, aparecerá acá.\n\nPodés crear un evento social con el botón de abajo.',
                           textAlign: TextAlign.center,
                         ),
                       ),
