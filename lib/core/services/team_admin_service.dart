@@ -30,6 +30,7 @@ class TeamAdminPanel {
   final int teamId;
   final List<DebtorRow> debtors;
   final List<PendingConfirmationEvent> pendingConfirmations;
+  final NextConvocationSummary? nextConvocation;
   final LastSessionAttendance? lastSessionAttendance;
   final MonthFinance monthFinance;
   final List<UpcomingEventRow> upcomingEvents;
@@ -38,6 +39,7 @@ class TeamAdminPanel {
     required this.teamId,
     required this.debtors,
     required this.pendingConfirmations,
+    this.nextConvocation,
     this.lastSessionAttendance,
     required this.monthFinance,
     required this.upcomingEvents,
@@ -57,6 +59,11 @@ class TeamAdminPanel {
                 ),
               )
               .toList(),
+      nextConvocation: json['nextConvocation'] != null
+          ? NextConvocationSummary.fromJson(
+              Map<String, dynamic>.from(json['nextConvocation'] as Map),
+            )
+          : null,
       lastSessionAttendance: json['lastSessionAttendance'] != null
           ? LastSessionAttendance.fromJson(
               Map<String, dynamic>.from(
@@ -142,6 +149,41 @@ class PendingPlayer {
     return PendingPlayer(
       userId: json['userId'] as int,
       userName: json['userName']?.toString() ?? '',
+    );
+  }
+}
+
+class NextConvocationSummary {
+  final int id;
+  final String title;
+  final String? opponentName;
+  final DateTime eventDate;
+  final int convoked;
+  final int confirmed;
+  final int pending;
+  final int declined;
+
+  NextConvocationSummary({
+    required this.id,
+    required this.title,
+    this.opponentName,
+    required this.eventDate,
+    required this.convoked,
+    required this.confirmed,
+    required this.pending,
+    required this.declined,
+  });
+
+  factory NextConvocationSummary.fromJson(Map<String, dynamic> json) {
+    return NextConvocationSummary(
+      id: json['id'] as int,
+      title: json['title']?.toString() ?? '',
+      opponentName: json['opponentName']?.toString(),
+      eventDate: DateTime.parse(json['eventDate'] as String),
+      convoked: json['convoked'] as int? ?? 0,
+      confirmed: json['confirmed'] as int? ?? 0,
+      pending: json['pending'] as int? ?? 0,
+      declined: json['declined'] as int? ?? 0,
     );
   }
 }

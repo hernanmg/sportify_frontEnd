@@ -361,12 +361,16 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
         decoration: InputDecoration(
           labelText: label,
           hintText: hintText,
+          floatingLabelBehavior: FloatingLabelBehavior.always,
+          floatingLabelAlignment: FloatingLabelAlignment.start,
           prefixIcon: Icon(icon),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           filled: true,
           fillColor: Colors.white,
+          contentPadding: const EdgeInsets.fromLTRB(12, 20, 12, 16),
+          isDense: false,
         ),
       ),
     );

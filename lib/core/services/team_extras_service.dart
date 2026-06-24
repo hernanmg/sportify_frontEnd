@@ -10,10 +10,14 @@ class TeamExtrasService {
   Future<Map<String, dynamic>> getReports(
     int teamId, {
     String? season,
+    int? categoryId,
   }) async {
     final response = await _dio.get(
       '/teams/$teamId/reports',
-      queryParameters: season != null ? {'season': season} : null,
+      queryParameters: {
+        if (season != null) 'season': season,
+        if (categoryId != null) 'categoryId': categoryId,
+      },
     );
     return Map<String, dynamic>.from(response.data as Map);
   }

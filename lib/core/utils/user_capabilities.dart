@@ -26,4 +26,19 @@ class UserCapabilities {
   /// Sumar jugadores a convocatorias ya enviadas (solo DT y admin de plataforma).
   static bool canAddToSentConvocation(String? role) =>
       isPlatformAdmin(role) || role == 'dt';
+
+  /// Editar datos del club (nombre, logo, categorías).
+  static bool canManageTeamSettings(String? role) =>
+      isPlatformAdmin(role) || role == 'dt';
+
+  /// Finanzas del equipo (cuotas, caja, gastos de entreno).
+  static bool canManageTeamFinance(String? role) =>
+      isPlatformAdmin(role) ||
+      role == 'dt' ||
+      role == 'tesorero' ||
+      role == 'delegado';
+
+  /// Solo convocatorias y deporte (sin panel financiero completo).
+  static bool canManageConvocationsOnly(String? role) =>
+      role == 'team_captain';
 }

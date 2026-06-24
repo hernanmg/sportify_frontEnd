@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/event_expenses_service.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/models/event_expense_sheet.dart';
 
 class SocialEventExpensesScreen extends StatefulWidget {
@@ -50,8 +51,8 @@ class _SocialEventExpensesScreenState extends State<SocialEventExpensesScreen> {
     final userId = userIdStr != null ? int.tryParse(userIdStr) : null;
 
     setState(() {
-      _isManager =
-          role == 'manager' || role == 'super_admin' || role == 'admin';
+      _isManager = UserCapabilities.isStaff(role) ||
+          UserCapabilities.isPlatformAdmin(role);
       _currentUserId = userId;
       _paidByUserId = userId;
     });
@@ -70,12 +71,13 @@ class _SocialEventExpensesScreenState extends State<SocialEventExpensesScreen> {
         _view = view;
         _loading = false;
         if (_paidByUserId == null && view.participants.isNotEmpty) {
-          final me = view.participants
-              .where((p) => p.userId == _currentUserId && !p.isDeclined)
+          final confirmed = view.participants.where((p) => p.isConfirmed);
+          final me = confirmed
+              .where((p) => p.userId == _currentUserId)
               .toList();
           _paidByUserId = me.isNotEmpty
               ? me.first.userId
-              : view.participants.firstWhere((p) => !p.isDeclined).userId;
+              : (confirmed.isNotEmpty ? confirmed.first.userId : null);
         }
       });
     } catch (e) {
@@ -89,10 +91,19 @@ class _SocialEventExpensesScreenState extends State<SocialEventExpensesScreen> {
 
   bool get _canAddExpense {
     final view = _view;
-    if (view == null || _currentUserId == null) return false;
+    if (view == null) return false;
+    if (_confirmedParticipants.isEmpty) return false;
+    if (_isManager) return true;
+    if (_currentUserId == null) return false;
     return view.participants.any(
-      (p) => p.userId == _currentUserId && !p.isDeclined,
+      (p) => p.userId == _currentUserId && p.isConfirmed,
     );
+  }
+
+  List<EventExpenseParticipantOption> get _confirmedParticipants {
+    final view = _view;
+    if (view == null) return const [];
+    return view.participants.where((p) => p.isConfirmed).toList();
   }
 
   Future<void> _addExpense() async {
@@ -105,6 +116,12 @@ class _SocialEventExpensesScreenState extends State<SocialEventExpensesScreen> {
     }
     if (_paidByUserId == null) {
       _snack('Seleccioná quién pagó');
+      return;
+    }
+    final payerConfirmed = _confirmedParticipants
+        .any((p) => p.userId == _paidByUserId);
+    if (!payerConfirmed) {
+      _snack('Solo se puede cargar un gasto de quien confirmó asistencia');
       return;
     }
 
@@ -484,8 +501,7 @@ class _SocialEventExpensesScreenState extends State<SocialEventExpensesScreen> {
                         labelText: 'Quién pagó',
                         border: OutlineInputBorder(),
                       ),
-                      items: view.participants
-                          .where((p) => !p.isDeclined)
+                      items: _confirmedParticipants
                           .map(
                             (p) => DropdownMenuItem(
                               value: p.userId,
@@ -514,12 +530,16 @@ class _SocialEventExpensesScreenState extends State<SocialEventExpensesScreen> {
                 ),
               ),
             ),
-          ] else if (_currentUserId != null) ...[
+          ] else ...[
             const SizedBox(height: 12),
-            const Card(
+            Card(
               child: ListTile(
-                leading: Icon(Icons.info_outline),
-                title: Text('Para cargar gastos tenés que estar en la lista de participantes del evento (y no haber rechazado la invitación).'),
+                leading: const Icon(Icons.info_outline),
+                title: Text(
+                  _confirmedParticipants.isEmpty
+                      ? 'Nadie confirmó asistencia todavía. No se pueden cargar gastos.'
+                      : 'Para cargar gastos tenés que confirmar asistencia al evento.',
+                ),
               ),
             ),
           ],

@@ -103,6 +103,16 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
     }
   }
 
+  List<SportEvent> get _sentWithPending {
+    return ConvocationsService.filterSent(_convocations)
+        .where((c) => c.isUpcoming && c.pendingCount > 0)
+        .toList()
+      ..sort((a, b) => a.eventDate.compareTo(b.eventDate));
+  }
+
+  int get _totalPendingResponses =>
+      _sentWithPending.fold(0, (sum, c) => sum + c.pendingCount);
+
   Future<void> _openCreate({bool official = false}) async {
     final result = await Navigator.push<bool>(
       context,
@@ -297,6 +307,29 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
     }
   }
 
+  Future<void> _remindPending(SportEvent c) async {
+    try {
+      final count = await _convocationsService.remindPendingConvocation(c.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            count > 0
+                ? 'Recordatorio enviado a $count jugador(es)'
+                : 'No hay jugadores pendientes',
+          ),
+          backgroundColor: count > 0 ? Colors.green : Colors.orange,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   Future<void> _showResponses(SportEvent c) async {
     try {
       final stats = await _convocationsService.getConvocationStats(c.id);
@@ -340,6 +373,15 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
             ),
           ),
           actions: [
+            if (stats.pending > 0 &&
+                UserCapabilities.canManageConvocations(_userRole))
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await _remindPending(c);
+                },
+                child: const Text('Recordar pendientes'),
+              ),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cerrar'),
@@ -448,6 +490,32 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
             ],
           ),
         ),
+        if (!_loading &&
+            UserCapabilities.canManageConvocations(_userRole) &&
+            _sentWithPending.isNotEmpty)
+          MaterialBanner(
+            backgroundColor: Colors.orange.shade50,
+            leading: Icon(Icons.notifications_active, color: Colors.orange.shade800),
+            content: Text(
+              _sentWithPending.length == 1
+                  ? '${_sentWithPending.first.title}: ${_sentWithPending.first.pendingCount} sin confirmar'
+                  : '$_totalPendingResponses confirmación(es) pendiente(s) en ${_sentWithPending.length} convocatoria(s)',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => _remindPending(_sentWithPending.first),
+                child: const Text('Recordar'),
+              ),
+              TextButton(
+                onPressed: () => _showResponses(_sentWithPending.first),
+                child: const Text('Ver detalle'),
+              ),
+              TextButton(
+                onPressed: () => setState(() => _filter = 'sent'),
+                child: const Text('Ver enviadas'),
+              ),
+            ],
+          ),
         Expanded(
           child: _loading
               ? const Center(child: CircularProgressIndicator())
@@ -596,11 +664,20 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                               label: const Text('Plantel'),
                                             ),
                                             if (!isDraft)
-                                              TextButton.icon(
-                                                onPressed: () async {
+                                              PopupMenuButton<String>(
+                                                icon: const Icon(
+                                                  Icons.picture_as_pdf,
+                                                ),
+                                                tooltip: 'PDF / Compartir',
+                                                onSelected: (action) async {
                                                   try {
-                                                    await _pdfService
-                                                        .previewPdf(c.id);
+                                                    if (action == 'preview') {
+                                                      await _pdfService
+                                                          .previewPdf(c.id);
+                                                    } else {
+                                                      await _pdfService
+                                                          .sharePdf(c.id);
+                                                    }
                                                   } catch (e) {
                                                     if (mounted) {
                                                       ScaffoldMessenger.of(
@@ -615,10 +692,30 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                                     }
                                                   }
                                                 },
-                                                icon: const Icon(
-                                                  Icons.picture_as_pdf,
-                                                ),
-                                                label: const Text('PDF'),
+                                                itemBuilder: (_) => const [
+                                                  PopupMenuItem(
+                                                    value: 'preview',
+                                                    child: ListTile(
+                                                      leading: Icon(
+                                                        Icons.visibility,
+                                                      ),
+                                                      title: Text('Ver PDF'),
+                                                      contentPadding:
+                                                          EdgeInsets.zero,
+                                                    ),
+                                                  ),
+                                                  PopupMenuItem(
+                                                    value: 'share',
+                                                    child: ListTile(
+                                                      leading: Icon(
+                                                        Icons.share,
+                                                      ),
+                                                      title: Text('Compartir'),
+                                                      contentPadding:
+                                                          EdgeInsets.zero,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             if (isDraft)
                                               TextButton.icon(

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/finance_service.dart';
-import 'package:sportify_amateur/core/services/roster_service.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/models/finance.dart';
 
 class QuotaOverviewScreen extends StatefulWidget {
@@ -18,8 +18,9 @@ class QuotaOverviewScreen extends StatefulWidget {
 class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
   final _finance = FinanceService();
   QuotaOverview? _overview;
+  List<QuotaSeries> _series = [];
   bool _loading = true;
-  bool _isManager = false;
+  bool _canManageFinance = false;
 
   @override
   void initState() {
@@ -29,7 +30,10 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
 
   Future<void> _init() async {
     final role = await AuthStorageService().getRole();
-    _isManager = role == 'super_admin' || role == 'manager' || role == 'admin';
+    _canManageFinance = UserCapabilities.isPlatformAdmin(role) ||
+        role == 'dt' ||
+        role == 'tesorero' ||
+        role == 'delegado';
     await _load();
   }
 
@@ -37,9 +41,16 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
     setState(() => _loading = true);
     try {
       final overview = await _finance.getQuotaOverview(widget.teamId);
+      List<QuotaSeries> series = [];
+      if (_canManageFinance) {
+        try {
+          series = await _finance.listQuotaSeries(widget.teamId);
+        } catch (_) {}
+      }
       if (!mounted) return;
       setState(() {
         _overview = overview;
+        _series = series;
         _loading = false;
       });
     } catch (e) {
@@ -91,9 +102,9 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
     if (ok != true) return;
     final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.'));
     if (amount == null || amount <= 0) return;
+    final season = context.read<SeasonProvider>().season;
 
     try {
-      final season = context.read<SeasonProvider>().season;
       await _finance.generateMonthlyQuota(
         teamId: widget.teamId,
         year: now.year,
@@ -105,6 +116,153 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Cuotas generadas'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(FinanceService.errorMessage(e)),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _generateRecurring() async {
+    final amountCtrl = TextEditingController();
+    final monthsCtrl = TextEditingController(text: '6');
+    final now = DateTime.now();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cuota recurrente'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Desde ${now.month}/${now.year}'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: amountCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Monto mensual por jugador',
+                prefixText: '\$ ',
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: monthsCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Cantidad de meses',
+                helperText: 'Ej: 6 genera 6 cuotas mensuales',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Generar serie'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.'));
+    final monthCount = int.tryParse(monthsCtrl.text.trim());
+    if (amount == null || amount <= 0 || monthCount == null || monthCount < 1) {
+      return;
+    }
+    final season = context.read<SeasonProvider>().season;
+
+    try {
+      await _finance.generateRecurringMonthlyQuota(
+        teamId: widget.teamId,
+        year: now.year,
+        month: now.month,
+        amount: amount,
+        monthCount: monthCount,
+        season: season,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Serie de $monthCount meses generada'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(FinanceService.errorMessage(e)),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _editSeries(QuotaSeries series) async {
+    final amountCtrl =
+        TextEditingController(text: series.amount.toStringAsFixed(0));
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Editar serie de cuotas'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${series.monthSpan} mes(es) · ${series.concepts.first}${series.concepts.length > 1 ? ' … ${series.concepts.last}' : ''}',
+              style: Theme.of(ctx).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: amountCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Nuevo monto (solo cuotas pendientes)',
+                prefixText: '\$ ',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.'));
+    if (amount == null || amount <= 0) return;
+
+    try {
+      await _finance.updateQuotaSeries(series.recurringGroupId, amount);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Serie actualizada'),
             backgroundColor: Colors.green,
           ),
         );
@@ -224,6 +382,33 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
                                 ),
                               ),
                             ),
+                            if (_canManageFinance && _series.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                'Series de cuotas',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ..._series.map(
+                                (s) => Card(
+                                  child: ListTile(
+                                    title: Text(
+                                      '\$${s.amount.toStringAsFixed(0)} × ${s.monthSpan} meses',
+                                    ),
+                                    subtitle: Text(
+                                      '${s.pendingCount} pendientes · ${s.paidCount} pagadas',
+                                    ),
+                                    trailing: IconButton(
+                                      tooltip: 'Editar monto pendiente',
+                                      icon: const Icon(Icons.edit_outlined),
+                                      onPressed: () => _editSeries(s),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 12),
                             ...o.players.map((p) {
                               return ListTile(
@@ -262,25 +447,39 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
                         ),
                       ),
                     ),
-                    if (_isManager)
+                    if (_canManageFinance)
                       SafeArea(
                         child: Padding(
                           padding: const EdgeInsets.all(12),
-                          child: Row(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _generateMonthly,
-                                  icon: const Icon(Icons.add_card),
-                                  label: const Text('Cuota del mes'),
-                                ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: _generateMonthly,
+                                      icon: const Icon(Icons.add_card),
+                                      label: const Text('Cuota del mes'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: _generateRecurring,
+                                      icon: const Icon(Icons.event_repeat),
+                                      label: const Text('Serie'),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
                                 child: FilledButton.icon(
                                   onPressed: _sendReminders,
                                   icon: const Icon(Icons.notifications),
-                                  label: const Text('Recordar'),
+                                  label: const Text('Recordar morosos'),
                                 ),
                               ),
                             ],

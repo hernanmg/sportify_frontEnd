@@ -261,4 +261,21 @@ class TeamService {
       'Infantiles'
     ];
   }
+
+  Future<List<Map<String, dynamic>>> listTeamMembers(int teamId) async {
+    final response = await _dio.get('/teams/$teamId/members');
+    final data = response.data as List<dynamic>;
+    return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<void> updateTeamMemberRole(
+    int teamId,
+    int userId,
+    String role,
+  ) async {
+    await _dio.patch(
+      '/teams/$teamId/members/$userId/role',
+      data: {'role': role},
+    );
+  }
 }

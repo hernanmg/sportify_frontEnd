@@ -9,6 +9,8 @@ import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
 import 'package:sportify_amateur/models/finance.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
+import 'package:sportify_amateur/features/teams/team_form_screen.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 import 'package:sportify_amateur/models/team.dart';
 
@@ -30,11 +32,13 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
   MyTeamOption? _selected;
   TeamAdminPanel? _panel;
   Team? _team;
+  List<Map<String, dynamic>> _members = [];
   int? _birthdayHour;
   bool _savingBirthdayHour = false;
   bool _loading = true;
   String? _error;
   bool _isPlatformAdmin = false;
+  String? _userRole;
 
   @override
   void initState() {
@@ -45,6 +49,7 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
   Future<void> _init() async {
     try {
       final role = await AuthStorageService().getRole();
+      _userRole = role;
       _isPlatformAdmin =
           role == 'super_admin' || role == 'manager' || role == 'admin';
       var teams = await _teamService.getMyTeams();
@@ -73,10 +78,15 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
     try {
       final panel = await _service.getAdminPanel(teamId);
       final team = await _teamService.getTeamById(teamId);
+      List<Map<String, dynamic>> members = [];
+      try {
+        members = await _teamService.listTeamMembers(teamId);
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
         _panel = panel;
         _team = team;
+        _members = members;
         _birthdayHour = team.birthdayNotificationHour;
         _loading = false;
       });
@@ -199,7 +209,73 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
             const Text('Sin sesiones pasadas registradas')
           else
             _lastSessionCard(panel.lastSessionAttendance!),
+          const SizedBox(height: 16),
+          _sectionTitle('Roles de finanzas'),
+          _teamRolesCard(panel.teamId),
         ],
+      ),
+    );
+  }
+
+  Widget _teamRolesCard(int teamId) {
+    if (_members.isEmpty) {
+      return const Text('Sin miembros cargados');
+    }
+    const roleLabels = {
+      'admin': 'Admin equipo',
+      'treasurer': 'Tesorero',
+      'delegate': 'Delegado',
+      'player': 'Jugador',
+    };
+    return Card(
+      child: Column(
+        children: _members.map((m) {
+          final userId = m['userId'] as int;
+          final role = m['role']?.toString() ?? 'player';
+          return ListTile(
+            dense: true,
+            title: Text(m['userName']?.toString() ?? 'Usuario $userId'),
+            subtitle: const Text(
+              'Tesorero/delegado pueden gestionar cuotas y caja',
+              style: TextStyle(fontSize: 11),
+            ),
+            trailing: DropdownButton<String>(
+              value: role,
+              underline: const SizedBox.shrink(),
+              items: roleLabels.entries
+                  .map(
+                    (e) => DropdownMenuItem(
+                      value: e.key,
+                      child: Text(e.value),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (newRole) async {
+                if (newRole == null || newRole == role) return;
+                try {
+                  await _teamService.updateTeamMemberRole(
+                    teamId,
+                    userId,
+                    newRole,
+                  );
+                  await _load(teamId);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Rol actualizado'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(TeamService.errorMessage(e))),
+                  );
+                }
+              },
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -299,11 +375,37 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
     }
   }
 
+  Future<void> _editTeam(int teamId) async {
+    try {
+      final team = await _teamService.getTeamById(teamId);
+      if (!mounted) return;
+      final updated = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => TeamFormScreen(team: team)),
+      );
+      if (updated != null) await _load(teamId);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(TeamService.errorMessage(e)),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Widget _quickActions(int teamId) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
+        if (UserCapabilities.canManageTeamSettings(_userRole))
+          ActionChip(
+            avatar: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Editar equipo'),
+            onPressed: () => _editTeam(teamId),
+          ),
         ActionChip(
           avatar: const Icon(Icons.payments, size: 18),
           label: const Text('Cuotas del equipo'),

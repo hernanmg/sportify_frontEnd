@@ -146,6 +146,119 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
     });
   }
 
+  Future<void> _applySuggestedStarters() async {
+    final teamId = _selectedPick?.teamId ?? _draft?.teamId;
+    if (teamId == null) return;
+    setState(() => _loadingRoster = true);
+    try {
+      final ids = await _convocationsService.getSuggestedStarters(teamId);
+      if (ids.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No hay titulares del último partido'),
+            ),
+          );
+        }
+        return;
+      }
+      final rosterIds = _roster.map((r) => r.userId).toSet();
+      if (!mounted) return;
+      setState(() {
+        _convokedIds
+          ..clear()
+          ..addAll(ids.where(rosterIds.contains));
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Titulares del último partido (${_convokedIds.length} jugadores)',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingRoster = false);
+    }
+  }
+
+  Future<void> _quickSendWithLastSquad() async {
+    await _createDraft();
+    if (_draft == null || !mounted) return;
+    await _applyLastConvocationSquad();
+    if (_convokedIds.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo armar el plantel. Elegí jugadores manualmente.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+    await _saveSquad(send: true);
+  }
+
+  Future<void> _applyLastConvocationSquad() async {
+    final teamId = _selectedPick?.teamId ?? _draft?.teamId;
+    if (teamId == null) return;
+    setState(() => _loadingRoster = true);
+    try {
+      final sent = await _convocationsService.getAllConvocations(
+        teamId: teamId,
+        status: 'sent',
+      );
+      if (sent.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No hay convocatorias enviadas anteriores'),
+            ),
+          );
+        }
+        return;
+      }
+      sent.sort((a, b) => b.eventDate.compareTo(a.eventDate));
+      final last = sent.first;
+      final responses =
+          await _convocationsService.getConvocationResponses(last.id);
+      final ids = responses
+          .where((p) => p.isConvoked)
+          .map((p) => p.userId)
+          .toSet();
+      final rosterIds = _roster.map((r) => r.userId).toSet();
+      if (!mounted) return;
+      setState(() {
+        _convokedIds
+          ..clear()
+          ..addAll(ids.where(rosterIds.contains));
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Plantel sugerido desde "${last.title}" (${_convokedIds.length} jugadores)',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingRoster = false);
+    }
+  }
+
   Future<void> _saveAsTemplate() async {
     final teamId = _selectedPick?.teamId ?? _draft?.teamId;
     if (teamId == null || _convokedIds.isEmpty) return;
@@ -461,7 +574,13 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
             value: _isOfficial,
             onChanged: (v) => setState(() => _isOfficial = v),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _loading ? null : _quickSendWithLastSquad,
+            icon: const Icon(Icons.flash_on_outlined, size: 18),
+            label: const Text('Rápido: último plantel y enviar'),
+          ),
+          const SizedBox(height: 12),
           FilledButton(
             onPressed: _loading ? null : _createDraft,
             child: _loading
@@ -513,6 +632,25 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
               ],
             ),
           ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _loadingRoster ? null : _applyLastConvocationSquad,
+                icon: const Icon(Icons.history, size: 18),
+                label: const Text('Usar plantel anterior'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _loadingRoster ? null : _applySuggestedStarters,
+                icon: const Icon(Icons.star_outline, size: 18),
+                label: const Text('Usar titulares'),
+              ),
+            ],
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(

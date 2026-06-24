@@ -7,6 +7,7 @@ import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/dashboard/team_membership_banner.dart';
+import 'package:sportify_amateur/features/dashboard/dt_home_dashboard.dart';
 import 'package:sportify_amateur/features/help/home_help_search_bar.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
 import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
@@ -204,6 +205,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const TeamMembershipBanner(),
+                  if (_isTeamStaff) ...[
+                    const SizedBox(height: 8),
+                    const DtHomeDashboard(),
+                  ],
                   const SizedBox(height: 8),
                   Text(
                     'Accesos rápidos',

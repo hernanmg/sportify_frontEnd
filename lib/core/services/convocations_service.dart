@@ -233,6 +233,23 @@ class ConvocationsService {
     }
   }
 
+  Future<int> remindPendingConvocation(int id) async {
+    final response = await _dio.post('/convocations/$id/remind-pending');
+    final data = Map<String, dynamic>.from(response.data as Map);
+    return data['reminded'] as int? ?? 0;
+  }
+
+  Future<List<int>> getSuggestedStarters(int teamId) async {
+    final response = await _dio.get(
+      '/convocations/suggested-starters',
+      queryParameters: {'teamId': teamId},
+    );
+    final data = Map<String, dynamic>.from(response.data as Map);
+    return (data['userIds'] as List<dynamic>? ?? [])
+        .map((e) => e as int)
+        .toList();
+  }
+
   // Estadísticas y respuestas
 
   Future<ConvocationStats> getConvocationStats(int id) async {

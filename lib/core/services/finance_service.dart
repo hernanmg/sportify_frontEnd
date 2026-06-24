@@ -225,6 +225,43 @@ class FinanceService {
     return Map<String, dynamic>.from(response.data as Map);
   }
 
+  Future<Map<String, dynamic>> generateRecurringMonthlyQuota({
+    required int teamId,
+    required int year,
+    required int month,
+    required double amount,
+    required int monthCount,
+    String? season,
+  }) async {
+    final response = await _dio.post(
+      '/finance/fees/monthly-quota/recurring',
+      data: {
+        'teamId': teamId,
+        'year': year,
+        'month': month,
+        'amount': amount,
+        'monthCount': monthCount,
+        if (season != null) 'season': season,
+      },
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<List<QuotaSeries>> listQuotaSeries(int teamId) async {
+    final response = await _dio.get('/finance/team/$teamId/quota-series');
+    final data = response.data as List<dynamic>;
+    return data
+        .map((e) => QuotaSeries.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  Future<void> updateQuotaSeries(String groupId, double amount) async {
+    await _dio.patch(
+      '/finance/fees/quota-series/$groupId',
+      data: {'amount': amount},
+    );
+  }
+
   Future<QuotaOverview> getQuotaOverview(int teamId, {String? concept}) async {
     final response = await _dio.get(
       '/finance/team/$teamId/quota-overview',
@@ -356,6 +393,45 @@ class QuotaPlayerRow {
   }
 
   bool get isPaid => balance <= 0.01;
+}
+
+class QuotaSeries {
+  final String recurringGroupId;
+  final double amount;
+  final List<String> concepts;
+  final int chargeCount;
+  final int pendingCount;
+  final int paidCount;
+  final String? startDueDate;
+  final String? endDueDate;
+
+  QuotaSeries({
+    required this.recurringGroupId,
+    required this.amount,
+    required this.concepts,
+    required this.chargeCount,
+    required this.pendingCount,
+    required this.paidCount,
+    this.startDueDate,
+    this.endDueDate,
+  });
+
+  factory QuotaSeries.fromJson(Map<String, dynamic> json) {
+    return QuotaSeries(
+      recurringGroupId: json['recurringGroupId']?.toString() ?? '',
+      amount: _parseAmount(json['amount']),
+      concepts: (json['concepts'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      chargeCount: json['chargeCount'] as int? ?? 0,
+      pendingCount: json['pendingCount'] as int? ?? 0,
+      paidCount: json['paidCount'] as int? ?? 0,
+      startDueDate: json['startDueDate']?.toString(),
+      endDueDate: json['endDueDate']?.toString(),
+    );
+  }
+
+  int get monthSpan => concepts.length;
 }
 
 class TrainingCollectionView {

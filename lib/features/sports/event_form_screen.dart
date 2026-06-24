@@ -72,6 +72,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
   bool _requiresConfirmation = true;
   bool _requiresPaymentUpToDate = false;
   bool _isLoading = false;
+  bool _repeatWeekly = false;
+  int _weeksAhead = 8;
   String? _userRole;
 
   List<SportEventType> get _selectableEventTypes {
@@ -558,6 +560,33 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 );
               }),
             ),
+            if (widget.event == null) ...[
+              const Divider(height: 24),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Repetir semanalmente'),
+                subtitle: Text(
+                  'Crea $_weeksAhead entrenamientos en el mismo día y horario',
+                ),
+                value: _repeatWeekly,
+                onChanged: (v) => setState(() => _repeatWeekly = v),
+              ),
+              if (_repeatWeekly)
+                DropdownButtonFormField<int>(
+                  initialValue: _weeksAhead,
+                  decoration: const InputDecoration(
+                    labelText: 'Semanas a generar',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 4, child: Text('4 semanas')),
+                    DropdownMenuItem(value: 8, child: Text('8 semanas')),
+                    DropdownMenuItem(value: 12, child: Text('12 semanas')),
+                    DropdownMenuItem(value: 16, child: Text('16 semanas')),
+                  ],
+                  onChanged: (v) => setState(() => _weeksAhead = v ?? 8),
+                ),
+            ],
           ],
         ),
       ),
@@ -1149,44 +1178,86 @@ class _EventFormScreenState extends State<EventFormScreen> {
       }
 
       if (widget.event == null) {
-        final created = await _eventsService.createEvent(eventData);
-        if (!mounted) return;
-
-        if (_selectedType == SportEventType.social) {
-          for (final g in _externalGuestLines) {
-            final name = g.name.text.trim();
-            if (name.isEmpty) continue;
-            try {
-              await _eventExpensesService.addSocialGuest(
-                eventId: created.id,
-                displayName: name,
-                phone: g.phone.text.trim().isEmpty ? null : g.phone.text.trim(),
-                email: g.email.text.trim().isEmpty ? null : g.email.text.trim(),
-              );
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('No se pudo registrar un invitado externo: $e'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              }
-            }
-          }
-
+        if (_selectedType == SportEventType.training && _repeatWeekly) {
+          final jsWeekday =
+              eventDateTime.weekday == 7 ? 0 : eventDateTime.weekday;
+          final result = await _eventsService.createTrainingSchedule({
+            'teamId': _selectedTeam!.teamId,
+            'title': _titleController.text,
+            'description': _descriptionController.text.isEmpty
+                ? null
+                : _descriptionController.text,
+            'weekday': jsWeekday,
+            'hour': _selectedTime.hour,
+            'minute': _selectedTime.minute,
+            'durationMinutes': _durationController.text.isEmpty
+                ? null
+                : int.tryParse(_durationController.text),
+            'location': _locationController.text.isEmpty
+                ? null
+                : _locationController.text,
+            'categoryIds': _selectedCategoryIds.isEmpty
+                ? null
+                : _selectedCategoryIds.toList(),
+            'weeksAhead': _weeksAhead,
+            'notes': _notesController.text.isEmpty ? null : _notesController.text,
+          });
           if (!mounted) return;
-          Navigator.pop(context, true);
-          await Navigator.push(
-            context,
-            MaterialPageRoute<void>(
-              builder: (context) => SocialEventExpensesScreen(
-                eventId: created.id,
-                eventTitle: created.title,
+          final created = result['eventsCreated'] as int? ?? 0;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                created > 0
+                    ? 'Serie creada: $created entrenamiento(s) generados'
+                    : 'Serie guardada (los entrenamientos ya existían)',
               ),
+              backgroundColor: Colors.green,
             ),
           );
-          return;
+          Navigator.pop(context, true);
+        } else {
+          final created = await _eventsService.createEvent(eventData);
+          if (!mounted) return;
+
+          if (_selectedType == SportEventType.social) {
+            for (final g in _externalGuestLines) {
+              final name = g.name.text.trim();
+              if (name.isEmpty) continue;
+              try {
+                await _eventExpensesService.addSocialGuest(
+                  eventId: created.id,
+                  displayName: name,
+                  phone:
+                      g.phone.text.trim().isEmpty ? null : g.phone.text.trim(),
+                  email:
+                      g.email.text.trim().isEmpty ? null : g.email.text.trim(),
+                );
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content:
+                          Text('No se pudo registrar un invitado externo: $e'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+              }
+            }
+
+            if (!mounted) return;
+            Navigator.pop(context, true);
+            await Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (context) => SocialEventExpensesScreen(
+                  eventId: created.id,
+                  eventTitle: created.title,
+                ),
+              ),
+            );
+            return;
+          }
         }
       } else {
         await _eventsService.updateEvent(widget.event!.id, eventData);

@@ -134,7 +134,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 obscureText: _obscureCurrentPassword,
                 decoration: InputDecoration(
                   labelText: 'Contraseña actual',
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
                   prefixIcon: const Icon(Icons.lock),
+                  contentPadding: const EdgeInsets.fromLTRB(12, 20, 12, 16),
                   suffixIcon: IconButton(
                     icon: Icon(_obscureCurrentPassword
                         ? Icons.visibility
@@ -163,7 +165,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 obscureText: _obscureNewPassword,
                 decoration: InputDecoration(
                   labelText: 'Nueva contraseña',
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
                   prefixIcon: const Icon(Icons.lock_open),
+                  contentPadding: const EdgeInsets.fromLTRB(12, 20, 12, 16),
                   suffixIcon: IconButton(
                     icon: Icon(_obscureNewPassword
                         ? Icons.visibility
@@ -195,7 +199,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 obscureText: _obscureConfirmPassword,
                 decoration: InputDecoration(
                   labelText: 'Confirmar nueva contraseña',
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
                   prefixIcon: const Icon(Icons.lock_open),
+                  contentPadding: const EdgeInsets.fromLTRB(12, 20, 12, 16),
                   suffixIcon: IconButton(
                     icon: Icon(_obscureConfirmPassword
                         ? Icons.visibility

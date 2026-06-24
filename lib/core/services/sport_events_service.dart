@@ -116,6 +116,14 @@ class SportEventsService {
     }
   }
 
+  Future<Map<String, dynamic>> createTrainingSchedule(
+    Map<String, dynamic> scheduleData,
+  ) async {
+    final response =
+        await _dio.post('/sport-events/training-schedules', data: scheduleData);
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
   Future<SportEvent> createMatch(Map<String, dynamic> matchData) async {
     try {
       final response = await _dio.post('/sport-events/match', data: matchData);

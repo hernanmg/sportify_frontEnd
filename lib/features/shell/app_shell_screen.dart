@@ -14,7 +14,9 @@ import 'package:sportify_amateur/features/sports/team_admin_panel_screen.dart';
 import 'package:sportify_amateur/features/sports/my_matches_screen.dart';
 import 'package:sportify_amateur/features/finance/quota_overview_screen.dart';
 import 'package:sportify_amateur/features/notifications/notification_screen.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/teams/join_team_screen.dart';
+import 'package:sportify_amateur/features/teams/team_form_screen.dart';
 import 'package:sportify_amateur/features/reports/reports_hub_screen.dart';
 import 'package:sportify_amateur/features/sponsors/sponsors_screen.dart';
 import 'package:sportify_amateur/features/audit/audit_log_screen.dart';
@@ -72,6 +74,8 @@ class _AppShellScreenState extends State<AppShellScreen> {
     return r == 'super_admin' || r == 'manager' || r == 'admin';
   }
 
+  bool get _canEditTeam => UserCapabilities.canManageTeamSettings(_role);
+
   List<Widget> _moreMenuTiles(BuildContext ctx) {
     return [
       if (_isStaff)
@@ -82,6 +86,16 @@ class _AppShellScreenState extends State<AppShellScreen> {
           onTap: () {
             Navigator.pop(ctx);
             _openAdminPanel();
+          },
+        ),
+      if (_canEditTeam)
+        ListTile(
+          leading: _menuIcon(Icons.edit_outlined, Colors.deepPurple),
+          title: const Text('Editar equipo'),
+          subtitle: const Text('Nombre, logo, colores y categorías'),
+          onTap: () {
+            Navigator.pop(ctx);
+            _openEditTeam();
           },
         ),
       ListTile(
@@ -294,6 +308,53 @@ class _AppShellScreenState extends State<AppShellScreen> {
         MaterialPageRoute(
           builder: (_) => TeamAdminPanelScreen(initialTeamId: teamId),
         ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _openEditTeam() async {
+    try {
+      final teams = MyTeamOption.dedupeByTeamId(await TeamService().getMyTeams());
+      if (teams.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No tenés equipos asignados')),
+          );
+        }
+        return;
+      }
+      int teamId = teams.first.teamId;
+      if (teams.length > 1) {
+        final picked = await showModalBottomSheet<MyTeamOption>(
+          context: context,
+          builder: (ctx) => SafeArea(
+            child: ListView(
+              shrinkWrap: true,
+              children: teams
+                  .map(
+                    (t) => ListTile(
+                      title: Text(t.listLabel(teams)),
+                      onTap: () => Navigator.pop(ctx, t),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        );
+        if (picked == null) return;
+        teamId = picked.teamId;
+      }
+      final team = await TeamService().getTeamById(teamId);
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => TeamFormScreen(team: team)),
       );
     } catch (e) {
       if (mounted) {

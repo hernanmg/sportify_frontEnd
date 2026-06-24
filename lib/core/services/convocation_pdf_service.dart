@@ -19,6 +19,22 @@ class ConvocationPdfService {
     await Printing.layoutPdf(onLayout: (_) async => doc.save());
   }
 
+  Future<void> sharePdf(int convocationId) async {
+    final data = await fetchExport(convocationId);
+    final doc = _buildDocument(data);
+    final bytes = await doc.save();
+    final conv = Map<String, dynamic>.from(data['convocation'] as Map);
+    final rawTitle = conv['title']?.toString() ?? 'convocatoria';
+    final safeName = rawTitle
+        .replaceAll(RegExp(r'[^\w\s-]', unicode: true), '')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '_');
+    await Printing.sharePdf(
+      bytes: bytes,
+      filename: '${safeName.isEmpty ? 'convocatoria' : safeName}.pdf',
+    );
+  }
+
   pw.Document _buildDocument(Map<String, dynamic> data) {
     final conv = Map<String, dynamic>.from(data['convocation'] as Map);
     final squad = (data['squad'] as List<dynamic>? ?? []);
