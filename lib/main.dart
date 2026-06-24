@@ -9,6 +9,7 @@ import 'package:sportify_amateur/core/services/push_registration_service.dart';
 import 'package:sportify_amateur/firebase_background.dart';
 import 'package:sportify_amateur/firebase_options.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
+import 'package:sportify_amateur/features/auth/auth_gate_screen.dart';
 import 'package:sportify_amateur/features/auth/login.dart';
 import 'package:sportify_amateur/features/auth/user_login.dart';
 import 'package:sportify_amateur/features/auth/register_screen.dart';
@@ -105,7 +106,8 @@ class MainApp extends StatelessWidget {
       themeMode: themeProvider.themeMode,
       initialRoute: '/',
       routes: {
-        '/': (context) => LoginScreen(),
+        '/': (context) => const AuthGateScreen(),
+        '/welcome': (context) => LoginScreen(),
         '/login': (context) => const UserLoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/onboarding': (context) => const OnboardingWizard(),

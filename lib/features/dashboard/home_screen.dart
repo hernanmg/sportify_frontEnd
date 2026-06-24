@@ -8,6 +8,7 @@ import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/dashboard/team_membership_banner.dart';
 import 'package:sportify_amateur/features/dashboard/dt_home_dashboard.dart';
+import 'package:sportify_amateur/features/onboarding/dt_guided_tour.dart';
 import 'package:sportify_amateur/features/help/home_help_search_bar.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
 import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
@@ -45,6 +46,11 @@ class _HomeScreenState extends State<HomeScreen> {
         _role = role;
         _userName = name;
       });
+      if (role == 'dt') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) DtGuidedTour.maybeShow(context, role: role);
+        });
+      }
     }
   }
 
@@ -283,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     _QuickTile(
                       icon: Icons.dashboard_customize,
                       title: 'Panel del equipo',
-                      subtitle: 'Morosos, caja del mes, asistencias',
+                      subtitle: 'Cuotas pendientes, caja del mes, asistencias',
                       color: Colors.teal,
                       onTap: () => Navigator.pushNamed(
                         context,

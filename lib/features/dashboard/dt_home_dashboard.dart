@@ -219,7 +219,7 @@ class _DtHomeDashboardState extends State<DtHomeDashboard> {
               _InfoTile(
                 icon: Icons.warning_amber_rounded,
                 iconColor: Colors.orange.shade800,
-                title: 'Morosos en plantel',
+                title: 'Cuotas pendientes en plantel',
                 subtitle:
                     '${panel.debtors.length} con cuota pendiente — pueden quedar fuera de partido oficial',
                 trailing: formatMoney(panel.debtors.first.balance),

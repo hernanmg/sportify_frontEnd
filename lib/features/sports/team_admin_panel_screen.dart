@@ -180,7 +180,7 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
           _sectionTitle('Finanzas del mes'),
           _financeCard(panel.monthFinance),
           const SizedBox(height: 16),
-          _sectionTitle('Morosos (${panel.debtors.length})'),
+          _sectionTitle('Cuotas pendientes (${panel.debtors.length})'),
           if (panel.debtors.isEmpty)
             const Text('Todos al día en cuotas visibles')
           else

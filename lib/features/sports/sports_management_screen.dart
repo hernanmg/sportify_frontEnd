@@ -344,7 +344,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
                 icon: Icons.dashboard_customize,
                 label: 'Panel del equipo',
                 tooltip:
-                    'Morosos, confirmaciones, asistencia y saldo del mes (DT / admin)',
+                    'Cuotas pendientes, confirmaciones, asistencia y saldo del mes (DT / admin)',
                 onTap: _openAdminPanel,
               ),
               _opsChip(

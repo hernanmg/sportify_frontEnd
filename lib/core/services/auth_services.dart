@@ -7,6 +7,7 @@ import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:sportify_amateur/core/common/app_config.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/services/biometric_auth_service.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
 import 'package:sportify_amateur/core/services/push_registration_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
@@ -20,6 +21,7 @@ class AuthService {
   final AuthStorageService storageService = AuthStorageService();
   final UserProfileService profileService = UserProfileService();
   final secureStorage = FlutterSecureStorage();
+  final BiometricAuthService biometricService = BiometricAuthService.instance;
   final Dio _dio = DioClient.instance;
 
   Future<bool> signInWithGoogle() async {
@@ -211,6 +213,58 @@ class AuthService {
     return true;
   }
 
+  /// Desbloqueo rápido con huella / Face ID (cualquier rol).
+  Future<bool> tryBiometricUnlock() async {
+    final userId = await storageService.getUserId();
+    if (userId == null) return false;
+    if (!await biometricService.isEnabledForUser(userId)) return false;
+    if (!await biometricService.authenticate()) return false;
+    try {
+      await storageService.renewToken();
+      return true;
+    } catch (_) {
+      final token = await storageService.getToken();
+      return token != null;
+    }
+  }
+
+  Future<void> maybeOfferBiometricEnrollment(BuildContext context) async {
+    if (!context.mounted) return;
+    if (!await biometricService.isDeviceSupported()) return;
+    if (!await biometricService.canCheckBiometrics()) return;
+
+    final userId = await storageService.getUserId();
+    if (userId == null) return;
+    if (await biometricService.isEnabledForUser(userId)) return;
+
+    final types = await biometricService.availableBiometrics();
+    final label = biometricService.biometricLabel(types);
+
+    if (!context.mounted) return;
+    final accept = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('¿Activar $label?'),
+        content: Text(
+          'La próxima vez podés entrar más rápido sin escribir la contraseña.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Ahora no'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Activar'),
+          ),
+        ],
+      ),
+    );
+    if (accept == true) {
+      await biometricService.setEnabledForUser(userId, true);
+    }
+  }
+
   Future<void> signOut() async {
     await PushRegistrationService.instance.unregisterOnLogout();
     NotificationService().disconnectOnLogout();
@@ -335,6 +389,8 @@ class AuthService {
     } else if (authStatus['needsOnboarding'] == true) {
       Navigator.pushReplacementNamed(context, '/onboarding');
     } else {
+      await maybeOfferBiometricEnrollment(context);
+      if (!context.mounted) return;
       Navigator.pushReplacementNamed(context, '/dashboard');
     }
   }

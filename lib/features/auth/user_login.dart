@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
+import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/services/biometric_auth_service.dart';
 
 class UserLoginScreen extends StatefulWidget {
   const UserLoginScreen({super.key});
@@ -15,6 +17,51 @@ class _LoginScreenState extends State<UserLoginScreen> {
   final AuthService authService = AuthService();
   bool _isLoading = false;
   bool _obscure = true;
+  bool _biometricAvailable = false;
+  String _biometricLabel = 'biometría';
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometric();
+  }
+
+  Future<void> _checkBiometric() async {
+    final bio = BiometricAuthService.instance;
+    final userId = await AuthStorageService().getUserId();
+    if (userId == null) return;
+    if (!await bio.isEnabledForUser(userId)) return;
+    if (!await bio.isDeviceSupported()) return;
+    final types = await bio.availableBiometrics();
+    if (!mounted) return;
+    setState(() {
+      _biometricAvailable = true;
+      _biometricLabel = bio.biometricLabel(types);
+    });
+  }
+
+  Future<void> _loginWithBiometric() async {
+    setState(() => _isLoading = true);
+    try {
+      final ok = await authService.tryBiometricUnlock();
+      if (!ok) {
+        throw Exception('No se pudo verificar $_biometricLabel');
+      }
+      if (context.mounted) {
+        await authService.navigateAfterAuth(context);
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AuthService.loginErrorMessage(e)),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -180,6 +227,14 @@ class _LoginScreenState extends State<UserLoginScreen> {
                                         ),
                                       ),
                               ),
+                              if (_biometricAvailable) ...[
+                                const SizedBox(height: 12),
+                                OutlinedButton.icon(
+                                  onPressed: _isLoading ? null : _loginWithBiometric,
+                                  icon: const Icon(Icons.fingerprint),
+                                  label: Text('Entrar con $_biometricLabel'),
+                                ),
+                              ],
                               const SizedBox(height: 16),
                               TextButton(
                                 onPressed: () =>

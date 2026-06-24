@@ -82,7 +82,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
         ListTile(
           leading: _menuIcon(Icons.dashboard_customize, Colors.teal),
           title: const Text('Panel del equipo'),
-          subtitle: const Text('Morosos, confirmaciones, caja del mes'),
+          subtitle: const Text('Cuotas pendientes, confirmaciones, caja del mes'),
           onTap: () {
             Navigator.pop(ctx);
             _openAdminPanel();

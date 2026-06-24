@@ -479,7 +479,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
                                 child: FilledButton.icon(
                                   onPressed: _sendReminders,
                                   icon: const Icon(Icons.notifications),
-                                  label: const Text('Recordar morosos'),
+                                  label: const Text('Recordar cuotas pendientes'),
                                 ),
                               ),
                             ],

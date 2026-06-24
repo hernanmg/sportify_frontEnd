@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/services/biometric_auth_service.dart';
 import 'package:sportify_amateur/core/services/password_service.dart';
 
 class SecurityScreen extends StatefulWidget {
@@ -25,6 +26,62 @@ class _SecurityScreenState extends State<SecurityScreen> {
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  bool _biometricSupported = false;
+  bool _biometricEnabled = false;
+  String _biometricLabel = 'Biometría';
+  String? _userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometric();
+  }
+
+  Future<void> _loadBiometric() async {
+    final bio = BiometricAuthService.instance;
+    final userId = await _authStorage.getUserId();
+    final supported = await bio.isDeviceSupported() && await bio.canCheckBiometrics();
+    var enabled = false;
+    var label = 'Biometría';
+    if (userId != null && supported) {
+      enabled = await bio.isEnabledForUser(userId);
+      label = bio.biometricLabel(await bio.availableBiometrics());
+    }
+    if (!mounted) return;
+    setState(() {
+      _userId = userId;
+      _biometricSupported = supported;
+      _biometricEnabled = enabled;
+      _biometricLabel = label;
+    });
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    final userId = _userId;
+    if (userId == null) return;
+    final bio = BiometricAuthService.instance;
+    if (value) {
+      final ok = await bio.authenticate(
+        reason: 'Confirmá para activar $_biometricLabel',
+      );
+      if (!ok) return;
+      await bio.setEnabledForUser(userId, true);
+    } else {
+      await bio.setEnabledForUser(userId, false);
+    }
+    if (!mounted) return;
+    setState(() => _biometricEnabled = value);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          value
+              ? '$_biometricLabel activado para este dispositivo'
+              : '$_biometricLabel desactivado',
+        ),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -266,27 +323,6 @@ class _SecurityScreenState extends State<SecurityScreen> {
   }
 
   Widget _buildSecurityOptions() {
-    final securityOptions = [
-      {
-        'title': 'Verificación en dos pasos',
-        'subtitle': 'Agrega una capa extra de seguridad',
-        'icon': Icons.verified_user,
-        'enabled': false, // Próximamente
-      },
-      {
-        'title': 'Sesiones activas',
-        'subtitle': 'Ver y gestionar tus sesiones activas',
-        'icon': Icons.devices,
-        'enabled': false, // Próximamente
-      },
-      {
-        'title': 'Notificaciones de seguridad',
-        'subtitle': 'Recibe alertas sobre actividad sospechosa',
-        'icon': Icons.notifications_active,
-        'enabled': true,
-      },
-    ];
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -307,45 +343,36 @@ class _SecurityScreenState extends State<SecurityScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            ...securityOptions.map((option) {
-              return ListTile(
-                leading: Icon(
-                  option['icon'] as IconData,
-                  color: option['enabled'] as bool ? Colors.blue : Colors.grey,
+            if (_biometricSupported)
+              SwitchListTile(
+                secondary: const Icon(Icons.fingerprint, color: Colors.blue),
+                title: Text('Desbloqueo con $_biometricLabel'),
+                subtitle: const Text(
+                  'Entrá más rápido sin escribir la contraseña en este dispositivo',
                 ),
-                title: Text(option['title'] as String),
-                subtitle: Text(option['subtitle'] as String),
-                trailing: option['enabled'] as bool
-                    ? Switch(
-                        value: false, // Por ahora todas desactivadas
-                        onChanged: (value) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Función próximamente'),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                        },
-                      )
-                    : Chip(
-                        label: const Text(
-                          'Próximamente',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        backgroundColor: Colors.grey[20],
-                      ),
-                onTap: option['enabled'] as bool
-                    ? () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Función próximamente'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                      }
-                    : null,
-              );
-            }).toList(),
+                value: _biometricEnabled,
+                onChanged: _toggleBiometric,
+              )
+            else
+              ListTile(
+                leading: const Icon(Icons.fingerprint, color: Colors.grey),
+                title: const Text('Desbloqueo biométrico'),
+                subtitle: const Text('No disponible en este dispositivo'),
+                trailing: Chip(
+                  label: const Text('N/D', style: TextStyle(fontSize: 12)),
+                  backgroundColor: Colors.grey[200],
+                ),
+              ),
+            const Divider(height: 8),
+            ListTile(
+              leading: const Icon(Icons.verified_user, color: Colors.grey),
+              title: const Text('Verificación en dos pasos'),
+              subtitle: const Text('Agrega una capa extra de seguridad'),
+              trailing: Chip(
+                label: const Text('Próximamente', style: TextStyle(fontSize: 12)),
+                backgroundColor: Colors.grey[200],
+              ),
+            ),
           ],
         ),
       ),
