@@ -40,7 +40,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
   Future<void> _loadBiometric() async {
     final bio = BiometricAuthService.instance;
     final userId = await _authStorage.getUserId();
-    final supported = await bio.isDeviceSupported() && await bio.canCheckBiometrics();
+    final supported = await bio.isBiometricUnlockAvailable();
     var enabled = false;
     var label = 'Biometría';
     if (userId != null && supported) {
@@ -357,7 +357,10 @@ class _SecurityScreenState extends State<SecurityScreen> {
               ListTile(
                 leading: const Icon(Icons.fingerprint, color: Colors.grey),
                 title: const Text('Desbloqueo biométrico'),
-                subtitle: const Text('No disponible en este dispositivo'),
+                subtitle: const Text(
+                  'No disponible en este teléfono (sin huella ni Face ID). '
+                  'Usá email y contraseña.',
+                ),
                 trailing: Chip(
                   label: const Text('N/D', style: TextStyle(fontSize: 12)),
                   backgroundColor: Colors.grey[200],

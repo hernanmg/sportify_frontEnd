@@ -256,7 +256,14 @@ class MyAccountTabState extends State<MyAccountTab> {
 
     final summary = _summary!;
     final pendingCharges = summary.charges
-        .where((c) => c.status == 'pending' || c.status == 'partial')
+        .where(
+          (c) =>
+              (c.status == 'pending' || c.status == 'partial') &&
+              c.pendingAmount > 0,
+        )
+        .toList();
+    final scheduledCharges = summary.charges
+        .where((c) => c.status == 'scheduled')
         .toList();
 
     return RefreshIndicator(
@@ -352,7 +359,11 @@ class MyAccountTabState extends State<MyAccountTab> {
                   ),
                   title: Text(charge.concept),
                   subtitle: Text(
-                    'Vence: ${charge.dueDate ?? '—'} · ${charge.status}',
+                    charge.dueDate != null
+                        ? 'Vence: ${charge.dueDate}'
+                        : charge.status == 'partial'
+                            ? 'Pago parcial'
+                            : 'Cuota del mes',
                   ),
                   trailing: Text(
                     formatMoney(charge.pendingAmount),
@@ -361,6 +372,32 @@ class MyAccountTabState extends State<MyAccountTab> {
                 ),
               ),
             ),
+          if (scheduledCharges.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Cuotas programadas',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Meses futuros — se activan cuando llega el mes',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            ...scheduledCharges.map(
+              (charge) => Card(
+                color: Colors.blueGrey.shade50,
+                child: ListTile(
+                  leading: const Icon(Icons.event, color: Colors.blueGrey),
+                  title: Text(charge.concept),
+                  trailing: Text(
+                    formatMoney(charge.amount),
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Text(
             'Historial de pagos',

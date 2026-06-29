@@ -31,7 +31,7 @@ class _LoginScreenState extends State<UserLoginScreen> {
     final userId = await AuthStorageService().getUserId();
     if (userId == null) return;
     if (!await bio.isEnabledForUser(userId)) return;
-    if (!await bio.isDeviceSupported()) return;
+    if (!await bio.isBiometricUnlockAvailable()) return;
     final types = await bio.availableBiometrics();
     if (!mounted) return;
     setState(() {

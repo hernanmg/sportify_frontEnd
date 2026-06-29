@@ -170,8 +170,8 @@ class _PitchPainter extends CustomPainter {
       line,
     );
     canvas.drawLine(
-      Offset(size.width / 2, 4),
-      Offset(size.width / 2, size.height - 4),
+      Offset(4, size.height / 2),
+      Offset(size.width - 4, size.height / 2),
       line,
     );
     canvas.drawCircle(

@@ -30,7 +30,9 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
     }
 
     final userId = await _storage.getUserId();
-    if (userId != null && await _biometric.isEnabledForUser(userId)) {
+    if (userId != null &&
+        await _biometric.isEnabledForUser(userId) &&
+        await _biometric.isBiometricUnlockAvailable()) {
       final ok = await _biometric.authenticate();
       if (!ok) {
         _goLogin();

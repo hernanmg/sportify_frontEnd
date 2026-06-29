@@ -13,6 +13,18 @@ class BiometricAuthService {
 
   String _enabledKey(String userId) => 'biometric_enabled_$userId';
 
+  Future<bool> isBiometricUnlockAvailable() async {
+    if (kIsWeb) return false;
+    try {
+      if (!await _localAuth.isDeviceSupported()) return false;
+      final types = await _localAuth.getAvailableBiometrics();
+      if (types.isNotEmpty) return true;
+      return await _localAuth.canCheckBiometrics;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> isDeviceSupported() async {
     if (kIsWeb) return false;
     try {

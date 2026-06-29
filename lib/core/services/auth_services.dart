@@ -230,8 +230,7 @@ class AuthService {
 
   Future<void> maybeOfferBiometricEnrollment(BuildContext context) async {
     if (!context.mounted) return;
-    if (!await biometricService.isDeviceSupported()) return;
-    if (!await biometricService.canCheckBiometrics()) return;
+    if (!await biometricService.isBiometricUnlockAvailable()) return;
 
     final userId = await storageService.getUserId();
     if (userId == null) return;
