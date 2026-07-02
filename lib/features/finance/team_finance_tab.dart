@@ -8,8 +8,13 @@ import 'package:sportify_amateur/models/finance.dart';
 
 class TeamFinanceTab extends StatefulWidget {
   final int? teamId;
+  final int? categoryId;
 
-  const TeamFinanceTab({super.key, required this.teamId});
+  const TeamFinanceTab({
+    super.key,
+    required this.teamId,
+    this.categoryId,
+  });
 
   @override
   State<TeamFinanceTab> createState() => TeamFinanceTabState();
@@ -47,7 +52,8 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
   @override
   void didUpdateWidget(covariant TeamFinanceTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.teamId != widget.teamId) {
+    if (oldWidget.teamId != widget.teamId ||
+        oldWidget.categoryId != widget.categoryId) {
       reload();
     }
   }
@@ -71,7 +77,11 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
       final season = context.read<SeasonProvider>().season;
       final results = await Future.wait([
         _financeService.getTeamSummary(teamId),
-        _financeService.getTeamPlayerBalances(teamId, season: season),
+        _financeService.getTeamPlayerBalances(
+          teamId,
+          season: season,
+          categoryId: widget.categoryId,
+        ),
         _financeService.getPendingPayments(teamId),
       ]);
       if (!mounted) return;

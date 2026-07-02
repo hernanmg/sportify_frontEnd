@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
@@ -23,6 +25,14 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
   }
 
   Future<void> _bootstrap() async {
+    try {
+      await _bootstrapInner().timeout(const Duration(seconds: 45));
+    } catch (_) {
+      _goLogin();
+    }
+  }
+
+  Future<void> _bootstrapInner() async {
     final token = await _storage.getToken();
     if (token == null) {
       _goLogin();
@@ -33,22 +43,26 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
     if (userId != null &&
         await _biometric.isEnabledForUser(userId) &&
         await _biometric.isBiometricUnlockAvailable()) {
-      final ok = await _biometric.authenticate();
+      final ok = await _biometric
+          .authenticate()
+          .timeout(const Duration(seconds: 90), onTimeout: () => false);
       if (!ok) {
         _goLogin();
         return;
       }
     }
 
-    try {
-      final status = await _auth.checkAuthStatus();
-      if (!mounted) return;
-      if (status['isAuthenticated'] == true) {
-        await _auth.navigateAfterAuth(context);
-      } else {
-        _goLogin();
-      }
-    } catch (_) {
+    final status = await _auth.checkAuthStatus().timeout(
+          const Duration(seconds: 45),
+          onTimeout: () => {'isAuthenticated': false},
+        );
+    if (!mounted) return;
+    if (status['isAuthenticated'] == true) {
+      await _auth.navigateAfterAuth(context).timeout(
+            const Duration(seconds: 45),
+            onTimeout: () {},
+          );
+    } else {
       _goLogin();
     }
   }

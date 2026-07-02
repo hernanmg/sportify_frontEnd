@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/models/post_match.dart';
-import 'package:sportify_amateur/widgets/match_field_widget.dart';
+import 'package:sportify_amateur/widgets/google_style_lineup_field.dart';
 
 /// Vista previa estática de la pantalla de alineación (sin partido real).
 class LineupHelpPreview extends StatelessWidget {
@@ -60,17 +60,24 @@ class LineupHelpPreview extends StatelessWidget {
               ),
         ),
         const SizedBox(height: 8),
-        AspectRatio(
-          aspectRatio: 0.68,
+        SizedBox(
+          height: 360,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: IgnorePointer(
-              child: MatchFieldWidget(
+              child: GoogleStyleLineupField(
                 players: _demoPlayers,
                 slots: _demoSlots,
                 formation: '4-4-2',
-                compact: true,
-                showFormationLabel: true,
+                matchResult: PostMatchResult(
+                  teamScore: 2,
+                  opponentScore: 1,
+                  isHomeMatch: true,
+                ),
+                opponentName: 'Rival',
+                teamName: 'Mi equipo',
+                isCompleted: true,
+                ratings: const [],
               ),
             ),
           ),

@@ -3,8 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/services/post_match_service.dart';
 import 'package:sportify_amateur/features/sports/match_lineup_board_tab.dart';
 import 'package:sportify_amateur/features/sports/post_match_manage_tabs.dart';
-import 'package:sportify_amateur/widgets/field_drawing_overlay.dart';
-import 'package:sportify_amateur/widgets/match_field_widget.dart';
+import 'package:sportify_amateur/widgets/google_style_lineup_field.dart';
 import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:sportify_amateur/models/post_match.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
@@ -750,33 +749,9 @@ class _SummaryTab extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            AspectRatio(
-              aspectRatio: 0.68,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  MatchFieldWidget(
-                    players: data.lineup,
-                    slots: data.lineupSlots.isNotEmpty
-                        ? data.lineupSlots
-                        : defaultSlotsForFormation(
-                            data.formation ?? '4-4-2',
-                            data.lineup
-                                .where((p) => p.isStarter)
-                                .map((p) => p.userId)
-                                .toList(),
-                          ),
-                    formation: data.formation,
-                    compact: true,
-                    showFormationLabel: true,
-                  ),
-                  FieldDrawingOverlay(
-                    strokes: data.boardStrokes,
-                    drawEnabled: false,
-                    onStrokesChanged: (_) {},
-                  ),
-                ],
-              ),
+            SizedBox(
+              height: 480,
+              child: GoogleStyleLineupField.fromPostMatch(data),
             ),
           ],
         ],

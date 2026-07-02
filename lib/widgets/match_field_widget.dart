@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/models/post_match.dart';
 import 'package:sportify_amateur/widgets/player_avatar.dart';
@@ -154,7 +156,12 @@ class _PitchPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final grass = Paint()..color = const Color(0xFF2D5A27);
+    final grass = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF1E4620), Color(0xFF2E7D32), Color(0xFF1B5E20)],
+      ).createShader(rect);
     canvas.drawRRect(
       RRect.fromRectAndRadius(rect, const Radius.circular(8)),
       grass,
@@ -165,38 +172,67 @@ class _PitchPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 
-    canvas.drawRect(
-      Rect.fromLTWH(4, 4, size.width - 8, size.height - 8),
-      line,
+    const margin = 4.0;
+    final field = Rect.fromLTWH(
+      margin,
+      margin,
+      size.width - margin * 2,
+      size.height - margin * 2,
     );
-    canvas.drawLine(
-      Offset(4, size.height / 2),
-      Offset(size.width - 4, size.height / 2),
-      line,
+    canvas.drawRect(field, line);
+
+    final boxW = field.width * 0.52;
+    final boxH = field.height * 0.2;
+    final bottomBox = Rect.fromLTWH(
+      field.left + (field.width - boxW) / 2,
+      field.bottom - boxH,
+      boxW,
+      boxH,
     );
-    canvas.drawCircle(
-      Offset(size.width / 2, size.height / 2),
-      size.width * 0.12,
-      line,
-    );
+    canvas.drawRect(bottomBox, line);
+
+    final goalLine = Paint()
+      ..color = line.color
+      ..style = line.style
+      ..strokeWidth = 2.5;
+    final goalW = field.width * 0.24;
+    final goalH = field.height * 0.035;
     canvas.drawRect(
       Rect.fromLTWH(
-        size.width * 0.25,
-        4,
-        size.width * 0.5,
-        size.height * 0.18,
+        field.center.dx - goalW / 2,
+        field.bottom - goalH,
+        goalW,
+        goalH,
       ),
-      line,
+      goalLine,
     );
-    canvas.drawRect(
-      Rect.fromLTWH(
-        size.width * 0.25,
-        size.height - 4 - size.height * 0.18,
-        size.width * 0.5,
-        size.height * 0.18,
-      ),
-      line,
-    );
+
+    _drawPenaltyArc(canvas, bottomBox, line, arcDown: false);
+  }
+
+  void _drawPenaltyArc(
+    Canvas canvas,
+    Rect box,
+    Paint line, {
+    required bool arcDown,
+  }) {
+    final center = Offset(box.center.dx, arcDown ? box.bottom : box.top);
+    final radius = box.width * 0.16;
+    final path = Path();
+    if (arcDown) {
+      path.addArc(
+        Rect.fromCircle(center: center, radius: radius),
+        0,
+        math.pi,
+      );
+    } else {
+      path.addArc(
+        Rect.fromCircle(center: center, radius: radius),
+        math.pi,
+        math.pi,
+      );
+    }
+    canvas.drawPath(path, line);
   }
 
   @override

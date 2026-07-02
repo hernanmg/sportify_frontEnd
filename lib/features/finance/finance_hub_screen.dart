@@ -25,6 +25,7 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
   List<Team> _teams = [];
   List<MyTeamOption> _teamOptions = [];
   Team? _selectedTeam;
+  int? _selectedCategoryId;
   bool _canManageFinance = false;
   bool _ready = false;
 
@@ -94,11 +95,33 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
     final role = await AuthStorageService().getRole();
     setState(() {
       _selectedTeam = team;
+      _selectedCategoryId = null;
       _canManageFinance = _userCanManageFinanceForTeam(role, team);
     });
     _myAccountKey.currentState?.reload();
     _teamFinanceKey.currentState?.reload();
     _ledgerKey.currentState?.reload();
+  }
+
+  void _onCategoryChanged(int? categoryId) {
+    setState(() => _selectedCategoryId = categoryId);
+    _teamFinanceKey.currentState?.reload();
+  }
+
+  List<({int id, String name})> _categoriesForTeam(Team? team) {
+    if (team == null) return [];
+    final ids = team.categoryIds;
+    final names = team.categoryNames;
+    if (ids.isEmpty) return [];
+    return List.generate(
+      ids.length,
+      (i) => (
+        id: ids[i],
+        name: i < names.length && names[i].trim().isNotEmpty
+            ? names[i]
+            : 'Categoría ${ids[i]}',
+      ),
+    );
   }
 
   Future<void> _refreshCurrentTab(TabController controller) async {
@@ -120,10 +143,14 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
       );
     }
 
+    if (_teams.length == 1) {
+      return const SizedBox.shrink();
+    }
+
     return Material(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         child: DropdownButtonFormField<int>(
           key: ValueKey(_selectedTeam?.id),
           initialValue: _selectedTeam?.id,
@@ -146,6 +173,44 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
               )
               .toList(),
           onChanged: _onTeamChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategorySelector(BuildContext context) {
+    final categories = _categoriesForTeam(_selectedTeam);
+    if (categories.length <= 1) {
+      return const SizedBox.shrink();
+    }
+
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: DropdownButtonFormField<int?>(
+          key: ValueKey('cat-${_selectedTeam?.id}-$_selectedCategoryId'),
+          initialValue: _selectedCategoryId,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Categoría',
+            isDense: true,
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+          items: [
+            const DropdownMenuItem<int?>(
+              value: null,
+              child: Text('Todas las categorías'),
+            ),
+            ...categories.map(
+              (c) => DropdownMenuItem<int?>(
+                value: c.id,
+                child: Text(c.name, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+          ],
+          onChanged: _onCategoryChanged,
         ),
       ),
     );
@@ -219,6 +284,7 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildTeamSelector(context),
+                _buildCategorySelector(context),
                 Expanded(
                   child: TabBarView(
                     children: [
@@ -230,6 +296,7 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
                         TeamFinanceTab(
                           key: _teamFinanceKey,
                           teamId: _selectedTeam?.id,
+                          categoryId: _selectedCategoryId,
                         ),
                       LedgerTab(
                         key: _ledgerKey,

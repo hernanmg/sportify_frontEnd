@@ -43,10 +43,14 @@ class FinanceService {
   Future<List<PlayerBalance>> getTeamPlayerBalances(
     int teamId, {
     String? season,
+    int? categoryId,
   }) async {
+    final queryParameters = <String, dynamic>{};
+    if (season != null) queryParameters['season'] = season;
+    if (categoryId != null) queryParameters['categoryId'] = categoryId;
     final response = await _dio.get(
       '/finance/team/$teamId/players-balance',
-      queryParameters: season != null ? {'season': season} : null,
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
     );
     final list = response.data as List<dynamic>;
     return list

@@ -400,6 +400,15 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = scheme.brightness == Brightness.dark;
+    final bannerBg =
+        isDark ? scheme.tertiaryContainer : Colors.orange.shade50;
+    final bannerFg =
+        isDark ? scheme.onTertiaryContainer : Colors.orange.shade900;
+    final bannerAction =
+        isDark ? scheme.onTertiaryContainer : Colors.orange.shade800;
+
     return Column(
       children: [
         Padding(
@@ -494,24 +503,28 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
             UserCapabilities.canManageConvocations(_userRole) &&
             _sentWithPending.isNotEmpty)
           MaterialBanner(
-            backgroundColor: Colors.orange.shade50,
-            leading: Icon(Icons.notifications_active, color: Colors.orange.shade800),
+            backgroundColor: bannerBg,
+            leading: Icon(Icons.notifications_active, color: bannerFg),
             content: Text(
               _sentWithPending.length == 1
                   ? '${_sentWithPending.first.title}: ${_sentWithPending.first.pendingCount} sin confirmar'
                   : '$_totalPendingResponses confirmación(es) pendiente(s) en ${_sentWithPending.length} convocatoria(s)',
+              style: TextStyle(color: bannerFg),
             ),
             actions: [
               TextButton(
                 onPressed: () => _remindPending(_sentWithPending.first),
+                style: TextButton.styleFrom(foregroundColor: bannerAction),
                 child: const Text('Recordar'),
               ),
               TextButton(
                 onPressed: () => _showResponses(_sentWithPending.first),
+                style: TextButton.styleFrom(foregroundColor: bannerAction),
                 child: const Text('Ver detalle'),
               ),
               TextButton(
                 onPressed: () => setState(() => _filter = 'sent'),
+                style: TextButton.styleFrom(foregroundColor: bannerAction),
                 child: const Text('Ver enviadas'),
               ),
             ],
