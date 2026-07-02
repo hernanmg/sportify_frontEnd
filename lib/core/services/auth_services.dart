@@ -14,6 +14,8 @@ import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/user_profile_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 
 class AuthService {
   //final String backendUrl = AppConfig.apiBaseUrl;
@@ -389,6 +391,8 @@ class AuthService {
       Navigator.pushReplacementNamed(context, '/onboarding');
     } else {
       await maybeOfferBiometricEnrollment(context);
+      if (!context.mounted) return;
+      await context.read<ActiveWorkspaceProvider>().ensureResolved(context);
       if (!context.mounted) return;
       Navigator.pushReplacementNamed(context, '/dashboard');
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/finance_service.dart';
@@ -40,7 +41,13 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final overview = await _finance.getQuotaOverview(widget.teamId);
+      final season = context.read<SeasonProvider>().season;
+      final categoryId = context.read<ActiveWorkspaceProvider>().categoryId;
+      final overview = await _finance.getQuotaOverview(
+        widget.teamId,
+        season: season,
+        categoryId: categoryId,
+      );
       List<QuotaSeries> series = [];
       if (_canManageFinance) {
         try {

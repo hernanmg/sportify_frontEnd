@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/common/team_branding_provider.dart';
+import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
@@ -44,6 +45,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
     _loadRole();
     context.read<SeasonProvider>().load();
     context.read<TeamBrandingProvider>().load();
+    context.read<ActiveWorkspaceProvider>().load();
     _guardStaffTeamSetup();
   }
 
@@ -78,6 +80,15 @@ class _AppShellScreenState extends State<AppShellScreen> {
 
   List<Widget> _moreMenuTiles(BuildContext ctx) {
     return [
+      ListTile(
+        leading: _menuIcon(Icons.swap_horiz, Colors.green.shade700),
+        title: const Text('Cambiar equipo activo'),
+        subtitle: const Text('Gestión deportiva, finanzas y convocatorias'),
+        onTap: () {
+          Navigator.pop(ctx);
+          context.read<ActiveWorkspaceProvider>().openTeamPicker(context);
+        },
+      ),
       if (_isStaff)
         ListTile(
           leading: _menuIcon(Icons.dashboard_customize, Colors.teal),

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:sportify_amateur/widgets/season_selector_chip.dart';
+import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
-import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/features/finance/ledger_tab.dart';
 import 'package:sportify_amateur/features/finance/my_account_tab.dart';
 import 'package:sportify_amateur/features/finance/team_finance_tab.dart';
@@ -17,17 +18,11 @@ class FinanceHubScreen extends StatefulWidget {
 }
 
 class _FinanceHubScreenState extends State<FinanceHubScreen> {
-  final TeamService _teamService = TeamService();
   final _myAccountKey = GlobalKey<MyAccountTabState>();
   final _teamFinanceKey = GlobalKey<TeamFinanceTabState>();
   final _ledgerKey = GlobalKey<LedgerTabState>();
 
-  List<Team> _teams = [];
-  List<MyTeamOption> _teamOptions = [];
-  Team? _selectedTeam;
-  int? _selectedCategoryId;
-  bool _canManageFinance = false;
-  bool _ready = false;
+  String? _role;
 
   static const _globalFinanceRoles = {
     'super_admin',
@@ -39,148 +34,55 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
     'team_captain',
   };
 
-  bool _userCanManageFinanceForTeam(String? role, Team? team) {
+  @override
+  void initState() {
+    super.initState();
+    _loadRole();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<ActiveWorkspaceProvider>().load();
+    });
+  }
+
+  Future<void> _loadRole() async {
+    final role = await AuthStorageService().getRole();
+    if (mounted) setState(() => _role = role);
+  }
+
+  bool _userCanManageFinanceForTeam(
+    String? role,
+    Team? team,
+    List<MyTeamOption> teamOptions,
+  ) {
     if (team == null) return false;
     if (role == 'super_admin' || role == 'manager' || role == 'admin') {
       return true;
     }
-    final opt = MyTeamOption.findInList(_teamOptions, team.id);
+    final opt = MyTeamOption.findInList(teamOptions, team.id);
     if (opt?.canManageFinance == true) return true;
     if (role != null && _globalFinanceRoles.contains(role)) {
-      return _teamOptions.any((t) => t.teamId == team.id);
+      return teamOptions.any((t) => t.teamId == team.id);
     }
     return false;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadInitialData();
-  }
-
-  Future<void> _loadInitialData() async {
-    final role = await AuthStorageService().getRole();
-    final isPlatformAdmin =
-        role == 'super_admin' || role == 'manager' || role == 'admin';
-
-    List<MyTeamOption> teamOptions = [];
-    List<Team> teams = [];
-    try {
-      if (isPlatformAdmin) {
-        teams = await _teamService.getAllTeams();
-      } else {
-        teamOptions = MyTeamOption.dedupeByTeamId(await _teamService.getMyTeams());
-        teams = teamOptions.map((o) => o.team).toList();
-      }
-    } catch (_) {
-      teams = [];
-    }
-
-    final selected = teams.isNotEmpty ? teams.first : null;
-
-    if (!mounted) return;
-
-    setState(() {
-      _teamOptions = teamOptions;
-      _teams = teams;
-      _selectedTeam = selected;
-      _canManageFinance = _userCanManageFinanceForTeam(role, selected);
-      _ready = true;
-    });
-  }
-
-  void _onTeamChanged(int? teamId) async {
-    if (teamId == null) return;
-    final team = _teams.firstWhere((t) => t.id == teamId);
-    final role = await AuthStorageService().getRole();
-    setState(() {
-      _selectedTeam = team;
-      _selectedCategoryId = null;
-      _canManageFinance = _userCanManageFinanceForTeam(role, team);
-    });
-    _myAccountKey.currentState?.reload();
-    _teamFinanceKey.currentState?.reload();
-    _ledgerKey.currentState?.reload();
-  }
-
-  void _onCategoryChanged(int? categoryId) {
-    setState(() => _selectedCategoryId = categoryId);
-    _teamFinanceKey.currentState?.reload();
-  }
-
-  List<({int id, String name})> _categoriesForTeam(Team? team) {
-    if (team == null) return [];
-    final ids = team.categoryIds;
-    final names = team.categoryNames;
-    if (ids.isEmpty) return [];
-    return List.generate(
-      ids.length,
-      (i) => (
-        id: ids[i],
-        name: i < names.length && names[i].trim().isNotEmpty
-            ? names[i]
-            : 'Categoría ${ids[i]}',
-      ),
-    );
-  }
-
   Future<void> _refreshCurrentTab(TabController controller) async {
+    final canManage = _userCanManageFinanceForTeam(
+      _role,
+      context.read<ActiveWorkspaceProvider>().team,
+      context.read<ActiveWorkspaceProvider>().teamOptions,
+    );
     final index = controller.index;
     if (index == 0) {
       await _myAccountKey.currentState?.reload();
-    } else if (_canManageFinance && index == 1) {
+    } else if (canManage && index == 1) {
       await _teamFinanceKey.currentState?.reload();
     } else {
       await _ledgerKey.currentState?.reload();
     }
   }
 
-  Widget _buildTeamSelector(BuildContext context) {
-    if (_teams.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Text('No hay equipos disponibles'),
-      );
-    }
-
-    if (_teams.length == 1) {
-      return const SizedBox.shrink();
-    }
-
-    return Material(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        child: DropdownButtonFormField<int>(
-          key: ValueKey(_selectedTeam?.id),
-          initialValue: _selectedTeam?.id,
-          isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Equipo',
-            isDense: true,
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          ),
-          items: _teams
-              .map(
-                (team) => DropdownMenuItem(
-                  value: team.id,
-                  child: Text(
-                    Team.listLabel(team, _teams),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: _onTeamChanged,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategorySelector(BuildContext context) {
-    final categories = _categoriesForTeam(_selectedTeam);
-    if (categories.length <= 1) {
+  Widget _buildCategorySelector(ActiveWorkspaceProvider workspace) {
+    if (!workspace.hasMultipleCategories) {
       return const SizedBox.shrink();
     }
 
@@ -189,8 +91,8 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         child: DropdownButtonFormField<int?>(
-          key: ValueKey('cat-${_selectedTeam?.id}-$_selectedCategoryId'),
-          initialValue: _selectedCategoryId,
+          key: ValueKey('fin-cat-${workspace.teamId}-${workspace.categoryId}'),
+          initialValue: workspace.categoryId,
           isExpanded: true,
           decoration: const InputDecoration(
             labelText: 'Categoría',
@@ -203,14 +105,17 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
               value: null,
               child: Text('Todas las categorías'),
             ),
-            ...categories.map(
+            ...workspace.categories.map(
               (c) => DropdownMenuItem<int?>(
                 value: c.id,
                 child: Text(c.name, overflow: TextOverflow.ellipsis),
               ),
             ),
           ],
-          onChanged: _onCategoryChanged,
+          onChanged: (v) async {
+            await workspace.setCategoryId(v);
+            _teamFinanceKey.currentState?.reload();
+          },
         ),
       ),
     );
@@ -218,7 +123,10 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_ready) {
+    final workspace = context.watch<ActiveWorkspaceProvider>();
+    final selectedTeam = workspace.team;
+
+    if (!workspace.ready) {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Finanzas'),
@@ -229,7 +137,12 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
       );
     }
 
-    final tabCount = _canManageFinance ? 3 : 2;
+    final canManageFinance = _userCanManageFinanceForTeam(
+      _role,
+      selectedTeam,
+      workspace.teamOptions,
+    );
+    final tabCount = canManageFinance ? 3 : 2;
 
     return DefaultTabController(
       length: tabCount,
@@ -239,7 +152,11 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
 
           return Scaffold(
             appBar: AppBar(
-              title: const Text('Finanzas'),
+              title: Text(
+                selectedTeam != null
+                    ? 'Finanzas · ${selectedTeam.name}'
+                    : 'Finanzas',
+              ),
               backgroundColor: Colors.green.shade700,
               foregroundColor: Colors.white,
               bottom: TabBar(
@@ -248,7 +165,7 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
                 unselectedLabelColor: Colors.white70,
                 tabs: [
                   const Tab(icon: Icon(Icons.person), text: 'Mi cuenta'),
-                  if (_canManageFinance)
+                  if (canManageFinance)
                     const Tab(icon: Icon(Icons.groups), text: 'Equipo'),
                   const Tab(
                     icon: Icon(Icons.receipt_long),
@@ -261,14 +178,14 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
                 IconButton(
                   icon: const Icon(Icons.groups),
                   tooltip: 'Cuotas del plantel',
-                  onPressed: _selectedTeam == null
+                  onPressed: selectedTeam == null
                       ? null
                       : () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => QuotaOverviewScreen(
-                                teamId: _selectedTeam!.id,
+                                teamId: selectedTeam.id,
                               ),
                             ),
                           );
@@ -283,24 +200,33 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
             body: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildTeamSelector(context),
-                _buildCategorySelector(context),
+                if (selectedTeam == null)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Seleccioná tu equipo activo para ver finanzas.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                _buildCategorySelector(workspace),
                 Expanded(
                   child: TabBarView(
                     children: [
                       MyAccountTab(
                         key: _myAccountKey,
-                        teamId: _selectedTeam?.id,
+                        teamId: selectedTeam?.id,
                       ),
-                      if (_canManageFinance)
+                      if (canManageFinance)
                         TeamFinanceTab(
                           key: _teamFinanceKey,
-                          teamId: _selectedTeam?.id,
-                          categoryId: _selectedCategoryId,
+                          teamId: selectedTeam?.id,
+                          categoryId: workspace.categoryId,
                         ),
                       LedgerTab(
                         key: _ledgerKey,
-                        teamId: _selectedTeam?.id,
+                        teamId: selectedTeam?.id,
                       ),
                     ],
                   ),

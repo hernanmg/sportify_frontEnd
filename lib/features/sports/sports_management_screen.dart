@@ -18,6 +18,7 @@ import 'package:sportify_amateur/features/sports/attendance_screen.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
 import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/sports/team_calendar_screen.dart';
@@ -199,11 +200,13 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
   }
 
   Widget _buildTabBody(_SportsMgmtTab tab) {
+    final teamId =
+        context.watch<ActiveWorkspaceProvider>().teamId ?? widget.initialTeamId;
     switch (tab) {
       case _SportsMgmtTab.roster:
         return RosterManagementScreen(
           key: _rosterListKey,
-          teamId: widget.initialTeamId,
+          teamId: teamId,
         );
       case _SportsMgmtTab.events:
         return EventsManagementScreen(key: _eventsKey);
@@ -212,7 +215,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
       case _SportsMgmtTab.playerStatus:
         return PlayerStatusScreen(
           key: _playerStatusKey,
-          initialTeamId: widget.initialTeamId,
+          initialTeamId: teamId,
         );
     }
   }
@@ -618,6 +621,8 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
   }
 
   Future<int?> _pickTeamId({String? emptyMessage}) async {
+    final workspaceTeamId = context.read<ActiveWorkspaceProvider>().teamId;
+    if (workspaceTeamId != null) return workspaceTeamId;
     try {
       final teams = MyTeamOption.dedupeByTeamId(await TeamService().getMyTeams());
       if (!mounted) return null;

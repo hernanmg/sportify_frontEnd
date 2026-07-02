@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/convocations_service.dart';
-import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/convocation_pdf_service.dart';
 import 'package:sportify_amateur/core/utils/user_capabilities.dart';
+import 'package:sportify_amateur/core/utils/sport_event_category.dart';
+import 'package:intl/intl.dart';
 import 'package:sportify_amateur/features/sports/convocation_form_screen.dart';
 import 'package:sportify_amateur/features/sports/post_match_screen.dart';
 import 'package:sportify_amateur/widgets/player_avatar.dart';
-import 'package:sportify_amateur/models/my_team_option.dart';
 import 'package:sportify_amateur/models/player_eligibility.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 
@@ -22,60 +23,57 @@ class ConvocationsScreen extends StatefulWidget {
 class ConvocationsScreenState extends State<ConvocationsScreen> {
   final _convocationsService = ConvocationsService();
   final _pdfService = ConvocationPdfService();
-  final _teamService = TeamService();
 
-  List<MyTeamOption> _teams = [];
-  MyTeamOption? _selectedTeam;
   List<SportEvent> _convocations = [];
   bool _loading = true;
   String _filter = 'all';
   String? _userRole;
+  int? _loadedForTeamId;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final ws = context.read<ActiveWorkspaceProvider>();
+      ws.addListener(_onWorkspaceChanged);
+      ws.load().then((_) => _load());
+    });
+  }
+
+  @override
+  void dispose() {
+    try {
+      context.read<ActiveWorkspaceProvider>().removeListener(_onWorkspaceChanged);
+    } catch (_) {}
+    super.dispose();
+  }
+
+  void _onWorkspaceChanged() {
+    final teamId = context.read<ActiveWorkspaceProvider>().teamId;
+    if (teamId != _loadedForTeamId && mounted) {
+      _load();
+    }
   }
 
   Future<void> reload() => _load();
 
   Future<void> _load() async {
+    final workspace = context.read<ActiveWorkspaceProvider>();
+    final teamId = workspace.teamId;
+
     setState(() => _loading = true);
     try {
       final role = await AuthStorageService().getRole();
-      var teams = await _teamService.getMyTeams();
-      if (teams.isEmpty) {
-        final all = await _teamService.getAllTeams();
-        teams = all
-            .map(
-              (t) => MyTeamOption(
-                teamId: t.id,
-                name: t.name,
-                categories: t.categoryNames,
-                categoryIds: t.categoryIds,
-                team: t,
-              ),
-            )
-            .toList();
-      }
-      teams = MyTeamOption.dedupeByTeamId(teams);
-      final previousId = _selectedTeam?.teamId;
-      final selected = (previousId != null
-              ? MyTeamOption.findInList(teams, previousId)
-              : null) ??
-          (teams.isNotEmpty ? teams.first : null);
       List<SportEvent> list = [];
-      if (selected != null) {
-        list = await _convocationsService.getAllConvocations(
-          teamId: selected.teamId,
-        );
+      if (teamId != null) {
+        list = await _convocationsService.getAllConvocations(teamId: teamId);
       }
       if (!mounted) return;
       setState(() {
-        _teams = teams;
-        _selectedTeam = selected;
         _convocations = list;
         _userRole = role;
+        _loadedForTeamId = teamId;
         _loading = false;
       });
     } catch (e) {
@@ -88,18 +86,22 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
     }
   }
 
-  List<SportEvent> get _filtered {
+  List<SportEvent> _filteredFor(int? categoryId) {
+    Iterable<SportEvent> list = _convocations;
+    if (categoryId != null) {
+      list = list.where((c) => c.matchesCategoryFilter(categoryId));
+    }
     switch (_filter) {
       case 'sent':
-        return ConvocationsService.filterSent(_convocations);
+        return ConvocationsService.filterSent(list.toList());
       case 'draft':
-        return ConvocationsService.filterDrafts(_convocations);
+        return ConvocationsService.filterDrafts(list.toList());
       case 'official':
-        return ConvocationsService.filterByMatchType(_convocations, true);
+        return ConvocationsService.filterByMatchType(list.toList(), true);
       case 'friendly':
-        return ConvocationsService.filterByMatchType(_convocations, false);
+        return ConvocationsService.filterByMatchType(list.toList(), false);
       default:
-        return _convocations;
+        return list.toList();
     }
   }
 
@@ -400,7 +402,9 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final workspace = context.watch<ActiveWorkspaceProvider>();
     final scheme = Theme.of(context).colorScheme;
+    final filtered = _filteredFor(workspace.categoryId);
     final isDark = scheme.brightness == Brightness.dark;
     final bannerBg =
         isDark ? scheme.tertiaryContainer : Colors.orange.shade50;
@@ -415,29 +419,35 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
           padding: const EdgeInsets.all(12),
           child: Column(
             children: [
-              if (_teams.isNotEmpty)
-                DropdownButtonFormField<MyTeamOption>(
-                  value: _selectedTeam != null &&
-                          _teams.any((t) => t.teamId == _selectedTeam!.teamId)
-                      ? _selectedTeam
-                      : null,
+              if (workspace.team != null && workspace.hasMultipleCategories)
+                DropdownButtonFormField<int?>(
+                  initialValue: workspace.categoryId,
                   decoration: const InputDecoration(
-                    labelText: 'Equipo',
+                    labelText: 'Categoría',
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
-                  items: _teams
-                      .map(
-                        (t) => DropdownMenuItem(
-                          value: t,
-                          child: Text(t.name),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (t) async {
-                    setState(() => _selectedTeam = t);
-                    await _load();
-                  },
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('Todas las categorías'),
+                    ),
+                    ...workspace.categories.map(
+                      (c) => DropdownMenuItem<int?>(
+                        value: c.id,
+                        child: Text(c.name),
+                      ),
+                    ),
+                  ],
+                  onChanged: (v) => workspace.setCategoryId(v),
+                ),
+              if (workspace.team == null && workspace.ready)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Seleccioná tu equipo activo desde Inicio o Perfil.',
+                    style: TextStyle(color: scheme.error),
+                  ),
                 ),
               const SizedBox(height: 8),
               Row(
@@ -534,7 +544,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
                   onRefresh: _load,
-                  child: _filtered.isEmpty
+                  child: filtered.isEmpty
                       ? ListView(
                           children: const [
                             SizedBox(height: 80),
@@ -545,9 +555,9 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                         )
                       : ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
-                          itemCount: _filtered.length,
+                          itemCount: filtered.length,
                           itemBuilder: (context, i) {
-                            final c = _filtered[i];
+                            final c = filtered[i];
                             final isDraft =
                                 c.status == SportEventStatus.draft;
                             final dateStr =

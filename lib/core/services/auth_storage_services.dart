@@ -57,6 +57,15 @@ class AuthStorageService {
     await secureStorage.delete(key: 'userId');
     await secureStorage.delete(key: 'userName');
     await setSkippedTeamSetup(false);
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys().where(
+      (k) =>
+          k.startsWith('active_workspace_team_') ||
+          k.startsWith('active_workspace_category_'),
+    );
+    for (final k in keys) {
+      await prefs.remove(k);
+    }
   }
 
   Future<Map<String, String>> getHeaders() async {

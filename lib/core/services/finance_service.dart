@@ -266,10 +266,19 @@ class FinanceService {
     );
   }
 
-  Future<QuotaOverview> getQuotaOverview(int teamId, {String? concept}) async {
+  Future<QuotaOverview> getQuotaOverview(
+    int teamId, {
+    String? concept,
+    String? season,
+    int? categoryId,
+  }) async {
+    final queryParameters = <String, dynamic>{};
+    if (concept != null) queryParameters['concept'] = concept;
+    if (season != null) queryParameters['season'] = season;
+    if (categoryId != null) queryParameters['categoryId'] = categoryId;
     final response = await _dio.get(
       '/finance/team/$teamId/quota-overview',
-      queryParameters: concept != null ? {'concept': concept} : null,
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
     );
     return QuotaOverview.fromJson(
       Map<String, dynamic>.from(response.data as Map),

@@ -15,6 +15,7 @@ import 'package:sportify_amateur/features/auth/user_login.dart';
 import 'package:sportify_amateur/features/auth/register_screen.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/common/team_branding_provider.dart';
+import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/features/shell/app_shell_screen.dart';
 import 'package:sportify_amateur/features/profile/profile_screen.dart';
 import 'package:sportify_amateur/features/profile/profile_info_screen.dart';
@@ -73,6 +74,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => SeasonProvider()),
         ChangeNotifierProvider(create: (_) => TeamBrandingProvider()),
+        ChangeNotifierProvider(create: (_) => ActiveWorkspaceProvider()),
       ],
       child: const MainApp(),
     ),
@@ -85,9 +87,29 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final seasonProvider = context.read<SeasonProvider>();
+    final brandingProvider = context.read<TeamBrandingProvider>();
+    final workspaceProvider = context.read<ActiveWorkspaceProvider>();
+
     return MaterialApp(
       navigatorKey: AppNavigator.key,
       scaffoldMessengerKey: AppNavigator.messengerKey,
+      builder: (context, child) {
+        if (child == null) return const SizedBox.shrink();
+        return MultiProvider(
+          providers: [
+            ChangeNotifierProvider<ThemeProvider>.value(value: themeProvider),
+            ChangeNotifierProvider<SeasonProvider>.value(value: seasonProvider),
+            ChangeNotifierProvider<TeamBrandingProvider>.value(
+              value: brandingProvider,
+            ),
+            ChangeNotifierProvider<ActiveWorkspaceProvider>.value(
+              value: workspaceProvider,
+            ),
+          ],
+          child: child,
+        );
+      },
       title: 'Sportify Amateur',
       theme: ThemeData(
         brightness: Brightness.light,

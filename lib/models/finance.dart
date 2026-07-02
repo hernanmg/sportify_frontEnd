@@ -25,6 +25,12 @@ class FeeCharge {
 
   double get pendingAmount => (amount - paidAmount).clamp(0, amount);
 
+  /// Período de la cuota en formato MM/aaaa (p. ej. 08/2026).
+  String? get periodLabel => feeChargePeriodLabel(
+        dueDate: dueDate,
+        concept: concept,
+      );
+
   factory FeeCharge.fromJson(Map<String, dynamic> json) {
     return FeeCharge(
       id: json['id'] as int,
@@ -269,6 +275,40 @@ String paymentMethodLabel(String method) {
     default:
       return 'Otro';
   }
+}
+
+String? feeChargePeriodLabel({String? dueDate, String? concept}) {
+  if (dueDate != null && dueDate.trim().isNotEmpty) {
+    final parsed = DateTime.tryParse(dueDate);
+    if (parsed != null) {
+      final mm = parsed.month.toString().padLeft(2, '0');
+      return '$mm/${parsed.year}';
+    }
+  }
+  if (concept == null || concept.trim().isEmpty) return null;
+  final match = RegExp(
+    r'cuota\s+(\w+)\s+(\d{4})',
+    caseSensitive: false,
+  ).firstMatch(concept);
+  if (match == null) return null;
+  const monthNames = {
+    'enero': 1,
+    'febrero': 2,
+    'marzo': 3,
+    'abril': 4,
+    'mayo': 5,
+    'junio': 6,
+    'julio': 7,
+    'agosto': 8,
+    'septiembre': 9,
+    'octubre': 10,
+    'noviembre': 11,
+    'diciembre': 12,
+  };
+  final month = monthNames[match.group(1)!.toLowerCase()];
+  final year = match.group(2);
+  if (month == null || year == null) return null;
+  return '${month.toString().padLeft(2, '0')}/$year';
 }
 
 String? _userNameFromJson(dynamic user) {

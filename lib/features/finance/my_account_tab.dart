@@ -359,11 +359,15 @@ class MyAccountTabState extends State<MyAccountTab> {
                   ),
                   title: Text(charge.concept),
                   subtitle: Text(
-                    charge.dueDate != null
-                        ? 'Vence: ${charge.dueDate}'
-                        : charge.status == 'partial'
+                    [
+                      if (charge.periodLabel != null) charge.periodLabel!,
+                      if (charge.dueDate != null && charge.periodLabel == null)
+                        'Vence: ${charge.dueDate}',
+                      if (charge.dueDate == null && charge.periodLabel == null)
+                        charge.status == 'partial'
                             ? 'Pago parcial'
                             : 'Cuota del mes',
+                    ].join(' · '),
                   ),
                   trailing: Text(
                     formatMoney(charge.pendingAmount),
@@ -390,6 +394,9 @@ class MyAccountTabState extends State<MyAccountTab> {
                 child: ListTile(
                   leading: const Icon(Icons.event, color: Colors.blueGrey),
                   title: Text(charge.concept),
+                  subtitle: charge.periodLabel != null
+                      ? Text('Corresponde a ${charge.periodLabel}')
+                      : null,
                   trailing: Text(
                     formatMoney(charge.amount),
                     style: const TextStyle(fontWeight: FontWeight.w500),
@@ -406,10 +413,15 @@ class MyAccountTabState extends State<MyAccountTab> {
           const SizedBox(height: 8),
           if (summary.payments.isEmpty)
             const Card(
-              child: ListTile(title: Text('Sin pagos registrados')),
+              child: ListTile(
+                title: Text('Sin pagos registrados'),
+                subtitle: Text(
+                  'Si el manager registró tu pago, aparecerá acá una vez confirmado.',
+                ),
+              ),
             )
           else
-            ...summary.payments.take(15).map(
+            ...summary.payments.take(20).map(
                   (payment) => Card(
                     child: ListTile(
                       leading: Icon(
@@ -419,6 +431,9 @@ class MyAccountTabState extends State<MyAccountTab> {
                       title: Text(formatMoney(payment.amount)),
                       subtitle: Text(
                         [
+                          if (payment.notes != null &&
+                              payment.notes!.trim().isNotEmpty)
+                            payment.notes!,
                           paymentMethodLabel(payment.method),
                           payment.statusLabel,
                           if (payment.rejectionReason != null)
