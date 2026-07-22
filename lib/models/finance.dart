@@ -9,6 +9,7 @@ class FeeCharge {
   final String status;
   final String? dueDate;
   final String? season;
+  final String? userName;
 
   FeeCharge({
     required this.id,
@@ -21,6 +22,7 @@ class FeeCharge {
     required this.status,
     this.dueDate,
     this.season,
+    this.userName,
   });
 
   double get pendingAmount => (amount - paidAmount).clamp(0, amount);
@@ -43,6 +45,7 @@ class FeeCharge {
       status: json['status'] as String? ?? 'pending',
       dueDate: json['dueDate']?.toString(),
       season: json['season'] as String?,
+      userName: _userNameFromJson(json['user']) ?? json['userName']?.toString(),
     );
   }
 }

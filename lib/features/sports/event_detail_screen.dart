@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/services/sport_events_service.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
@@ -20,6 +22,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   late SportEvent _event;
   bool _isManager = false;
   bool _canTakeAttendance = false;
+  bool _canEdit = false;
+  bool _canDelete = false;
+  final _eventsService = SportEventsService();
 
   @override
   void initState() {
@@ -30,15 +35,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   Future<void> _loadRole() async {
     final role = await AuthStorageService().getRole();
-    final staff = role == 'super_admin' ||
-        role == 'manager' ||
-        role == 'admin' ||
-        role == 'team_captain' ||
-        role == 'dt';
+    final staff = UserCapabilities.canManageSportsEvents(role);
     if (mounted) {
       setState(() {
         _isManager = staff;
         _canTakeAttendance = staff;
+        _canEdit = staff;
+        _canDelete = staff;
       });
     }
   }
@@ -49,10 +52,18 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       appBar: AppBar(
         title: Text(_event.title),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _editEvent,
-          ),
+          if (_canEdit)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              tooltip: 'Editar evento',
+              onPressed: _editEvent,
+            ),
+          if (_canDelete)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Eliminar evento',
+              onPressed: _deleteEvent,
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -595,13 +606,60 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       ),
     );
 
-    if (result == true) {
-      // Aquí deberías recargar el evento desde el servidor
-      // Por ahora, simplemente mostramos un mensaje
+    if (result == true && mounted) {
+      try {
+        final refreshed = await _eventsService.getEventById(_event.id);
+        setState(() => _event = refreshed);
+      } catch (_) {}
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Evento actualizado'),
           backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteEvent() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar evento'),
+        content: Text(
+          '¿Eliminar "${_event.title}"?\n'
+          'Se borrará aunque sea un evento pasado, junto con datos asociados.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _eventsService.deleteEvent(_event.id);
+      if (!mounted) return;
+      Navigator.pop(context, true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Evento eliminado'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No se pudo eliminar: $e'),
+          backgroundColor: Colors.red,
         ),
       );
     }

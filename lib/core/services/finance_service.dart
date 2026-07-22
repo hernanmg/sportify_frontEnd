@@ -266,6 +266,34 @@ class FinanceService {
     );
   }
 
+  Future<Map<String, dynamic>> deleteQuotaSeries(String groupId) async {
+    final response = await _dio.delete('/finance/fees/quota-series/$groupId');
+    return Map<String, dynamic>.from(response.data as Map? ?? {});
+  }
+
+  Future<FeeCharge> updateFeeCharge(
+    int chargeId, {
+    double? amount,
+    String? concept,
+    String? dueDate,
+    String? status,
+  }) async {
+    final response = await _dio.patch(
+      '/finance/fees/$chargeId',
+      data: {
+        if (amount != null) 'amount': amount,
+        if (concept != null) 'concept': concept,
+        if (dueDate != null) 'dueDate': dueDate,
+        if (status != null) 'status': status,
+      },
+    );
+    return FeeCharge.fromJson(Map<String, dynamic>.from(response.data as Map));
+  }
+
+  Future<void> deleteFeeCharge(int chargeId) async {
+    await _dio.delete('/finance/fees/$chargeId');
+  }
+
   Future<QuotaOverview> getQuotaOverview(
     int teamId, {
     String? concept,

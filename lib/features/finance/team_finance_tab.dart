@@ -25,6 +25,7 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
   TeamFinanceSummary? _summary;
   List<PlayerBalance> _balances = [];
   List<PlayerPayment> _pendingPayments = [];
+  List<FeeCharge> _charges = [];
   bool _loading = true;
   String? _error;
 
@@ -83,12 +84,14 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
           categoryId: widget.categoryId,
         ),
         _financeService.getPendingPayments(teamId),
+        _financeService.getTeamCharges(teamId),
       ]);
       if (!mounted) return;
       setState(() {
         _summary = results[0] as TeamFinanceSummary;
         _balances = results[1] as List<PlayerBalance>;
         _pendingPayments = results[2] as List<PlayerPayment>;
+        _charges = results[3] as List<FeeCharge>;
         _loading = false;
       });
     } catch (e) {
@@ -173,6 +176,100 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
         reason: reason.isEmpty ? null : reason,
       );
       _showSnack('Pago rechazado');
+      await reload();
+    } catch (e) {
+      _showSnack(FinanceService.errorMessage(e));
+    }
+  }
+
+  Future<void> _editCharge(FeeCharge charge) async {
+    final amountCtrl =
+        TextEditingController(text: charge.amount.toStringAsFixed(0));
+    final conceptCtrl = TextEditingController(text: charge.concept);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Editar cuota'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: conceptCtrl,
+              decoration: const InputDecoration(labelText: 'Concepto'),
+            ),
+            TextField(
+              controller: amountCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Monto',
+                prefixText: '\$ ',
+              ),
+            ),
+            if (charge.periodLabel != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('Período: ${charge.periodLabel}'),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final amount = double.tryParse(amountCtrl.text.replaceAll(',', '.'));
+    if (amount == null || amount <= 0) {
+      _showSnack('Monto inválido');
+      return;
+    }
+    try {
+      await _financeService.updateFeeCharge(
+        charge.id,
+        amount: amount,
+        concept: conceptCtrl.text.trim(),
+      );
+      _showSnack('Cuota actualizada');
+      await reload();
+    } catch (e) {
+      _showSnack(FinanceService.errorMessage(e));
+    }
+  }
+
+  Future<void> _deleteCharge(FeeCharge charge) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar cuota'),
+        content: Text(
+          '¿Eliminar "${charge.concept}"'
+          '${charge.periodLabel != null ? ' (${charge.periodLabel})' : ''} '
+          'de ${formatMoney(charge.amount)}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _financeService.deleteFeeCharge(charge.id);
+      _showSnack('Cuota eliminada');
       await reload();
     } catch (e) {
       _showSnack(FinanceService.errorMessage(e));
@@ -636,6 +733,67 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          Text(
+            'Cuotas del equipo',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Admin, DT o tesorero pueden editar o eliminar cuotas sin pagos.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          if (_charges.isEmpty)
+            const Card(
+              child: ListTile(title: Text('No hay cuotas cargadas')),
+            )
+          else
+            ..._charges.take(40).map((charge) {
+              final canMutate = charge.paidAmount <= 0.01;
+              return Card(
+                child: ListTile(
+                  dense: true,
+                  title: Text(
+                    charge.userName != null && charge.userName!.isNotEmpty
+                        ? '${charge.concept} · ${charge.userName}'
+                        : charge.concept,
+                  ),
+                  subtitle: Text(
+                    [
+                      if (charge.periodLabel != null) charge.periodLabel!,
+                      charge.status,
+                      'Pagado ${formatMoney(charge.paidAmount)}',
+                    ].join(' · '),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        formatMoney(charge.amount),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      if (canMutate) ...[
+                        IconButton(
+                          tooltip: 'Editar',
+                          icon: const Icon(Icons.edit_outlined, size: 20),
+                          onPressed: () => _editCharge(charge),
+                        ),
+                        IconButton(
+                          tooltip: 'Eliminar',
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: 20,
+                            color: Colors.red,
+                          ),
+                          onPressed: () => _deleteCharge(charge),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }),
           const SizedBox(height: 16),
           Text(
             'Saldos por jugador',

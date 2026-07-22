@@ -302,14 +302,15 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
         trailing: PopupMenuButton<String>(
           onSelected: (value) => _handleEventAction(value, event),
           itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: ListTile(
-                leading: Icon(Icons.edit),
-                title: Text('Editar'),
-                contentPadding: EdgeInsets.zero,
+            if (_canManageEvents)
+              const PopupMenuItem(
+                value: 'edit',
+                child: ListTile(
+                  leading: Icon(Icons.edit),
+                  title: Text('Editar'),
+                  contentPadding: EdgeInsets.zero,
+                ),
               ),
-            ),
             const PopupMenuItem(
               value: 'participants',
               child: ListTile(
@@ -566,7 +567,7 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Eliminar Evento'),
         content:
-            Text('¿Estás seguro de que quieres eliminar "${event.title}"?'),
+            Text('¿Eliminar "${event.title}"?\nSe puede borrar aunque sea un evento pasado.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -585,13 +586,16 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
     );
   }
 
-  void _viewEventDetails(SportEvent event) {
-    Navigator.push(
+  void _viewEventDetails(SportEvent event) async {
+    final deleted = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) => EventDetailScreen(event: event),
       ),
     );
+    if (deleted == true) {
+      await _loadEvents();
+    }
   }
 
   String _getEventTypeName(SportEventType type) {

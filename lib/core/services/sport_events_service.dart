@@ -84,6 +84,19 @@ class SportEventsService {
       }
       throw Exception('Error al actualizar evento');
     } catch (e) {
+      if (e is DioException) {
+        final message = e.response?.data is Map
+            ? (e.response!.data as Map)['message']?.toString()
+            : null;
+        if (e.response?.statusCode == 403) {
+          throw Exception(
+            message ?? 'No tenés permisos para editar este evento',
+          );
+        }
+        if (e.response?.statusCode == 400) {
+          throw Exception(message ?? 'Datos inválidos');
+        }
+      }
       throw Exception('Error de conexión: $e');
     }
   }
@@ -92,10 +105,24 @@ class SportEventsService {
     try {
       final response = await _dio.delete('/sport-events/$id');
 
-      if (response.statusCode != 204) {
+      if (response.statusCode != 204 && response.statusCode != 200) {
         throw Exception('Error al eliminar evento');
       }
     } catch (e) {
+      if (e is DioException) {
+        final message = e.response?.data is Map
+            ? (e.response!.data as Map)['message']?.toString()
+            : null;
+        if (e.response?.statusCode == 403) {
+          throw Exception(
+            message ?? 'No tenés permisos para eliminar este evento',
+          );
+        }
+        if (e.response?.statusCode == 404) {
+          throw Exception('El evento ya no existe');
+        }
+        throw Exception(message ?? 'Error al eliminar: ${e.message}');
+      }
       throw Exception('Error de conexión: $e');
     }
   }

@@ -287,6 +287,54 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
     }
   }
 
+  Future<void> _deleteSeries(QuotaSeries series) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar serie'),
+        content: Text(
+          '¿Eliminar las cuotas pendientes de esta serie?\n'
+          '(${series.pendingCount} pendientes). Las ya pagadas se conservan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final result =
+          await _finance.deleteQuotaSeries(series.recurringGroupId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['message']?.toString() ?? 'Serie eliminada',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+      await _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(FinanceService.errorMessage(e)),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _sendReminders() async {
     try {
       final r = await _finance.sendQuotaReminders(
@@ -407,10 +455,23 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
                                     subtitle: Text(
                                       '${s.pendingCount} pendientes · ${s.paidCount} pagadas',
                                     ),
-                                    trailing: IconButton(
-                                      tooltip: 'Editar monto pendiente',
-                                      icon: const Icon(Icons.edit_outlined),
-                                      onPressed: () => _editSeries(s),
+                                    trailing: Wrap(
+                                      spacing: 0,
+                                      children: [
+                                        IconButton(
+                                          tooltip: 'Editar monto pendiente',
+                                          icon: const Icon(Icons.edit_outlined),
+                                          onPressed: () => _editSeries(s),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Eliminar cuotas pendientes',
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.red,
+                                          ),
+                                          onPressed: () => _deleteSeries(s),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
