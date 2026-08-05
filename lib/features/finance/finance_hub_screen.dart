@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/widgets/season_selector_chip.dart';
 import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
@@ -23,6 +24,7 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
   final _ledgerKey = GlobalKey<LedgerTabState>();
 
   String? _role;
+  bool _seasonEndBannerDismissed = false;
 
   static const _globalFinanceRoles = {
     'super_admin',
@@ -39,7 +41,10 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
     super.initState();
     _loadRole();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<ActiveWorkspaceProvider>().load();
+      if (mounted) {
+        context.read<ActiveWorkspaceProvider>().load();
+        context.read<SeasonProvider>().load();
+      }
     });
   }
 
@@ -210,6 +215,38 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
                       ),
                     ),
                   ),
+                Consumer<SeasonProvider>(
+                  builder: (context, season, _) {
+                    if (!season.isSeasonEnded ||
+                        _seasonEndBannerDismissed ||
+                        !canManageFinance) {
+                      return const SizedBox.shrink();
+                    }
+                    return MaterialBanner(
+                      content: Text(
+                        'La temporada ${season.season} ya venció. '
+                        'Podés hacer el cierre de caja (cuotas pendientes '
+                        'pasan por defecto como saldo a cobrar).',
+                      ),
+                      leading: const Icon(Icons.lock_clock),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            setState(() => _seasonEndBannerDismissed = true);
+                            tabController.animateTo(canManageFinance ? 1 : 0);
+                          },
+                          child: const Text('Ir a Equipo'),
+                        ),
+                        TextButton(
+                          onPressed: () => setState(
+                            () => _seasonEndBannerDismissed = true,
+                          ),
+                          child: const Text('Cerrar'),
+                        ),
+                      ],
+                    );
+                  },
+                ),
                 _buildCategorySelector(workspace),
                 Expanded(
                   child: TabBarView(

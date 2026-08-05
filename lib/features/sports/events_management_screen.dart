@@ -494,15 +494,69 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
   }
 
   void _createEvent() async {
+    final type = await showModalBottomSheet<SportEventType>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '¿Qué tipo de evento?',
+                style: Theme.of(ctx).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Elegí el tipo y completá solo lo necesario',
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.blue.shade100,
+                  child: const Icon(Icons.fitness_center, color: Colors.blue),
+                ),
+                title: const Text('Entrenamiento'),
+                subtitle: const Text('Práctica del equipo'),
+                onTap: () => Navigator.pop(ctx, SportEventType.training),
+              ),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.green.shade100,
+                  child: const Icon(Icons.sports_soccer, color: Colors.green),
+                ),
+                title: const Text('Partido'),
+                subtitle: const Text('Oficial o amistoso'),
+                onTap: () => Navigator.pop(ctx, SportEventType.match),
+              ),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.orange.shade100,
+                  child: const Icon(Icons.celebration, color: Colors.orange),
+                ),
+                title: const Text('Social / Asado'),
+                subtitle: const Text('Invitá plantel y contactos del teléfono'),
+                onTap: () => Navigator.pop(ctx, SportEventType.social),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (type == null || !mounted) return;
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const EventFormScreen(),
+        builder: (context) => EventFormScreen(initialEventType: type),
       ),
     );
 
     if (result == true) {
-      _loadEvents(); // Recargar eventos si se creó uno nuevo
+      _loadEvents();
     }
   }
 

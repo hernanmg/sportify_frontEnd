@@ -125,31 +125,33 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
     if (result == true) await _load();
   }
 
-  Future<void> _deleteConvocation(SportEvent c) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar convocatoria'),
-        content: Text(
-          '¿Eliminar "${c.title}"? Se borrará el partido y sus datos asociados.',
+  Future<void> _deleteConvocation(SportEvent c, {bool silent = false}) async {
+    if (!silent) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Eliminar convocatoria'),
+          content: Text(
+            '¿Eliminar "${c.title}"? Se borrará el partido y sus datos asociados.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Eliminar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
+      );
+      if (ok != true) return;
+    }
     try {
       await _convocationsService.deleteConvocation(c.id);
-      if (mounted) {
+      if (!silent && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Convocatoria eliminada'),
@@ -164,6 +166,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
+      await _load();
     }
   }
 
@@ -564,7 +567,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                 DateFormat('dd/MM/yyyy HH:mm').format(
                               c.eventDate,
                             );
-                            return Card(
+                            final card = Card(
                               child: ExpansionTile(
                                 leading: Icon(
                                   c.isOfficialMatch
@@ -768,6 +771,49 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                   ),
                                 ],
                               ),
+                            );
+                            if (!c.canDeleteConvocation) return card;
+                            return Dismissible(
+                              key: ValueKey('convocation-${c.id}'),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 16),
+                                margin: const EdgeInsets.only(bottom: 4),
+                                color: Colors.red.shade400,
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              confirmDismiss: (_) async {
+                                final ok = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Eliminar convocatoria'),
+                                    content: Text('¿Eliminar "${c.title}"?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, false),
+                                        child: const Text('Cancelar'),
+                                      ),
+                                      FilledButton(
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                        ),
+                                        onPressed: () =>
+                                            Navigator.pop(ctx, true),
+                                        child: const Text('Eliminar'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                return ok == true;
+                              },
+                              onDismissed: (_) =>
+                                  _deleteConvocation(c, silent: true),
+                              child: card,
                             );
                           },
                         ),

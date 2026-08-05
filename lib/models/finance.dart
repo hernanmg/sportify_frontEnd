@@ -112,6 +112,8 @@ class LedgerEntry {
   final String description;
   final int? userId;
   final String? createdAt;
+  final String? referenceType;
+  final int? referenceId;
 
   LedgerEntry({
     required this.id,
@@ -122,9 +124,21 @@ class LedgerEntry {
     required this.description,
     this.userId,
     this.createdAt,
+    this.referenceType,
+    this.referenceId,
   });
 
   bool get isIncome => type == 'income';
+
+  /// Movimientos ligados a un evento deportivo (entrenamiento, social, etc.).
+  bool get isEventRelated {
+    final ref = referenceType?.toLowerCase() ?? '';
+    final cat = category.toLowerCase();
+    return ref == 'sport_event' ||
+        cat == 'training' ||
+        cat == 'event' ||
+        cat == 'social';
+  }
 
   factory LedgerEntry.fromJson(Map<String, dynamic> json) {
     return LedgerEntry(
@@ -136,6 +150,8 @@ class LedgerEntry {
       description: json['description'] as String? ?? '',
       userId: json['userId'] as int?,
       createdAt: json['createdAt']?.toString(),
+      referenceType: json['referenceType'] as String?,
+      referenceId: json['referenceId'] as int?,
     );
   }
 }

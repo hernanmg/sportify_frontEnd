@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/services/post_match_service.dart';
+import 'package:sportify_amateur/core/services/sport_events_service.dart';
+import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
 import 'package:sportify_amateur/features/sports/match_lineup_board_tab.dart';
 import 'package:sportify_amateur/features/sports/post_match_manage_tabs.dart';
 import 'package:sportify_amateur/widgets/google_style_lineup_field.dart';
@@ -367,6 +369,25 @@ class _PostMatchScreenState extends State<PostMatchScreen>
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.event_note_outlined),
+            tooltip: 'Ver evento',
+            onPressed: () async {
+              try {
+                final event = await SportEventsService()
+                    .getEventById(widget.eventId);
+                if (!mounted) return;
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EventDetailScreen(event: event),
+                  ),
+                );
+              } catch (e) {
+                _snack(PostMatchService.errorMessage(e), error: true);
+              }
+            },
+          ),
           if (_data?.canManage == true && _data?.isCompleted != true)
             IconButton(
               icon: const Icon(Icons.flag),

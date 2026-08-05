@@ -221,6 +221,15 @@ class _AppShellScreenState extends State<AppShellScreen> {
         },
       ),
       ListTile(
+        leading: _menuIcon(Icons.help_outline, Colors.orange),
+        title: const Text('Centro de ayuda'),
+        subtitle: const Text('Guías paso a paso'),
+        onTap: () {
+          Navigator.pop(ctx);
+          Navigator.pushNamed(context, '/help');
+        },
+      ),
+      ListTile(
         leading: _menuIcon(Icons.account_circle, Colors.blueGrey),
         title: const Text('Perfil'),
         onTap: () {

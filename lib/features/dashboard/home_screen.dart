@@ -246,37 +246,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.deepPurple,
                     onTap: () => _switchTab(context, 3),
                   ),
-                  _QuickTile(
-                    icon: Icons.help_outline,
-                    title: 'Centro de ayuda',
-                    subtitle: 'Guías paso a paso de cada función',
-                    color: Colors.orange,
-                    onTap: () => _openHelp(''),
-                  ),
-                  if (_isPlayer) ...[
-                    _QuickTile(
-                      icon: Icons.person,
-                      title: 'Mi perfil',
-                      subtitle: 'Editá tus datos y de qué hincha sos',
-                      color: Colors.blue,
-                      onTap: () => Navigator.pushNamed(context, '/profile/info'),
-                    ),
-                    _QuickTile(
-                      icon: Icons.vpn_key,
-                      title: 'Unirme con código',
-                      subtitle: 'Sumate al plantel de tu equipo',
-                      color: Colors.amber.shade800,
-                      onTap: () => Navigator.pushNamed(context, '/join-team'),
-                    ),
-                    _QuickTile(
-                      icon: Icons.how_to_vote,
-                      title: 'Mis partidos',
-                      subtitle: 'Confirmá convocatorias y asistencia',
-                      color: Colors.green,
-                      onTap: () =>
-                          Navigator.pushNamed(context, '/sports/my-matches'),
-                    ),
-                  ],
                   if (_isPlatformAdmin)
                     _QuickTile(
                       icon: Icons.groups_3,

@@ -287,41 +287,45 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
     }
   }
 
-  Future<void> _deleteSeries(QuotaSeries series) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar serie'),
-        content: Text(
-          '¿Eliminar las cuotas pendientes de esta serie?\n'
-          '(${series.pendingCount} pendientes). Las ya pagadas se conservan.',
+  Future<void> _deleteSeries(QuotaSeries series, {bool silent = false}) async {
+    if (!silent) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Eliminar serie'),
+          content: Text(
+            '¿Eliminar las cuotas pendientes de esta serie?\n'
+            '(${series.pendingCount} pendientes). Las ya pagadas se conservan.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Eliminar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
+      );
+      if (ok != true) return;
+    }
     try {
       final result =
           await _finance.deleteQuotaSeries(series.recurringGroupId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result['message']?.toString() ?? 'Serie eliminada',
+      if (!silent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['message']?.toString() ?? 'Serie eliminada',
+            ),
+            backgroundColor: Colors.green,
           ),
-          backgroundColor: Colors.green,
-        ),
-      );
+        );
+      }
       await _load();
     } catch (e) {
       if (mounted) {
@@ -332,6 +336,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
           ),
         );
       }
+      await _load();
     }
   }
 
@@ -446,8 +451,8 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              ..._series.map(
-                                (s) => Card(
+                              ..._series.map((s) {
+                                final tile = Card(
                                   child: ListTile(
                                     title: Text(
                                       '\$${s.amount.toStringAsFixed(0)} × ${s.monthSpan} meses',
@@ -474,8 +479,51 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
                                       ],
                                     ),
                                   ),
-                                ),
-                              ),
+                                );
+                                return Dismissible(
+                                  key: ValueKey('series-${s.recurringGroupId}'),
+                                  direction: DismissDirection.endToStart,
+                                  background: Container(
+                                    alignment: Alignment.centerRight,
+                                    padding: const EdgeInsets.only(right: 16),
+                                    color: Colors.red.shade400,
+                                    child: const Icon(
+                                      Icons.delete,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  confirmDismiss: (_) async {
+                                    final ok = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: const Text('Eliminar serie'),
+                                        content: Text(
+                                          '¿Eliminar ${s.pendingCount} cuotas pendientes?',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, false),
+                                            child: const Text('Cancelar'),
+                                          ),
+                                          FilledButton(
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: Colors.red,
+                                            ),
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, true),
+                                            child: const Text('Eliminar'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    return ok == true;
+                                  },
+                                  onDismissed: (_) =>
+                                      _deleteSeries(s, silent: true),
+                                  child: tile,
+                                );
+                              }),
                             ],
                             const SizedBox(height: 12),
                             ...o.players.map((p) {

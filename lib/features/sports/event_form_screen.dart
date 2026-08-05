@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
@@ -831,8 +833,14 @@ class _EventFormScreenState extends State<EventFormScreen> {
             const SizedBox(height: 4),
             Text(
               'Para familiares u otras personas que no están en el equipo. '
-              'Se registran como invitados del evento para gastos y cupos.',
+              'Elegí de tus contactos del teléfono o cargá a mano.',
               style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _pickPhoneContacts,
+              icon: const Icon(Icons.contacts),
+              label: const Text('Elegir de mis contactos'),
             ),
             const SizedBox(height: 12),
             ...List.generate(_externalGuestLines.length, (i) {
@@ -1289,6 +1297,159 @@ class _EventFormScreenState extends State<EventFormScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _pickPhoneContacts() async {
+    try {
+      var status = await Permission.contacts.status;
+      if (!status.isGranted) {
+        status = await Permission.contacts.request();
+      }
+      if (!status.isGranted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Necesitamos permiso de contactos para elegir invitados',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final granted = await FlutterContacts.requestPermission(readonly: true);
+      if (!granted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo acceder a los contactos')),
+        );
+        return;
+      }
+
+      final contacts = await FlutterContacts.getContacts(
+        withProperties: true,
+        withPhoto: false,
+      );
+      final withPhone = contacts
+          .where((c) => c.phones.isNotEmpty && c.displayName.trim().isNotEmpty)
+          .toList()
+        ..sort(
+          (a, b) => a.displayName.toLowerCase().compareTo(
+                b.displayName.toLowerCase(),
+              ),
+        );
+
+      if (!mounted) return;
+      if (withPhone.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No hay contactos con teléfono')),
+        );
+        return;
+      }
+
+      final selected = <Contact>{};
+      final confirmed = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setLocal) {
+              return DraggableScrollableSheet(
+                expand: false,
+                initialChildSize: 0.75,
+                minChildSize: 0.45,
+                maxChildSize: 0.95,
+                builder: (_, scrollCtrl) {
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Contactos (${selected.length} elegidos)',
+                                style: Theme.of(ctx).textTheme.titleMedium,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancelar'),
+                            ),
+                            FilledButton(
+                              onPressed: selected.isEmpty
+                                  ? null
+                                  : () => Navigator.pop(ctx, true),
+                              child: const Text('Agregar'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollCtrl,
+                          itemCount: withPhone.length,
+                          itemBuilder: (_, i) {
+                            final c = withPhone[i];
+                            final phone = c.phones.first.number;
+                            final checked = selected.contains(c);
+                            return CheckboxListTile(
+                              value: checked,
+                              onChanged: (v) {
+                                setLocal(() {
+                                  if (v == true) {
+                                    selected.add(c);
+                                  } else {
+                                    selected.remove(c);
+                                  }
+                                });
+                              },
+                              title: Text(c.displayName),
+                              subtitle: Text(phone),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          );
+        },
+      );
+
+      if (confirmed != true || !mounted) return;
+
+      setState(() {
+        // Quitar línea vacía inicial si es la única.
+        if (_externalGuestLines.length == 1 &&
+            _externalGuestLines.first.name.text.trim().isEmpty &&
+            _externalGuestLines.first.phone.text.trim().isEmpty) {
+          _externalGuestLines.first.dispose();
+          _externalGuestLines.clear();
+        }
+        for (final c in selected) {
+          final line = _ExternalGuestLine();
+          line.name.text = c.displayName;
+          line.phone.text = c.phones.first.number;
+          if (c.emails.isNotEmpty) {
+            line.email.text = c.emails.first.address;
+          }
+          _externalGuestLines.add(line);
+        }
+        if (_externalGuestLines.isEmpty) {
+          _externalGuestLines.add(_ExternalGuestLine());
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al leer contactos: $e')),
+      );
     }
   }
 

@@ -8,6 +8,7 @@ import 'package:sportify_amateur/features/sports/event_form_screen.dart';
 import 'package:sportify_amateur/features/sports/social_event_expenses_screen.dart';
 import 'package:sportify_amateur/features/sports/event_attendance_screen.dart';
 import 'package:sportify_amateur/features/sports/widgets/training_event_finance_card.dart';
+import 'package:sportify_amateur/features/sports/post_match_screen.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final SportEvent event;
@@ -262,6 +263,25 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   },
                   icon: const Icon(Icons.fact_check),
                   label: const Text('Tomar asistencia'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PostMatchScreen(
+                          eventId: _event.id,
+                          eventTitle: _event.title,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.sports_soccer),
+                  label: const Text('Cancha / Gestionar partido'),
                 ),
               ),
             ],

@@ -294,6 +294,36 @@ class FinanceService {
     await _dio.delete('/finance/fees/$chargeId');
   }
 
+  Future<Map<String, dynamic>> closeCashRegister({
+    required int teamId,
+    bool carryPendingQuotas = true,
+    bool resetCashToZero = true,
+    String? season,
+    String? notes,
+  }) async {
+    final response = await _dio.post(
+      '/finance/team/$teamId/cash-close',
+      data: {
+        'carryPendingQuotas': carryPendingQuotas,
+        'resetCashToZero': resetCashToZero,
+        if (season != null) 'season': season,
+        if (notes != null) 'notes': notes,
+      },
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> resetCashToZero({
+    required int teamId,
+    String? notes,
+  }) async {
+    final response = await _dio.post(
+      '/finance/team/$teamId/cash-zero',
+      data: {if (notes != null) 'notes': notes},
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
   Future<QuotaOverview> getQuotaOverview(
     int teamId, {
     String? concept,

@@ -47,5 +47,7 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Usamos Face ID para que puedas entrar a Sportify Amateur de forma rápida y segura.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Usamos tus contactos para invitar gente externa a eventos (asado, etc.) sin tener que tipear el teléfono.</string>
 </dict>
 </plist>

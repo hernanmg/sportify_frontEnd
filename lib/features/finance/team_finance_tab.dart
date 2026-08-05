@@ -243,15 +243,50 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
     }
   }
 
-  Future<void> _deleteCharge(FeeCharge charge) async {
+  Future<void> _deleteCharge(FeeCharge charge, {bool silent = false}) async {
+    if (!silent) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Eliminar cuota'),
+          content: Text(
+            '¿Eliminar "${charge.concept}"'
+            '${charge.periodLabel != null ? ' (${charge.periodLabel})' : ''} '
+            'de ${formatMoney(charge.amount)}?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    try {
+      await _financeService.deleteFeeCharge(charge.id);
+      if (!silent) _showSnack('Cuota eliminada');
+      await reload();
+    } catch (e) {
+      _showSnack(FinanceService.errorMessage(e));
+      await reload();
+    }
+  }
+
+  Future<void> _waiveCharge(FeeCharge charge) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar cuota'),
+        title: const Text('Anular cuota'),
         content: Text(
-          '¿Eliminar "${charge.concept}"'
-          '${charge.periodLabel != null ? ' (${charge.periodLabel})' : ''} '
-          'de ${formatMoney(charge.amount)}?',
+          'La cuota ya tiene pagos aplicados. '
+          '¿Marcarla como anulada (waived)? No se borra el historial de pagos.',
         ),
         actions: [
           TextButton(
@@ -259,17 +294,119 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Eliminar'),
+            child: const Text('Anular'),
           ),
         ],
       ),
     );
     if (ok != true) return;
     try {
-      await _financeService.deleteFeeCharge(charge.id);
-      _showSnack('Cuota eliminada');
+      await _financeService.updateFeeCharge(charge.id, status: 'waived');
+      _showSnack('Cuota anulada');
+      await reload();
+    } catch (e) {
+      _showSnack(FinanceService.errorMessage(e));
+    }
+  }
+
+  Future<void> _showCashCloseDialog() async {
+    if (widget.teamId == null) return;
+    var carryPending = true;
+    var resetZero = true;
+    final notesCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Cierre de caja'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Saldo actual: ${formatMoney(_summary?.cashBalance ?? 0)}\n'
+                'Cuotas pendientes: ${formatMoney(_summary?.totalOutstanding ?? 0)}',
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Dejar caja en cero'),
+                value: resetZero,
+                onChanged: (v) => setLocal(() => resetZero = v),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Arrastrar cuotas pendientes'),
+                subtitle: const Text(
+                  'Quedan como saldo a cobrar (recomendado)',
+                ),
+                value: carryPending,
+                onChanged: (v) => setLocal(() => carryPending = v),
+              ),
+              TextField(
+                controller: notesCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Notas (opcional)',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Cerrar caja'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final season = context.read<SeasonProvider>().season;
+      final result = await _financeService.closeCashRegister(
+        teamId: widget.teamId!,
+        carryPendingQuotas: carryPending,
+        resetCashToZero: resetZero,
+        season: season,
+        notes: notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+      );
+      _showSnack(result['message']?.toString() ?? 'Caja cerrada');
+      await reload();
+    } catch (e) {
+      _showSnack(FinanceService.errorMessage(e));
+    }
+  }
+
+  Future<void> _zeroCash() async {
+    if (widget.teamId == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Dejar caja en cero'),
+        content: Text(
+          'Se creará un ajuste por ${formatMoney(_summary?.cashBalance ?? 0)} '
+          'para dejar la caja en \$0. Las cuotas de jugadores no se borran.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _financeService.resetCashToZero(teamId: widget.teamId!);
+      _showSnack('Caja en cero');
       await reload();
     } catch (e) {
       _showSnack(FinanceService.errorMessage(e));
@@ -633,11 +770,148 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
             ],
           ),
           const SizedBox(height: 16),
+          Text(
+            'Cuotas del equipo',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Deslizá a la izquierda para eliminar cuotas sin pagos. '
+            'Los pagos confirmados no se borran.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          if (_charges.isEmpty)
+            const Card(
+              child: ListTile(title: Text('No hay cuotas cargadas')),
+            )
+          else
+            ..._charges.take(60).map((charge) {
+              final canDelete = charge.paidAmount <= 0.01;
+              final tile = Card(
+                child: ListTile(
+                  dense: true,
+                  title: Text(
+                    charge.userName != null && charge.userName!.isNotEmpty
+                        ? '${charge.concept} · ${charge.userName}'
+                        : charge.concept,
+                  ),
+                  subtitle: Text(
+                    [
+                      if (charge.periodLabel != null) charge.periodLabel!,
+                      charge.status,
+                      'Pagado ${formatMoney(charge.paidAmount)}',
+                      if (!canDelete) 'protegida',
+                    ].join(' · '),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        formatMoney(charge.amount),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      IconButton(
+                        tooltip: 'Editar cuota',
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        onPressed: () => _editCharge(charge),
+                      ),
+                      if (canDelete)
+                        IconButton(
+                          tooltip: 'Eliminar cuota',
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: 20,
+                            color: Colors.red,
+                          ),
+                          onPressed: () => _deleteCharge(charge),
+                        )
+                      else
+                        IconButton(
+                          tooltip: 'Anular (waive)',
+                          icon: const Icon(Icons.block, size: 20),
+                          onPressed: () => _waiveCharge(charge),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+              if (!canDelete) return tile;
+              return Dismissible(
+                key: ValueKey('fee-${charge.id}'),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 16),
+                  margin: const EdgeInsets.only(bottom: 4),
+                  color: Colors.red.shade400,
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                confirmDismiss: (_) async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Eliminar cuota'),
+                      content: Text('¿Eliminar "${charge.concept}"?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancelar'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.red,
+                          ),
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Eliminar'),
+                        ),
+                      ],
+                    ),
+                  );
+                  return ok == true;
+                },
+                onDismissed: (_) => _deleteCharge(charge, silent: true),
+                child: tile,
+              );
+            }),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                onPressed: _showGenerateFeesDialog,
+                icon: const Icon(Icons.receipt),
+                label: const Text('Generar cuotas'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => _showRegisterPaymentDialog(null),
+                icon: const Icon(Icons.payments),
+                label: const Text('Registrar pago'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _showExpenseDialog,
+                icon: const Icon(Icons.money_off),
+                label: const Text('Gasto'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _showCashCloseDialog,
+                icon: const Icon(Icons.lock_clock),
+                label: const Text('Cierre de caja'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _zeroCash,
+                icon: const Icon(Icons.exposure_zero),
+                label: const Text('Caja en cero'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           if (_pendingPayments.isNotEmpty) ...[
             Row(
               children: [
                 Text(
-                  'Pagos pendientes de confirmación',
+                  'Pagos a confirmar (no son cuotas)',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(width: 8),
@@ -712,89 +986,6 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
             ),
             const SizedBox(height: 16),
           ],
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              FilledButton.icon(
-                onPressed: _showGenerateFeesDialog,
-                icon: const Icon(Icons.receipt),
-                label: const Text('Generar cuotas'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => _showRegisterPaymentDialog(null),
-                icon: const Icon(Icons.payments),
-                label: const Text('Registrar pago'),
-              ),
-              OutlinedButton.icon(
-                onPressed: _showExpenseDialog,
-                icon: const Icon(Icons.money_off),
-                label: const Text('Gasto'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Cuotas del equipo',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Admin, DT o tesorero pueden editar o eliminar cuotas sin pagos.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 8),
-          if (_charges.isEmpty)
-            const Card(
-              child: ListTile(title: Text('No hay cuotas cargadas')),
-            )
-          else
-            ..._charges.take(40).map((charge) {
-              final canMutate = charge.paidAmount <= 0.01;
-              return Card(
-                child: ListTile(
-                  dense: true,
-                  title: Text(
-                    charge.userName != null && charge.userName!.isNotEmpty
-                        ? '${charge.concept} · ${charge.userName}'
-                        : charge.concept,
-                  ),
-                  subtitle: Text(
-                    [
-                      if (charge.periodLabel != null) charge.periodLabel!,
-                      charge.status,
-                      'Pagado ${formatMoney(charge.paidAmount)}',
-                    ].join(' · '),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        formatMoney(charge.amount),
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      if (canMutate) ...[
-                        IconButton(
-                          tooltip: 'Editar',
-                          icon: const Icon(Icons.edit_outlined, size: 20),
-                          onPressed: () => _editCharge(charge),
-                        ),
-                        IconButton(
-                          tooltip: 'Eliminar',
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            size: 20,
-                            color: Colors.red,
-                          ),
-                          onPressed: () => _deleteCharge(charge),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            }),
-          const SizedBox(height: 16),
           Text(
             'Saldos por jugador',
             style: Theme.of(context).textTheme.titleMedium,
