@@ -7,6 +7,7 @@ import 'package:sportify_amateur/features/sports/social_event_expenses_screen.da
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
 import 'package:sportify_amateur/features/sports/team_calendar_screen.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
+import 'package:sportify_amateur/widgets/empty_state_hint.dart';
 
 class MyEventsScreen extends StatefulWidget {
   const MyEventsScreen({super.key});
@@ -172,14 +173,14 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
           : _error != null
               ? Center(child: Text(_error!))
               : _events.isEmpty
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text(
-                          'No tenés invitaciones a eventos.\nCuando te inviten a un evento social o entrenamiento, aparecerá acá.\n\nPodés crear un evento social con el botón de abajo.',
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+                  ? EmptyStateHint(
+                      icon: Icons.event_available,
+                      title: 'Sin invitaciones todavía',
+                      subtitle:
+                          'Cuando te convoquen a un partido o te inviten a un '
+                          'evento social, aparece acá.',
+                      actionLabel: 'Crear evento social',
+                      onAction: _openCreateSocialEvent,
                     )
                   : RefreshIndicator(
                       onRefresh: _load,

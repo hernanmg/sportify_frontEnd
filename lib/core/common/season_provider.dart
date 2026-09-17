@@ -1,25 +1,30 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
+import 'package:sportify_amateur/core/services/team_service.dart';
 
 /// Temporada activa compartida entre plantel, finanzas y eventos.
+/// Las fechas desde/hasta se sincronizan con el servidor por equipo.
 class SeasonProvider extends ChangeNotifier {
   static const _prefKey = 'active_season';
-  static const _datesPrefix = 'season_dates_';
+
+  final TeamService _teamService = TeamService();
 
   String _season = RosterService.getCurrentSeason();
   DateTime? _startDate;
   DateTime? _endDate;
+  int? _teamId;
 
   String get season => _season;
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
+  int? get teamId => _teamId;
 
   List<String> get availableSeasons => RosterService.getSeasons();
 
   bool get hasDateRange => _startDate != null && _endDate != null;
 
-  /// True si hay fecha de fin y ya pasó (incluye el día siguiente).
+  /// True si hay fecha de fin y ya pasó.
   bool get isSeasonEnded {
     if (_endDate == null) return false;
     final today = DateTime.now();
@@ -28,7 +33,6 @@ class SeasonProvider extends ChangeNotifier {
     return now.isAfter(end);
   }
 
-  /// True si estamos en el rango o sin fechas configuradas.
   bool get isSeasonActive {
     if (!hasDateRange) return true;
     final today = DateTime.now();
@@ -51,17 +55,55 @@ class SeasonProvider extends ChangeNotifier {
         _season = normalized;
       }
     }
-    await _loadDatesFor(_season);
-    notifyListeners();
+    if (_teamId != null) {
+      await loadDatesForTeam(_teamId!);
+    } else {
+      notifyListeners();
+    }
   }
 
   Future<void> setSeason(String value) async {
     if (_season == value) return;
     _season = value;
-    await _loadDatesFor(value);
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefKey, value);
+    if (_teamId != null) {
+      await loadDatesForTeam(_teamId!);
+    }
+  }
+
+  /// Carga fechas del servidor para el equipo activo.
+  Future<void> bindTeam(int? teamId) async {
+    if (_teamId == teamId) {
+      if (teamId != null) await loadDatesForTeam(teamId);
+      return;
+    }
+    _teamId = teamId;
+    if (teamId == null) {
+      _startDate = null;
+      _endDate = null;
+      notifyListeners();
+      return;
+    }
+    await loadDatesForTeam(teamId);
+  }
+
+  Future<void> loadDatesForTeam(int teamId) async {
+    try {
+      final data = await _teamService.getSeasonPeriod(
+        teamId: teamId,
+        season: _season,
+      );
+      _startDate = _parseDate(data['startDate']);
+      _endDate = _parseDate(data['endDate']);
+      _teamId = teamId;
+    } catch (_) {
+      // Sin red o sin permiso: no romper la UI.
+      _startDate = null;
+      _endDate = null;
+    }
+    notifyListeners();
   }
 
   Future<void> setSeasonDates({
@@ -71,32 +113,33 @@ class SeasonProvider extends ChangeNotifier {
     _startDate = start;
     _endDate = end;
     notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    final key = '$_datesPrefix$_season';
-    if (start == null && end == null) {
-      await prefs.remove(key);
-      return;
-    }
-    await prefs.setString(
-      key,
-      '${start?.toIso8601String() ?? ''}|${end?.toIso8601String() ?? ''}',
+
+    final teamId = _teamId;
+    if (teamId == null) return;
+
+    final startIso = start == null
+        ? null
+        : '${start.year.toString().padLeft(4, '0')}-'
+            '${start.month.toString().padLeft(2, '0')}-'
+            '${start.day.toString().padLeft(2, '0')}';
+    final endIso = end == null
+        ? null
+        : '${end.year.toString().padLeft(4, '0')}-'
+            '${end.month.toString().padLeft(2, '0')}-'
+            '${end.day.toString().padLeft(2, '0')}';
+
+    await _teamService.upsertSeasonPeriod(
+      teamId: teamId,
+      season: _season,
+      startDate: startIso,
+      endDate: endIso,
     );
   }
 
-  Future<void> _loadDatesFor(String season) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('$_datesPrefix$season');
-    if (raw == null || raw.isEmpty) {
-      _startDate = null;
-      _endDate = null;
-      return;
-    }
-    final parts = raw.split('|');
-    _startDate = parts.isNotEmpty && parts[0].isNotEmpty
-        ? DateTime.tryParse(parts[0])
-        : null;
-    _endDate = parts.length > 1 && parts[1].isNotEmpty
-        ? DateTime.tryParse(parts[1])
-        : null;
+  DateTime? _parseDate(dynamic raw) {
+    if (raw == null) return null;
+    final s = raw.toString();
+    if (s.isEmpty) return null;
+    return DateTime.tryParse(s);
   }
 }

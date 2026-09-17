@@ -1,22 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
+import 'package:sportify_amateur/core/utils/api_error_messages.dart';
 
 class TeamAdminService {
   final Dio _dio = DioClient.instance;
 
-  static String errorMessage(Object error) {
-    if (error is DioException) {
-      final data = error.response?.data;
-      if (data is Map && data['message'] != null) {
-        final message = data['message'];
-        if (message is List) {
-          return message.map((e) => e.toString()).join('\n');
-        }
-        return message.toString();
-      }
-    }
-    return error.toString();
-  }
+  static String errorMessage(Object error) => ApiErrorMessages.from(error);
 
   Future<TeamAdminPanel> getAdminPanel(int teamId) async {
     final response = await _dio.get('/teams/$teamId/admin-panel');

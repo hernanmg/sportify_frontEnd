@@ -3,6 +3,7 @@ import 'package:sportify_amateur/core/services/convocations_service.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
 import 'package:sportify_amateur/features/sports/sports_management_args.dart';
 import 'package:sportify_amateur/models/notification.dart';
+import 'package:sportify_amateur/widgets/empty_state_hint.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
@@ -130,6 +131,52 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     }
   }
 
+  Future<void> _deleteNotification(
+    NotificationModel notification, {
+    bool silent = false,
+  }) async {
+    if (!silent) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Eliminar notificación'),
+          content: Text('¿Eliminar "${notification.title}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    try {
+      await _notificationService.deleteNotification(notification.id);
+      if (!silent && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notificación eliminada')),
+        );
+      }
+      await _loadNotifications();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      await _loadNotifications();
+    }
+  }
+
   Future<void> _markAllAsRead() async {
     try {
       await _notificationService.markAllAsRead();
@@ -195,34 +242,12 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     }
 
     if (_filteredNotifications.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.notifications_none,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No hay notificaciones',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _selectedFilter == 'all'
-                  ? 'No tienes notificaciones aún'
-                  : 'No hay notificaciones de este tipo',
-              style: TextStyle(
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
+      return EmptyStateHint(
+        icon: Icons.notifications_none,
+        title: 'No hay notificaciones',
+        subtitle: _selectedFilter == 'all'
+            ? 'Cuando haya convocatorias, entrenamientos o pagos, vas a verlas acá.'
+            : 'No hay notificaciones de este tipo.',
       );
     }
 
@@ -232,7 +257,43 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         itemCount: _filteredNotifications.length,
         itemBuilder: (context, index) {
           final notification = _filteredNotifications[index];
-          return _buildNotificationCard(notification);
+          return Dismissible(
+            key: ValueKey('notif-${notification.id}'),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              color: Colors.red.shade400,
+              child: const Icon(Icons.delete, color: Colors.white),
+            ),
+            confirmDismiss: (_) async {
+              final ok = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Eliminar notificación'),
+                  content: Text('¿Eliminar "${notification.title}"?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancelar'),
+                    ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Eliminar'),
+                    ),
+                  ],
+                ),
+              );
+              return ok == true;
+            },
+            onDismissed: (_) =>
+                _deleteNotification(notification, silent: true),
+            child: _buildNotificationCard(notification),
+          );
         },
       ),
     );

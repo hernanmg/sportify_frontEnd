@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/finance_service.dart';
+import 'package:sportify_amateur/features/finance/finance_export_helper.dart';
 import 'package:sportify_amateur/models/finance.dart';
 
 enum _LedgerScope { all, team, events }
@@ -50,8 +51,16 @@ class LedgerTabState extends State<LedgerTab> {
     });
 
     try {
-      final entries =
-          await _financeService.getTeamLedger(widget.teamId!, limit: 100);
+      final scope = switch (_scope) {
+        _LedgerScope.all => 'all',
+        _LedgerScope.team => 'team',
+        _LedgerScope.events => 'events',
+      };
+      final entries = await _financeService.getTeamLedger(
+        widget.teamId!,
+        limit: 200,
+        scope: scope,
+      );
       if (!mounted) return;
       setState(() {
         _entries = entries;
@@ -60,20 +69,30 @@ class LedgerTabState extends State<LedgerTab> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = FinanceService.errorMessage(e);
         _loading = false;
       });
     }
   }
 
-  List<LedgerEntry> get _filtered {
-    switch (_scope) {
-      case _LedgerScope.all:
-        return _entries;
-      case _LedgerScope.team:
-        return _entries.where((e) => !e.isEventRelated).toList();
-      case _LedgerScope.events:
-        return _entries.where((e) => e.isEventRelated).toList();
+  List<LedgerEntry> get _filtered => _entries;
+
+  Future<void> _export(String kind) async {
+    final items = _filtered;
+    try {
+      if (kind == 'csv') {
+        await FinanceExportHelper.shareLedgerCsv(entries: items);
+      } else {
+        await FinanceExportHelper.shareLedgerPdf(
+          entries: items,
+          teamLabel: 'Equipo #${widget.teamId}',
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo exportar: $e')),
+      );
     }
   }
 
@@ -105,13 +124,34 @@ class LedgerTabState extends State<LedgerTab> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Finanzas de equipo y de eventos están separadas',
-                style: Theme.of(context).textTheme.bodySmall,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Finanzas de equipo y de eventos están separadas',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    tooltip: 'Exportar',
+                    icon: const Icon(Icons.ios_share),
+                    onSelected: _export,
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
+                        value: 'csv',
+                        child: Text('Exportar CSV'),
+                      ),
+                      PopupMenuItem(
+                        value: 'pdf',
+                        child: Text('Exportar PDF'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               SegmentedButton<_LedgerScope>(
@@ -133,7 +173,10 @@ class LedgerTabState extends State<LedgerTab> {
                   ),
                 ],
                 selected: {_scope},
-                onSelectionChanged: (s) => setState(() => _scope = s.first),
+                onSelectionChanged: (s) {
+                  setState(() => _scope = s.first);
+                  reload();
+                },
               ),
             ],
           ),

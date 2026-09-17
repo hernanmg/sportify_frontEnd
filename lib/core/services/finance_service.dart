@@ -4,24 +4,13 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
+import 'package:sportify_amateur/core/utils/api_error_messages.dart';
 import 'package:sportify_amateur/models/finance.dart';
 
 class FinanceService {
   final Dio _dio = DioClient.instance;
 
-  static String errorMessage(Object error) {
-    if (error is DioException) {
-      final data = error.response?.data;
-      if (data is Map) {
-        final message = data['message'];
-        if (message is List) {
-          return message.map((item) => item.toString()).join('\n');
-        }
-        if (message != null) return message.toString();
-      }
-    }
-    return error.toString();
-  }
+  static String errorMessage(Object error) => ApiErrorMessages.from(error);
 
   Future<MyAccountSummary> getMyAccount({int? teamId}) async {
     final response = await _dio.get(
@@ -58,10 +47,17 @@ class FinanceService {
         .toList();
   }
 
-  Future<List<LedgerEntry>> getTeamLedger(int teamId, {int limit = 50}) async {
+  Future<List<LedgerEntry>> getTeamLedger(
+    int teamId, {
+    int limit = 50,
+    String scope = 'all',
+  }) async {
     final response = await _dio.get(
       '/finance/team/$teamId/ledger',
-      queryParameters: {'limit': limit},
+      queryParameters: {
+        'limit': limit,
+        if (scope != 'all') 'scope': scope,
+      },
     );
     final list = response.data as List<dynamic>;
     return list
@@ -322,6 +318,20 @@ class FinanceService {
       data: {if (notes != null) 'notes': notes},
     );
     return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<List<CashClosure>> listCashClosures(
+    int teamId, {
+    int limit = 20,
+  }) async {
+    final response = await _dio.get(
+      '/finance/team/$teamId/cash-closures',
+      queryParameters: {'limit': limit},
+    );
+    final list = response.data as List? ?? [];
+    return list
+        .map((e) => CashClosure.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   Future<QuotaOverview> getQuotaOverview(

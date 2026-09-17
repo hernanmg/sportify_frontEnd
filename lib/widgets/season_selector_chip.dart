@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 
 class SeasonSelectorChip extends StatelessWidget {
@@ -8,6 +9,18 @@ class SeasonSelectorChip extends StatelessWidget {
 
   Future<void> _configureDates(BuildContext context) async {
     final season = context.read<SeasonProvider>();
+    final workspace = context.read<ActiveWorkspaceProvider>();
+    final teamId = workspace.teamId ?? season.teamId;
+    if (teamId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seleccioná un equipo activo para configurar el torneo'),
+        ),
+      );
+      return;
+    }
+    await season.bindTeam(teamId);
+
     var start = season.startDate;
     var end = season.endDate;
 
@@ -22,14 +35,16 @@ class SeasonSelectorChip extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'Definí desde–hasta. Al vencer, Finanzas te avisará '
-                  'para hacer el cierre de caja.',
+                  'Estas fechas se guardan en el servidor y las ven '
+                  'todos los admins/DT del equipo. Al vencer, Finanzas avisa '
+                  'para el cierre de caja.',
                 ),
                 const SizedBox(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Desde'),
-                  subtitle: Text(start != null ? fmt.format(start!) : 'Sin fecha'),
+                  subtitle:
+                      Text(start != null ? fmt.format(start!) : 'Sin fecha'),
                   trailing: const Icon(Icons.calendar_today),
                   onTap: () async {
                     final picked = await showDatePicker(
@@ -61,8 +76,16 @@ class SeasonSelectorChip extends StatelessWidget {
             actions: [
               TextButton(
                 onPressed: () async {
-                  await season.setSeasonDates(start: null, end: null);
-                  if (ctx.mounted) Navigator.pop(ctx, false);
+                  try {
+                    await season.setSeasonDates(start: null, end: null);
+                    if (ctx.mounted) Navigator.pop(ctx, false);
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('Error: $e')),
+                      );
+                    }
+                  }
                 },
                 child: const Text('Limpiar'),
               ),
@@ -80,19 +103,35 @@ class SeasonSelectorChip extends StatelessWidget {
       ),
     );
     if (ok == true) {
-      await season.setSeasonDates(start: start, end: end);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fechas del torneo guardadas')),
-        );
+      try {
+        await season.setSeasonDates(start: start, end: end);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Fechas del torneo guardadas en el equipo')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo guardar: $e')),
+          );
+        }
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SeasonProvider>(
-      builder: (context, season, _) {
+    return Consumer2<SeasonProvider, ActiveWorkspaceProvider>(
+      builder: (context, season, workspace, _) {
+        // Mantener fechas del equipo activo sincronizadas.
+        final tid = workspace.teamId;
+        if (tid != null && tid != season.teamId) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) season.bindTeam(tid);
+          });
+        }
+
         final subtitle = season.hasDateRange
             ? ' · ${DateFormat('dd/MM').format(season.startDate!)}'
                 '-${DateFormat('dd/MM').format(season.endDate!)}'

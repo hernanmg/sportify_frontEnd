@@ -110,6 +110,9 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
         (_data?['playerConvocations'] as List<dynamic>?) ?? const [];
     final attendanceSessions =
         (_data?['attendanceSessions'] as List<dynamic>?) ?? const [];
+    final finance = _data?['finance'] is Map
+        ? Map<String, dynamic>.from(_data!['finance'] as Map)
+        : null;
     final sessionDateFmt = DateFormat('EEE d/M', 'es');
     final selectedTeam = _teams.where((t) => t.teamId == _teamId).toList();
     final team = selectedTeam.isNotEmpty ? selectedTeam.first : null;
@@ -196,6 +199,59 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
                               child: ListView(
                                 padding: const EdgeInsets.all(16),
                                 children: [
+                                  if (finance != null) ...[
+                                    _sectionTitle('Finanzas: equipo vs eventos'),
+                                    ListTile(
+                                      leading: const Icon(Icons.account_balance_wallet),
+                                      title: const Text('Caja total'),
+                                      trailing: Text(
+                                        '\$${((finance['cashBalance'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.groups),
+                                      title: const Text('Ámbito equipo'),
+                                      subtitle: Text(
+                                        'Ingresos \$${((finance['teamIncome'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)} · '
+                                        'Egresos \$${((finance['teamExpenses'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}',
+                                      ),
+                                      trailing: Text(
+                                        '\$${((finance['teamBalance'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.event),
+                                      title: const Text('Ámbito eventos'),
+                                      subtitle: Text(
+                                        'Ingresos \$${((finance['eventIncome'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)} · '
+                                        'Egresos \$${((finance['eventExpenses'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}',
+                                      ),
+                                      trailing: Text(
+                                        '\$${((finance['eventBalance'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.pending_actions),
+                                      title: const Text('Por cobrar (cuotas)'),
+                                      trailing: Text(
+                                        '\$${((finance['totalOutstanding'] as num?)?.toDouble() ?? 0).toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.orange,
+                                        ),
+                                      ),
+                                    ),
+                                    const Divider(height: 32),
+                                  ],
                                   _sectionTitle('Asistencia %'),
                                   if (attendance.isEmpty)
                                     const Text('Sin datos aún'),

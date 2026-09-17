@@ -9,6 +9,7 @@ import 'package:sportify_amateur/features/sports/social_event_expenses_screen.da
 import 'package:sportify_amateur/features/sports/event_attendance_screen.dart';
 import 'package:sportify_amateur/features/sports/widgets/training_event_finance_card.dart';
 import 'package:sportify_amateur/features/sports/post_match_screen.dart';
+import 'package:sportify_amateur/features/sports/convocation_form_screen.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final SportEvent event;
@@ -25,6 +26,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   bool _canTakeAttendance = false;
   bool _canEdit = false;
   bool _canDelete = false;
+  bool _canManageConvocation = false;
   final _eventsService = SportEventsService();
 
   @override
@@ -43,6 +45,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         _canTakeAttendance = staff;
         _canEdit = staff;
         _canDelete = staff;
+        _canManageConvocation =
+            UserCapabilities.canManageConvocations(role);
       });
     }
   }
@@ -247,8 +251,30 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           if (_event.type == SportEventType.match) ...[
             const SizedBox(height: 16),
             _buildMatchDetails(),
-            if (_canTakeAttendance) ...[
+            if (_canManageConvocation) ...[
               const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ConvocationFormScreen(
+                          existing: _event,
+                          isOfficial: _event.isOfficialMatch,
+                          initialTeamId: _event.teamId,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.group_add_outlined),
+                  label: const Text('1. Armar convocatoria'),
+                ),
+              ),
+            ],
+            if (_canTakeAttendance) ...[
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -281,7 +307,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                     );
                   },
                   icon: const Icon(Icons.sports_soccer),
-                  label: const Text('Cancha / Gestionar partido'),
+                  label: const Text('2. Cancha / Gestionar partido'),
                 ),
               ),
             ],

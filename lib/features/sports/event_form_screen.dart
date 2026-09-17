@@ -3,6 +3,7 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
+import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
@@ -12,6 +13,8 @@ import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 import 'package:sportify_amateur/features/sports/social_event_expenses_screen.dart';
+import 'package:sportify_amateur/features/sports/convocation_form_screen.dart';
+import 'package:sportify_amateur/features/sports/post_match_screen.dart';
 
 class EventFormScreen extends StatefulWidget {
   final SportEvent? event;
@@ -65,7 +68,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   // Form values
   SportEventType _selectedType = SportEventType.training;
-  DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
+  DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = const TimeOfDay(hour: 19, minute: 0);
   DateTime? _confirmationDeadline;
   bool _isHomeMatch = true;
@@ -135,11 +138,17 @@ class _EventFormScreenState extends State<EventFormScreen> {
             .toList();
       }
       teams = MyTeamOption.dedupeByTeamId(teams);
-      final MyTeamOption? selected = widget.event != null
-          ? MyTeamOption.findInList(teams, widget.event!.teamId)
-          : (widget.initialTeamId != null
-              ? MyTeamOption.findInList(teams, widget.initialTeamId!)
-              : null);
+      int? workspaceTeamId;
+      try {
+        workspaceTeamId =
+            context.read<ActiveWorkspaceProvider>().teamId;
+      } catch (_) {}
+      final preferredTeamId = widget.event?.teamId ??
+          widget.initialTeamId ??
+          workspaceTeamId;
+      final MyTeamOption? selected = preferredTeamId != null
+          ? MyTeamOption.findInList(teams, preferredTeamId)
+          : null;
       final resolved = selected ?? (teams.isNotEmpty ? teams.first : null);
       setState(() {
         _myTeams = teams;
@@ -149,12 +158,29 @@ class _EventFormScreenState extends State<EventFormScreen> {
             ..clear()
             ..addAll(resolved.categoryIds);
         }
+        // Título sugerido si está vacío (creación rápida).
+        if (widget.event == null && _titleController.text.trim().isEmpty) {
+          _titleController.text = _suggestedTitle(_selectedType);
+        }
       });
       if (_selectedType == SportEventType.social) {
         await _loadInvitees();
       }
     } catch (_) {
       // El formulario mostrará aviso si no hay equipos
+    }
+  }
+
+  String _suggestedTitle(SportEventType type) {
+    switch (type) {
+      case SportEventType.training:
+        return 'Entrenamiento';
+      case SportEventType.match:
+        return 'Partido';
+      case SportEventType.social:
+        return 'Evento social';
+      case SportEventType.meeting:
+        return 'Reunión';
     }
   }
 
@@ -373,7 +399,12 @@ class _EventFormScreenState extends State<EventFormScreen> {
                   ? null
                   : (value) {
                 setState(() {
+                  final prevSuggested = _suggestedTitle(_selectedType);
                   _selectedType = value!;
+                  if (_titleController.text.trim().isEmpty ||
+                      _titleController.text.trim() == prevSuggested) {
+                    _titleController.text = _suggestedTitle(_selectedType);
+                  }
                   // Resetear campos específicos del tipo anterior
                   if (_selectedType != SportEventType.match) {
                     _opponentController.clear();
@@ -1264,6 +1295,59 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 ),
               ),
             );
+            return;
+          }
+
+          if (_selectedType == SportEventType.match &&
+              UserCapabilities.canManageConvocations(_userRole)) {
+            final next = await showDialog<String>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Partido creado'),
+                content: const Text(
+                  '¿Seguimos con el flujo del día? '
+                  'Armá la convocatoria (plantel) y después la cancha.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, 'done'),
+                    child: const Text('Después'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx, 'pitch'),
+                    child: const Text('Ir a cancha'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(ctx, 'convocation'),
+                    child: const Text('Armar convocatoria'),
+                  ),
+                ],
+              ),
+            );
+            if (!mounted) return;
+            Navigator.pop(context, true);
+            if (next == 'convocation') {
+              await Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => ConvocationFormScreen(
+                    existing: created,
+                    isOfficial: created.isOfficialMatch,
+                    initialTeamId: created.teamId,
+                  ),
+                ),
+              );
+            } else if (next == 'pitch') {
+              await Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => PostMatchScreen(
+                    eventId: created.id,
+                    eventTitle: created.title,
+                  ),
+                ),
+              );
+            }
             return;
           }
         }

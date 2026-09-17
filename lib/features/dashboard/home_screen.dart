@@ -8,6 +8,7 @@ import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/dashboard/team_membership_banner.dart';
 import 'package:sportify_amateur/features/dashboard/dt_home_dashboard.dart';
+import 'package:sportify_amateur/features/dashboard/player_home_dashboard.dart';
 import 'package:sportify_amateur/features/onboarding/dt_guided_tour.dart';
 import 'package:sportify_amateur/features/help/home_help_search_bar.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
@@ -215,37 +216,50 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 8),
                     const DtHomeDashboard(),
                   ],
+                  if (_isPlayer) ...[
+                    const SizedBox(height: 8),
+                    const PlayerHomeDashboard(),
+                  ],
                   const SizedBox(height: 8),
                   Text(
-                    'Accesos rápidos',
+                    _isPlayer ? 'Más accesos' : 'Accesos rápidos',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                   ),
                   const SizedBox(height: 8),
-                  _QuickTile(
-                    icon: Icons.sports_soccer,
-                    title: 'Gestión Deportiva',
-                    subtitle: _isPlayer && !_isTeamStaff
-                        ? 'Mi ficha en el plantel'
-                        : 'Plantel, eventos, convocatorias',
-                    color: Colors.green,
-                    onTap: () => _switchTab(context, 0),
-                  ),
-                  _QuickTile(
-                    icon: Icons.payments,
-                    title: 'Finanzas',
-                    subtitle: 'Mi cuenta, movimientos, cuotas',
-                    color: Colors.teal,
-                    onTap: () => _switchTab(context, 1),
-                  ),
-                  _QuickTile(
-                    icon: Icons.event_available,
-                    title: 'Mis eventos',
-                    subtitle: 'Sociales y confirmaciones',
-                    color: Colors.deepPurple,
-                    onTap: () => _switchTab(context, 3),
-                  ),
+                  if (!_isPlayer)
+                    _QuickTile(
+                      icon: Icons.sports_soccer,
+                      title: 'Gestión Deportiva',
+                      subtitle: 'Plantel, eventos, convocatorias',
+                      color: Colors.green,
+                      onTap: () => _switchTab(context, 0),
+                    ),
+                  if (_isPlayer)
+                    _QuickTile(
+                      icon: Icons.badge_outlined,
+                      title: 'Mi ficha / plantel',
+                      subtitle: 'Datos, dorsal y estado en el equipo',
+                      color: Colors.green,
+                      onTap: () => _switchTab(context, 0),
+                    ),
+                  if (!_isPlayer)
+                    _QuickTile(
+                      icon: Icons.payments,
+                      title: 'Finanzas',
+                      subtitle: 'Mi cuenta, movimientos, cuotas',
+                      color: Colors.teal,
+                      onTap: () => _switchTab(context, 1),
+                    ),
+                  if (!_isPlayer)
+                    _QuickTile(
+                      icon: Icons.event_available,
+                      title: 'Mis eventos',
+                      subtitle: 'Sociales y confirmaciones',
+                      color: Colors.deepPurple,
+                      onTap: () => _switchTab(context, 3),
+                    ),
                   if (_isPlatformAdmin)
                     _QuickTile(
                       icon: Icons.groups_3,

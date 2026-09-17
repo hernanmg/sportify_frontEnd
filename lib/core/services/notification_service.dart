@@ -172,6 +172,11 @@ class NotificationService {
     }
   }
 
+  Future<void> deleteNotification(int notificationId) async {
+    await _dio.delete('/notifications/$notificationId');
+    await getMyNotifications();
+  }
+
   // MÉTODOS PARA GESTORES (DT/Manager)
 
   // Enviar convocatoria a partido

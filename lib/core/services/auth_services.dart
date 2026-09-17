@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:sportify_amateur/core/common/app_config.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
+import 'package:sportify_amateur/core/utils/api_error_messages.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/biometric_auth_service.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
@@ -134,17 +135,13 @@ class AuthService {
     }
   }
 
-  static bool _isConnectionTimeout(DioException e) {
-    return e.type == DioExceptionType.connectionTimeout ||
-        e.type == DioExceptionType.receiveTimeout ||
-        e.type == DioExceptionType.sendTimeout;
-  }
+  static bool _isConnectionTimeout(DioException e) =>
+      ApiErrorMessages.isColdStartLike(e);
 
   static String loginErrorMessage(Object error) {
     if (error is DioException) {
       if (_isConnectionTimeout(error)) {
-        return 'El servidor tardó en responder (Render puede estar despertando). '
-            'Esperá unos segundos e intentá de nuevo.';
+        return ApiErrorMessages.coldStart;
       }
       final data = error.response?.data;
       if (data is Map && data['message'] != null) {
@@ -156,7 +153,7 @@ class AuthService {
         return 'Email o contraseña incorrectos';
       }
     }
-    return error.toString();
+    return ApiErrorMessages.from(error, fallback: 'No se pudo iniciar sesión');
   }
 
   Future<bool> signInWithEmail(String email, String password) async {

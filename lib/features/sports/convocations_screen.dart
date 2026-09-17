@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/convocations_service.dart';
 import 'package:sportify_amateur/core/services/convocation_pdf_service.dart';
 import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/core/utils/sport_event_category.dart';
-import 'package:intl/intl.dart';
 import 'package:sportify_amateur/features/sports/convocation_form_screen.dart';
 import 'package:sportify_amateur/features/sports/post_match_screen.dart';
+import 'package:sportify_amateur/widgets/empty_state_hint.dart';
 import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:sportify_amateur/models/player_eligibility.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
@@ -116,10 +117,17 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
       _sentWithPending.fold(0, (sum, c) => sum + c.pendingCount);
 
   Future<void> _openCreate({bool official = false}) async {
+    int? teamId;
+    try {
+      teamId = context.read<ActiveWorkspaceProvider>().teamId;
+    } catch (_) {}
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => ConvocationFormScreen(isOfficial: official),
+        builder: (_) => ConvocationFormScreen(
+          isOfficial: official,
+          initialTeamId: teamId,
+        ),
       ),
     );
     if (result == true) await _load();
@@ -549,10 +557,18 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                   onRefresh: _load,
                   child: filtered.isEmpty
                       ? ListView(
-                          children: const [
-                            SizedBox(height: 80),
-                            Center(
-                              child: Text('No hay convocatorias'),
+                          children: [
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.55,
+                              child: EmptyStateHint(
+                                icon: Icons.campaign_outlined,
+                                title: 'No hay convocatorias',
+                                subtitle:
+                                    'Creá un partido con plantel convocado '
+                                    'para después pasar a la cancha.',
+                                actionLabel: 'Nueva convocatoria',
+                                onAction: () => _openCreate(),
+                              ),
                             ),
                           ],
                         )

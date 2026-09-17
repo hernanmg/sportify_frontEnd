@@ -41,6 +41,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
   String _categoryFilter = 'all';
   bool _filtersExpanded = false;
   bool _categoryFilterInitialized = false;
+  bool _canManageRoster = false;
 
   @override
   void initState() {
@@ -48,12 +49,22 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
     _selectedSeason = RosterService.normalizeSeason(
       widget.season ?? RosterService.getCurrentSeason(),
     );
+    _loadRole();
     _loadRoster();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || widget.season != null) return;
       context.read<SeasonProvider>().addListener(_onGlobalSeason);
       _syncFromGlobalSeason();
     });
+  }
+
+  Future<void> _loadRole() async {
+    final role = await AuthStorageService().getRole();
+    if (mounted) {
+      setState(() {
+        _canManageRoster = UserCapabilities.canManageRoster(role);
+      });
+    }
   }
 
   void _onGlobalSeason() => _syncFromGlobalSeason();
@@ -430,52 +441,56 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
     }
   }
 
-  Future<void> _deletePlayer(PlayerRoster player) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar Eliminación'),
-        content: Text(
-          '¿Estás seguro de que quieres eliminar a "${player.playerName}" '
-          'de la lista de buena fe?\n\nEsta acción no se puede deshacer.',
+  Future<void> _deletePlayer(PlayerRoster player, {bool silent = false}) async {
+    if (!silent) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirmar Eliminación'),
+          content: Text(
+            '¿Estás seguro de que quieres eliminar a "${player.playerName}" '
+            'de la lista de buena fe?\n\nEsta acción no se puede deshacer.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text(
+                'Eliminar',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child:
-                const Text('Eliminar', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+      );
+      if (confirmed != true) return;
+    }
 
-    if (confirmed == true) {
-      try {
-        await _rosterService.deleteRoster(player.id);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${player.playerName} eliminado de la lista'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-        _loadRoster();
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al eliminar: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+    try {
+      await _rosterService.deleteRoster(player.id);
+      if (!silent && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${player.playerName} eliminado de la lista'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
+      _loadRoster();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      _loadRoster();
     }
   }
 
@@ -794,7 +809,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
 
   Widget _buildPlayerGroupCard(_RosterGroup group) {
     final player = group.primary;
-    return Card(
+    final card = Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 3,
       child: InkWell(
@@ -947,16 +962,17 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                                 ],
                               ),
                             ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Eliminar categoría'),
-                              ],
+                          if (_canManageRoster)
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, color: Colors.red),
+                                  SizedBox(width: 8),
+                                  Text('Eliminar categoría'),
+                                ],
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ],
@@ -1002,6 +1018,43 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
           ),
         ),
       ),
+    );
+
+    if (!_canManageRoster) return card;
+
+    return Dismissible(
+      key: ValueKey('roster-${player.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 12),
+        color: Colors.red.shade400,
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      confirmDismiss: (_) async {
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Eliminar del plantel'),
+            content: Text('¿Eliminar a "${player.playerName}"?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Eliminar'),
+              ),
+            ],
+          ),
+        );
+        return ok == true;
+      },
+      onDismissed: (_) => _deletePlayer(player, silent: true),
+      child: card,
     );
   }
 

@@ -2,6 +2,7 @@ import 'dart:ui' show Offset;
 
 import 'package:dio/dio.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
+import 'package:sportify_amateur/core/utils/api_error_messages.dart';
 import 'package:sportify_amateur/models/board_stroke.dart';
 import 'package:sportify_amateur/models/post_match.dart';
 
@@ -145,21 +146,8 @@ class PostMatchService {
     );
   }
 
-  static String errorMessage(Object e) {
-    if (e is DioException) {
-      final data = e.response?.data;
-      if (data is Map && data['message'] != null) {
-        final msg = data['message'];
-        if (msg is List) return msg.join(', ');
-        return msg.toString();
-      }
-      if (e.response?.statusCode == 500) {
-        return 'Error del servidor (¿migración 015 aplicada?)';
-      }
-      if (e.type == DioExceptionType.connectionError) {
-        return 'Sin conexión con el servidor';
-      }
-    }
-    return e.toString();
-  }
+  static String errorMessage(Object e) => ApiErrorMessages.from(
+        e,
+        fallback: 'Ocurrió un error en el partido',
+      );
 }

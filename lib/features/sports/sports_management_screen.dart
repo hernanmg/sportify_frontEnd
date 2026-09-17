@@ -775,9 +775,75 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
   }
 
   Future<void> _createStaffEvent() async {
+    final type = await showModalBottomSheet<SportEventType>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '¿Qué querés crear?',
+                style: Theme.of(ctx).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: const Icon(Icons.sports_soccer, color: Colors.green),
+                title: const Text('Partido con convocatoria'),
+                subtitle: const Text('Plantel → cancha (recomendado)'),
+                onTap: () => Navigator.pop(ctx, SportEventType.match),
+              ),
+              ListTile(
+                leading: const Icon(Icons.fitness_center, color: Colors.blue),
+                title: const Text('Entrenamiento'),
+                onTap: () => Navigator.pop(ctx, SportEventType.training),
+              ),
+              ListTile(
+                leading: const Icon(Icons.celebration, color: Colors.orange),
+                title: const Text('Social / Asado'),
+                onTap: () => Navigator.pop(ctx, SportEventType.social),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (type == null || !mounted) return;
+
+    final teamId = context.read<ActiveWorkspaceProvider>().teamId;
+
+    if (type == SportEventType.match &&
+        UserCapabilities.canManageConvocations(_userRole)) {
+      final result = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ConvocationFormScreen(
+            initialTeamId: teamId,
+            initialMatchDate: DateTime.now(),
+          ),
+        ),
+      );
+      if (result == true && mounted) {
+        _convocationsKey.currentState?.reload();
+        _eventsKey.currentState?.reloadEvents();
+      }
+      return;
+    }
+
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const EventFormScreen()),
+      MaterialPageRoute(
+        builder: (_) => EventFormScreen(
+          initialEventType: type,
+          initialTeamId: teamId,
+          initialDate: DateTime.now(),
+          socialOnly: type == SportEventType.social &&
+              !UserCapabilities.canManageSportsEvents(_userRole),
+        ),
+      ),
     );
     if (result == true && mounted) {
       _eventsKey.currentState?.reloadEvents();

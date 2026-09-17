@@ -31,10 +31,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
 
   Future<void> _init() async {
     final role = await AuthStorageService().getRole();
-    _canManageFinance = UserCapabilities.isPlatformAdmin(role) ||
-        role == 'dt' ||
-        role == 'tesorero' ||
-        role == 'delegado';
+    _canManageFinance = UserCapabilities.canManageTeamFinance(role);
     await _load();
   }
 

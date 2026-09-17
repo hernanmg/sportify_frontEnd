@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sportify_amateur/core/common/app_config.dart';
+import 'package:sportify_amateur/core/utils/api_error_messages.dart';
 
 class DioClient {
   static String get backendUrl => AppConfig.apiBaseUrl;
@@ -41,6 +42,33 @@ class DioClient {
         final path = error.requestOptions.path.split('?').first;
         final alreadyRetried =
             error.requestOptions.extra['auth_retry'] == true;
+        final coldRetried =
+            error.requestOptions.extra['cold_start_retry'] == true;
+
+        // Un reintento ante cold start / caída breve de red.
+        if (!coldRetried &&
+            ApiErrorMessages.isColdStartLike(error) &&
+            !_isPublicAuthPath(path)) {
+          await Future<void>.delayed(const Duration(seconds: 3));
+          try {
+            final opts = error.requestOptions;
+            final response = await _dio.request<dynamic>(
+              opts.path,
+              data: opts.data,
+              queryParameters: opts.queryParameters,
+              options: Options(
+                method: opts.method,
+                headers: opts.headers,
+                extra: {...opts.extra, 'cold_start_retry': true},
+                responseType: opts.responseType,
+                contentType: opts.contentType,
+              ),
+            );
+            return handler.resolve(response);
+          } catch (_) {
+            // seguir con auth retry / error original
+          }
+        }
 
         if (status != 401 ||
             _isPublicAuthPath(path) ||

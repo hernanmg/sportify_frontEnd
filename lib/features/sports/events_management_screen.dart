@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
@@ -7,6 +9,7 @@ import 'package:sportify_amateur/models/sport_event.dart';
 import 'package:sportify_amateur/features/sports/event_form_screen.dart';
 import 'package:sportify_amateur/features/sports/event_detail_screen.dart';
 import 'package:sportify_amateur/features/sports/team_calendar_screen.dart';
+import 'package:sportify_amateur/widgets/empty_state_hint.dart';
 
 class EventsManagementScreen extends StatefulWidget {
   const EventsManagementScreen({Key? key}) : super(key: key);
@@ -201,34 +204,14 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
 
   Widget _buildEventsList() {
     if (_filteredEvents.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.event_busy,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No hay eventos',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _selectedFilter == null
-                  ? 'No tienes eventos programados'
-                  : 'No hay eventos de este tipo',
-              style: TextStyle(
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
+      return EmptyStateHint(
+        icon: Icons.event_busy,
+        title: 'No hay eventos',
+        subtitle: _selectedFilter == null
+            ? 'Creá el primero: entrenamiento, partido o social.'
+            : 'No hay eventos de este tipo. Probá otro filtro o creá uno nuevo.',
+        actionLabel: _canManageEvents ? 'Crear evento' : null,
+        onAction: _canManageEvents ? _createEvent : null,
       );
     }
 
@@ -548,10 +531,19 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
     );
     if (type == null || !mounted) return;
 
+    int? teamId;
+    try {
+      teamId = context.read<ActiveWorkspaceProvider>().teamId;
+    } catch (_) {}
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EventFormScreen(initialEventType: type),
+        builder: (context) => EventFormScreen(
+          initialEventType: type,
+          initialTeamId: teamId,
+          initialDate: DateTime.now(),
+        ),
       ),
     );
 

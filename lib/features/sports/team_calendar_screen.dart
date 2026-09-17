@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/core/services/team_calendar_service.dart';
@@ -87,9 +89,14 @@ class _TeamCalendarScreenState extends State<TeamCalendarScreen> {
           _error = 'No tenés equipos asignados';
           return;
         }
-        _teamId = widget.initialTeamId != null &&
-                teams.any((t) => t.teamId == widget.initialTeamId)
-            ? widget.initialTeamId
+        int? workspaceId;
+        try {
+          workspaceId = context.read<ActiveWorkspaceProvider>().teamId;
+        } catch (_) {}
+        final preferred = widget.initialTeamId ?? workspaceId;
+        _teamId = preferred != null &&
+                teams.any((t) => t.teamId == preferred)
+            ? preferred
             : teams.first.teamId;
         _teamName = teams
             .firstWhere(
@@ -181,6 +188,9 @@ class _TeamCalendarScreenState extends State<TeamCalendarScreen> {
     final items = _itemsOnDay(selectedDay);
     if (items.isNotEmpty) {
       _showDaySheet(selectedDay, items);
+    } else if (_canManageSportsEvents || _canCreateConvocation) {
+      // Un toque en día vacío → crear (antes hacía falta doble toque).
+      _showCreateActions(selectedDay);
     }
   }
 
@@ -205,14 +215,29 @@ class _TeamCalendarScreenState extends State<TeamCalendarScreen> {
                   ),
                 ),
               ),
+              if (_canCreateConvocation)
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.green.shade100,
+                    child: Icon(Icons.sports_soccer, color: Colors.green.shade800),
+                  ),
+                  title: const Text('Partido con convocatoria'),
+                  subtitle: const Text(
+                    'Flujo completo: plantel → cancha (recomendado)',
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _openCreateConvocation(day);
+                  },
+                ),
               if (_canManageSportsEvents)
                 ListTile(
                   leading: CircleAvatar(
                     backgroundColor: Colors.blue.shade100,
                     child: Icon(Icons.event, color: Colors.blue.shade800),
                   ),
-                  title: const Text('Crear evento'),
-                  subtitle: const Text('Entrenamiento, partido o social'),
+                  title: const Text('Otro evento'),
+                  subtitle: const Text('Entrenamiento, partido simple o social'),
                   onTap: () {
                     Navigator.pop(ctx);
                     _openCreateEvent(day);
@@ -229,19 +254,6 @@ class _TeamCalendarScreenState extends State<TeamCalendarScreen> {
                   onTap: () {
                     Navigator.pop(ctx);
                     _openCreateSocialEvent(day);
-                  },
-                ),
-              if (_canCreateConvocation)
-                ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.green.shade100,
-                    child: Icon(Icons.sports_soccer, color: Colors.green.shade800),
-                  ),
-                  title: const Text('Crear convocatoria'),
-                  subtitle: const Text('Partido con lista de convocados'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _openCreateConvocation(day);
                   },
                 ),
             ],
@@ -340,6 +352,17 @@ class _TeamCalendarScreenState extends State<TeamCalendarScreen> {
               ),
               const SizedBox(height: 12),
               ...items.map((item) => _buildSheetTile(item)),
+              if (_canManageSportsEvents || _canCreateConvocation) ...[
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.add_circle_outline),
+                  title: const Text('Agregar en este día'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showCreateActions(day);
+                  },
+                ),
+              ],
             ],
           ),
         ),

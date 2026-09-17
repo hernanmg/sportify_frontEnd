@@ -4,7 +4,6 @@ import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/common/team_branding_provider.dart';
 import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
-import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/features/dashboard/home_screen.dart';
@@ -62,21 +61,18 @@ class _AppShellScreenState extends State<AppShellScreen> {
     if (mounted) setState(() => _role = role);
   }
 
-  bool get _isStaff {
-    final r = _role;
-    return r == 'super_admin' ||
-        r == 'manager' ||
-        r == 'admin' ||
-        r == 'team_captain' ||
-        r == 'dt';
-  }
+  bool get _isStaff => UserCapabilities.isStaff(_role);
 
-  bool get _isManager {
-    final r = _role;
-    return r == 'super_admin' || r == 'manager' || r == 'admin';
-  }
+  bool get _isManager => UserCapabilities.isPlatformAdmin(_role);
 
   bool get _canEditTeam => UserCapabilities.canManageTeamSettings(_role);
+
+  bool get _canAccessAdminPanel =>
+      UserCapabilities.canAccessTeamAdminPanel(_role);
+
+  bool get _canAccessReports => UserCapabilities.canAccessTeamReports(_role);
+
+  bool get _canManageFinance => UserCapabilities.canManageTeamFinance(_role);
 
   List<Widget> _moreMenuTiles(BuildContext ctx) {
     return [
@@ -89,7 +85,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
           context.read<ActiveWorkspaceProvider>().openTeamPicker(context);
         },
       ),
-      if (_isStaff)
+      if (_canAccessAdminPanel)
         ListTile(
           leading: _menuIcon(Icons.dashboard_customize, Colors.teal),
           title: const Text('Panel del equipo'),
@@ -120,36 +116,39 @@ class _AppShellScreenState extends State<AppShellScreen> {
           );
         },
       ),
-      ListTile(
-        leading: _menuIcon(Icons.groups, Colors.blue),
-        title: const Text('Cuotas del plantel'),
-        onTap: () {
-          Navigator.pop(ctx);
-          _openQuotaOverview();
-        },
-      ),
-      ListTile(
-        leading: _menuIcon(Icons.assessment, Colors.indigo),
-        title: const Text('Informes'),
-        onTap: () {
-          Navigator.pop(ctx);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ReportsHubScreen()),
-          );
-        },
-      ),
-      ListTile(
-        leading: _menuIcon(Icons.business, Colors.deepOrange),
-        title: const Text('Patrocinadores'),
-        onTap: () {
-          Navigator.pop(ctx);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const SponsorsScreen()),
-          );
-        },
-      ),
+      if (_canManageFinance)
+        ListTile(
+          leading: _menuIcon(Icons.groups, Colors.blue),
+          title: const Text('Cuotas del plantel'),
+          onTap: () {
+            Navigator.pop(ctx);
+            _openQuotaOverview();
+          },
+        ),
+      if (_canAccessReports)
+        ListTile(
+          leading: _menuIcon(Icons.assessment, Colors.indigo),
+          title: const Text('Informes'),
+          onTap: () {
+            Navigator.pop(ctx);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ReportsHubScreen()),
+            );
+          },
+        ),
+      if (_canManageFinance || _isStaff)
+        ListTile(
+          leading: _menuIcon(Icons.business, Colors.deepOrange),
+          title: const Text('Patrocinadores'),
+          onTap: () {
+            Navigator.pop(ctx);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SponsorsScreen()),
+            );
+          },
+        ),
       if (_isStaff)
         ListTile(
           leading: _menuIcon(Icons.history, Colors.blueGrey),

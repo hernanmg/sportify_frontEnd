@@ -1,24 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:sportify_amateur/core/common/dio_client.dart';
+import 'package:sportify_amateur/core/utils/api_error_messages.dart';
 import 'package:sportify_amateur/models/team.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
 
 class TeamService {
   final Dio _dio = DioClient.instance;
 
-  static String errorMessage(Object error) {
-    if (error is DioException) {
-      final data = error.response?.data;
-      if (data is Map && data['message'] != null) {
-        final message = data['message'];
-        if (message is List) {
-          return message.map((e) => e.toString()).join('\n');
-        }
-        return message.toString();
-      }
-    }
-    return error.toString();
-  }
+  static String errorMessage(Object error) => ApiErrorMessages.from(error);
 
   Future<Map<String, dynamic>> completeOnboarding(
     Map<String, dynamic> payload,
@@ -184,6 +173,33 @@ class TeamService {
     } catch (e) {
       throw Exception('Error de conexión: $e');
     }
+  }
+
+  Future<Map<String, dynamic>> getSeasonPeriod({
+    required int teamId,
+    required String season,
+  }) async {
+    final encoded = Uri.encodeComponent(season);
+    final response =
+        await _dio.get('/teams/$teamId/season-periods/$encoded');
+    return Map<String, dynamic>.from(response.data as Map? ?? {});
+  }
+
+  Future<Map<String, dynamic>> upsertSeasonPeriod({
+    required int teamId,
+    required String season,
+    String? startDate,
+    String? endDate,
+  }) async {
+    final encoded = Uri.encodeComponent(season);
+    final response = await _dio.put(
+      '/teams/$teamId/season-periods/$encoded',
+      data: {
+        'startDate': startDate,
+        'endDate': endDate,
+      },
+    );
+    return Map<String, dynamic>.from(response.data as Map? ?? {});
   }
 
   // Eliminar equipo

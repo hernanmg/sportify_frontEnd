@@ -4,6 +4,7 @@ import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/widgets/season_selector_chip.dart';
 import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
+import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/finance/ledger_tab.dart';
 import 'package:sportify_amateur/features/finance/my_account_tab.dart';
 import 'package:sportify_amateur/features/finance/team_finance_tab.dart';
@@ -26,24 +27,20 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
   String? _role;
   bool _seasonEndBannerDismissed = false;
 
-  static const _globalFinanceRoles = {
-    'super_admin',
-    'manager',
-    'admin',
-    'dt',
-    'tesorero',
-    'delegado',
-    'team_captain',
-  };
-
   @override
   void initState() {
     super.initState();
     _loadRole();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<ActiveWorkspaceProvider>().load();
-        context.read<SeasonProvider>().load();
+        final workspace = context.read<ActiveWorkspaceProvider>();
+        workspace.load();
+        final season = context.read<SeasonProvider>();
+        season.load().then((_) {
+          if (workspace.teamId != null) {
+            season.bindTeam(workspace.teamId);
+          }
+        });
       }
     });
   }
@@ -59,12 +56,10 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
     List<MyTeamOption> teamOptions,
   ) {
     if (team == null) return false;
-    if (role == 'super_admin' || role == 'manager' || role == 'admin') {
-      return true;
-    }
+    if (UserCapabilities.isPlatformAdmin(role)) return true;
     final opt = MyTeamOption.findInList(teamOptions, team.id);
     if (opt?.canManageFinance == true) return true;
-    if (role != null && _globalFinanceRoles.contains(role)) {
+    if (UserCapabilities.canManageTeamFinance(role)) {
       return teamOptions.any((t) => t.teamId == team.id);
     }
     return false;

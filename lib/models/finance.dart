@@ -114,6 +114,8 @@ class LedgerEntry {
   final String? createdAt;
   final String? referenceType;
   final int? referenceId;
+  /// Si el backend lo envía, tiene prioridad sobre la heurística local.
+  final bool? isEventRelatedFlag;
 
   LedgerEntry({
     required this.id,
@@ -126,17 +128,23 @@ class LedgerEntry {
     this.createdAt,
     this.referenceType,
     this.referenceId,
+    this.isEventRelatedFlag,
   });
 
   bool get isIncome => type == 'income';
 
   /// Movimientos ligados a un evento deportivo (entrenamiento, social, etc.).
   bool get isEventRelated {
+    if (isEventRelatedFlag != null) return isEventRelatedFlag!;
     final ref = referenceType?.toLowerCase() ?? '';
     final cat = category.toLowerCase();
     return ref == 'sport_event' ||
+        ref == 'event_expense' ||
+        ref == 'social_event' ||
+        ref == 'training_expense' ||
         cat == 'training' ||
         cat == 'event' ||
+        cat == 'match' ||
         cat == 'social';
   }
 
@@ -152,6 +160,7 @@ class LedgerEntry {
       createdAt: json['createdAt']?.toString(),
       referenceType: json['referenceType'] as String?,
       referenceId: json['referenceId'] as int?,
+      isEventRelatedFlag: json['isEventRelated'] as bool?,
     );
   }
 }
@@ -202,6 +211,12 @@ class TeamFinanceSummary {
   final double cashBalance;
   final double totalIncome;
   final double totalExpenses;
+  final double teamIncome;
+  final double teamExpenses;
+  final double teamBalance;
+  final double eventIncome;
+  final double eventExpenses;
+  final double eventBalance;
   final double totalOutstanding;
   final int pendingPaymentsCount;
 
@@ -210,16 +225,35 @@ class TeamFinanceSummary {
     required this.cashBalance,
     required this.totalIncome,
     required this.totalExpenses,
+    required this.teamIncome,
+    required this.teamExpenses,
+    required this.teamBalance,
+    required this.eventIncome,
+    required this.eventExpenses,
+    required this.eventBalance,
     required this.totalOutstanding,
     required this.pendingPaymentsCount,
   });
 
   factory TeamFinanceSummary.fromJson(Map<String, dynamic> json) {
+    final totalIncome = _toDouble(json['totalIncome']);
+    final totalExpenses = _toDouble(json['totalExpenses']);
+    final teamIncome = _toDouble(json['teamIncome'] ?? totalIncome);
+    final teamExpenses = _toDouble(json['teamExpenses'] ?? totalExpenses);
+    final eventIncome = _toDouble(json['eventIncome']);
+    final eventExpenses = _toDouble(json['eventExpenses']);
     return TeamFinanceSummary(
       teamId: json['teamId'] as int,
       cashBalance: _toDouble(json['cashBalance']),
-      totalIncome: _toDouble(json['totalIncome']),
-      totalExpenses: _toDouble(json['totalExpenses']),
+      totalIncome: totalIncome,
+      totalExpenses: totalExpenses,
+      teamIncome: teamIncome,
+      teamExpenses: teamExpenses,
+      teamBalance: _toDouble(json['teamBalance'] ?? (teamIncome - teamExpenses)),
+      eventIncome: eventIncome,
+      eventExpenses: eventExpenses,
+      eventBalance:
+          _toDouble(json['eventBalance'] ?? (eventIncome - eventExpenses)),
       totalOutstanding: _toDouble(json['totalOutstanding']),
       pendingPaymentsCount: json['pendingPaymentsCount'] as int? ?? 0,
     );
@@ -296,6 +330,66 @@ String paymentMethodLabel(String method) {
   }
 }
 
+String feeChargeStatusLabel(String status) {
+  switch (status) {
+    case 'pending':
+      return 'Pendiente';
+    case 'partial':
+      return 'Pago parcial';
+    case 'paid':
+      return 'Pagada';
+    case 'waived':
+      return 'Anulada';
+    case 'overdue':
+      return 'Vencida';
+    default:
+      return status;
+  }
+}
+
+class CashClosure {
+  final int id;
+  final int teamId;
+  final String? season;
+  final DateTime? closedAt;
+  final double previousCashBalance;
+  final double outstandingCarried;
+  final bool carryPendingQuotas;
+  final bool resetCashToZero;
+  final String? notes;
+  final String? closerName;
+
+  CashClosure({
+    required this.id,
+    required this.teamId,
+    this.season,
+    this.closedAt,
+    required this.previousCashBalance,
+    required this.outstandingCarried,
+    required this.carryPendingQuotas,
+    required this.resetCashToZero,
+    this.notes,
+    this.closerName,
+  });
+
+  factory CashClosure.fromJson(Map<String, dynamic> json) {
+    return CashClosure(
+      id: json['id'] as int,
+      teamId: json['teamId'] as int,
+      season: json['season'] as String?,
+      closedAt: json['closedAt'] != null
+          ? DateTime.tryParse(json['closedAt'].toString())
+          : null,
+      previousCashBalance: _toDouble(json['previousCashBalance']),
+      outstandingCarried: _toDouble(json['outstandingCarried']),
+      carryPendingQuotas: json['carryPendingQuotas'] != false,
+      resetCashToZero: json['resetCashToZero'] != false,
+      notes: json['notes'] as String?,
+      closerName: _userNameFromJson(json['closer']),
+    );
+  }
+}
+
 String? feeChargePeriodLabel({String? dueDate, String? concept}) {
   if (dueDate != null && dueDate.trim().isNotEmpty) {
     final parsed = DateTime.tryParse(dueDate);
@@ -341,5 +435,5 @@ String? _userNameFromJson(dynamic user) {
       .join(' ')
       .trim();
   if (combined.isNotEmpty) return combined;
-  return map['username']?.toString();
+  return map['username']?.toString() ?? map['email']?.toString();
 }

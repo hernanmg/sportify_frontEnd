@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/services/finance_service.dart';
 import 'package:sportify_amateur/features/finance/payment_receipt_dialog.dart';
+import 'package:sportify_amateur/features/finance/finance_export_helper.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/models/finance.dart';
 
@@ -26,6 +28,7 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
   List<PlayerBalance> _balances = [];
   List<PlayerPayment> _pendingPayments = [];
   List<FeeCharge> _charges = [];
+  List<CashClosure> _closures = [];
   bool _loading = true;
   String? _error;
 
@@ -85,6 +88,7 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
         ),
         _financeService.getPendingPayments(teamId),
         _financeService.getTeamCharges(teamId),
+        _financeService.listCashClosures(teamId),
       ]);
       if (!mounted) return;
       setState(() {
@@ -92,6 +96,7 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
         _balances = results[1] as List<PlayerBalance>;
         _pendingPayments = results[2] as List<PlayerPayment>;
         _charges = results[3] as List<FeeCharge>;
+        _closures = results[4] as List<CashClosure>;
         _loading = false;
       });
     } catch (e) {
@@ -271,7 +276,9 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
     }
     try {
       await _financeService.deleteFeeCharge(charge.id);
-      if (!silent) _showSnack('Cuota eliminada');
+      if (!silent) {
+        _showSnack('Cuota eliminada (no se regenera sola)');
+      }
       await reload();
     } catch (e) {
       _showSnack(FinanceService.errorMessage(e));
@@ -411,6 +418,71 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
     } catch (e) {
       _showSnack(FinanceService.errorMessage(e));
     }
+  }
+
+  Widget _closureTile(CashClosure c) {
+    final fmt = DateFormat('dd/MM/yyyy HH:mm');
+    final when = c.closedAt != null ? fmt.format(c.closedAt!.toLocal()) : '—';
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.lock_clock),
+        title: Text(
+          when + (c.season != null ? ' · ${c.season}' : ''),
+        ),
+        subtitle: Text(
+          [
+            'Caja previa ${formatMoney(c.previousCashBalance)}',
+            if (c.carryPendingQuotas)
+              'Arrastró ${formatMoney(c.outstandingCarried)}'
+            else
+              'Sin arrastre de cuotas',
+            if (c.resetCashToZero) 'Caja a cero',
+            if (c.closerName != null) 'Por ${c.closerName}',
+            if (c.notes != null && c.notes!.isNotEmpty) c.notes!,
+          ].join(' · '),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showClosuresSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.55,
+          minChildSize: 0.35,
+          maxChildSize: 0.9,
+          builder: (_, scrollCtrl) {
+            return ListView(
+              controller: scrollCtrl,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              children: [
+                Text(
+                  'Historial de cierres de caja',
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Registro de auditoría. No se pueden borrar.',
+                  style: Theme.of(ctx).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                if (_closures.isEmpty)
+                  const ListTile(
+                    title: Text('Todavía no hay cierres registrados'),
+                  )
+                else
+                  ..._closures.map(_closureTile),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _showGenerateFeesDialog() async {
@@ -769,14 +841,105 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  label: 'Caja equipo',
+                  value: formatMoney(summary.teamBalance),
+                  icon: Icons.groups,
+                  color: Colors.indigo,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _StatCard(
+                  label: 'Caja eventos',
+                  value: formatMoney(summary.eventBalance),
+                  icon: Icons.event,
+                  color: Colors.deepPurple,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
-          Text(
-            'Cuotas del equipo',
-            style: Theme.of(context).textTheme.titleMedium,
+          Card(
+            color: Colors.blue.shade50,
+            child: const Padding(
+              padding: EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cómo leer las finanzas',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    '• Cuota: lo que el jugador debe (generada por el equipo).\n'
+                    '• Pago a confirmar: comprobante que envió el jugador; '
+                    'todavía no baja la deuda hasta que lo confirmes.\n'
+                    '• Caja: plata ya confirmada en el equipo (no es lo pendiente).',
+                    style: TextStyle(fontSize: 13, height: 1.35),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Cuotas del equipo',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'Exportar',
+                icon: const Icon(Icons.ios_share),
+                onSelected: (v) async {
+                  try {
+                    if (v == 'csv_cuotas') {
+                      await FinanceExportHelper.shareChargesCsv(
+                        charges: _charges,
+                      );
+                    } else if (v == 'pdf_cuotas') {
+                      await FinanceExportHelper.shareChargesPdf(
+                        charges: _charges,
+                        teamLabel: 'Equipo #${widget.teamId}',
+                        season: context.read<SeasonProvider>().season,
+                      );
+                    } else if (v == 'csv_saldos') {
+                      await FinanceExportHelper.shareBalancesCsv(
+                        balances: _balances,
+                      );
+                    }
+                  } catch (e) {
+                    _showSnack('No se pudo exportar: $e');
+                  }
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'csv_cuotas',
+                    child: Text('Exportar cuotas (CSV)'),
+                  ),
+                  PopupMenuItem(
+                    value: 'pdf_cuotas',
+                    child: Text('Exportar cuotas (PDF)'),
+                  ),
+                  PopupMenuItem(
+                    value: 'csv_saldos',
+                    child: Text('Exportar saldos (CSV)'),
+                  ),
+                ],
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(
-            'Deslizá a la izquierda para eliminar cuotas sin pagos. '
+            'La cuota es la deuda. Deslizá para eliminar solo cuotas sin pagos. '
             'Los pagos confirmados no se borran.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -799,9 +962,9 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
                   subtitle: Text(
                     [
                       if (charge.periodLabel != null) charge.periodLabel!,
-                      charge.status,
+                      feeChargeStatusLabel(charge.status),
                       'Pagado ${formatMoney(charge.paidAmount)}',
-                      if (!canDelete) 'protegida',
+                      if (!canDelete) 'con pagos (protegida)',
                     ].join(' · '),
                   ),
                   trailing: Row(
@@ -904,22 +1067,57 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
                 icon: const Icon(Icons.exposure_zero),
                 label: const Text('Caja en cero'),
               ),
+              OutlinedButton.icon(
+                onPressed: _showClosuresSheet,
+                icon: const Icon(Icons.history),
+                label: Text(
+                  _closures.isEmpty
+                      ? 'Historial cierres'
+                      : 'Cierres (${_closures.length})',
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
+          if (_closures.isNotEmpty) ...[
+            Text(
+              'Últimos cierres de caja',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Auditoría: quién cerró, saldo previo y cuotas arrastradas.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            ..._closures.take(3).map(_closureTile),
+            if (_closures.length > 3)
+              TextButton(
+                onPressed: _showClosuresSheet,
+                child: const Text('Ver todo el historial'),
+              ),
+            const SizedBox(height: 16),
+          ],
           if (_pendingPayments.isNotEmpty) ...[
             Row(
               children: [
-                Text(
-                  'Pagos a confirmar (no son cuotas)',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Expanded(
+                  child: Text(
+                    'Pagos a confirmar',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
-                const SizedBox(width: 8),
                 Chip(
                   label: Text('${_pendingPayments.length}'),
                   backgroundColor: Colors.orange.shade100,
                 ),
               ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'No son cuotas: son comprobantes enviados por jugadores. '
+              'Al confirmar, se aplican a la deuda y entran a la caja.',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
             ..._pendingPayments.map(
