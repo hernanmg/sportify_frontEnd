@@ -114,7 +114,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            '¡Únete a Sports Manager!',
+                            '¡Únete a KeepSync Sports!',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,

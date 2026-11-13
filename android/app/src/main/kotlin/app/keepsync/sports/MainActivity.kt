@@ -1,4 +1,4 @@
-package sportify.amateur
+package app.keepsync.sports
 
 import io.flutter.embedding.android.FlutterActivity
 

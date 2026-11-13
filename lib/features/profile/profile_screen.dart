@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/services/account_service.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/user_profile_service.dart';
 import 'package:sportify_amateur/models/user_profile.dart';
@@ -85,6 +86,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       // Opciones del perfil
                       _buildProfileOptions(),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () =>
+                              AccountService.logoutAndGoToLogin(context),
+                          icon: const Icon(Icons.logout),
+                          label: const Text('Cerrar sesión'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

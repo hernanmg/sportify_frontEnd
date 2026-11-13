@@ -1,4 +1,4 @@
-# 📱 Sportify Amateur - Flutter Frontend
+﻿# 📱 KeepSync Sports - Flutter Frontend
 
 ## 🏗️ **Arquitectura del Proyecto**
 

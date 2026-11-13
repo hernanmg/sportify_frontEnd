@@ -184,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         )
                       : const Text(
-                          'Sportify Amateur',
+                          'KeepSync Sports',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

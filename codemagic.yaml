@@ -1,0 +1,43 @@
+# Build iOS -> TestFlight. Ver docs/IOS_TESTFLIGHT.md (pasos previos en Apple / Codemagic).
+workflows:
+  ios-testflight:
+    name: iOS TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      # Nombre EXACTO de la API key cargada en Codemagic > Team integrations > App Store Connect.
+      app_store_connect: KeepSync ASC
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.keepsync.sports
+      vars:
+        # Apple ID numérico de la app (App Store Connect > App > Información general).
+        APP_STORE_APPLE_ID: 0000000000
+        API_BASE_URL: https://sportify-backend-yyqe.onrender.com
+    scripts:
+      - name: Dependencias Flutter
+        script: flutter pub get
+      - name: CocoaPods
+        script: cd ios && pod install --repo-update
+      - name: Perfiles de firma
+        script: xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          BUILD_NUMBER=$((LATEST + 1))
+          flutter build ipa --release \
+            --build-number=$BUILD_NUMBER \
+            --dart-define=API_BASE_URL=$API_BASE_URL \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

@@ -83,7 +83,7 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
             SizedBox(height: 24),
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Cargando Sportify Amateur…'),
+            Text('Cargando KeepSync Sports…'),
           ],
         ),
       ),

@@ -1,4 +1,4 @@
-# 🌐 Sportify Amateur - Setup para Desarrollo Web
+﻿# 🌐 KeepSync Sports - Setup para Desarrollo Web
 
 ## 🎯 **Objetivo**
 Configurar el proyecto Flutter para desarrollo web local, conectado al backend NestJS que corre en `localhost:3000`.
@@ -132,7 +132,7 @@ flutter run -d chrome --web-port 8080
 flutter build web --release
 
 # Build con URL específica
-flutter build web --dart-define=API_BASE_URL=https://api.sportify.com
+flutter build web --dart-define=API_BASE_URL=https://api.keepsync.sports
 ```
 
 ---

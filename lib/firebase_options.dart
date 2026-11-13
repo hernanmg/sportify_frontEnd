@@ -60,7 +60,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '489565755634',
     projectId: 'sportify-amateur-dev',
     storageBucket: 'sportify-amateur-dev.firebasestorage.app',
-    iosBundleId: 'com.example.sportifyAmateur',
+    iosBundleId: 'app.keepsync.sports',
   );
 
   static const FirebaseOptions web = FirebaseOptions(

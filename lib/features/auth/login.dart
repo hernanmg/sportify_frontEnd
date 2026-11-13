@@ -8,7 +8,7 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Bienvenido a Sports Manager Pro')),
+      appBar: AppBar(title: Text('Bienvenido a KeepSync Sports')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

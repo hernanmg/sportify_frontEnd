@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/services/account_service.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/biometric_auth_service.dart';
 import 'package:sportify_amateur/core/services/password_service.dart';
@@ -405,10 +406,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.orange),
-              title: const Text('Cerrar sesión en todos los dispositivos'),
-              subtitle:
-                  const Text('Cierra la sesión en todos tus dispositivos'),
-              onTap: _logoutAllDevices,
+              title: const Text('Cerrar sesión'),
+              subtitle: const Text('Salís de tu cuenta en este dispositivo'),
+              onTap: _confirmLogout,
             ),
             const Divider(),
             ListTile(
@@ -461,76 +461,109 @@ class _SecurityScreenState extends State<SecurityScreen> {
     }
   }
 
-  void _logoutAllDevices() {
-    showDialog(
+  Future<void> _confirmLogout() async {
+    final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cerrar sesión en todos los dispositivos'),
-        content: const Text(
-          '¿Estás seguro de que quieres cerrar la sesión en todos tus dispositivos? '
-          'Tendrás que iniciar sesión nuevamente en cada uno.',
-        ),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cerrar sesión'),
+        content: const Text('¿Querés salir de tu cuenta en este dispositivo?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implementar logout en todos los dispositivos
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Función próximamente'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            },
+            onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
             child: const Text('Cerrar sesión'),
           ),
         ],
       ),
     );
+    if (ok == true && mounted) {
+      await AccountService.logoutAndGoToLogin(context);
+    }
   }
 
-  void _showDeleteAccountDialog() {
-    showDialog(
+  Future<void> _showDeleteAccountDialog() async {
+    final passwordController = TextEditingController();
+    var obscure = true;
+    final password = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(
-          'Eliminar cuenta',
-          style: TextStyle(color: Colors.red),
-        ),
-        content: const Text(
-          '¿Estás seguro de que quieres eliminar tu cuenta? '
-          'Esta acción no se puede deshacer y perderás todos tus datos.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text(
+            'Eliminar cuenta',
+            style: TextStyle(color: Colors.red),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implementar eliminación de cuenta
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Función próximamente'),
-                  backgroundColor: Colors.orange,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Se borran tus datos personales (nombre, email, teléfono, foto) '
+                'y no vas a poder volver a entrar con esta cuenta. '
+                'El historial del equipo (pagos, asistencias) queda anónimo.\n\n'
+                'Esta acción no se puede deshacer.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: obscure,
+                decoration: InputDecoration(
+                  labelText: 'Tu contraseña',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscure ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () => setDialogState(() => obscure = !obscure),
+                  ),
                 ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(
-              'Eliminar cuenta',
-              style: TextStyle(color: Colors.white),
-            ),
+              ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, passwordController.text),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text(
+                'Eliminar definitivamente',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
       ),
     );
+    passwordController.dispose();
+    if (password == null || !mounted) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await AccountService().deleteOwnAccount(password: password);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tu cuenta fue eliminada'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      await AccountService.logoutAndGoToLogin(context, disableBiometric: true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override

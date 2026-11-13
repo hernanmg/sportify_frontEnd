@@ -214,7 +214,7 @@ class AdminMetricsService {
         'new_registrations': 8,
       },
       'competition_stats': {
-        'current_season': 'Liga Amateur 2024',
+        'current_season': 'Liga 2024',
         'matchday': 8,
         'total_matchdays': 12,
         'matches_this_week': 6,

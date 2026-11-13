@@ -10,7 +10,7 @@ class TeamColorPair {
   });
 }
 
-/// Presets comunes para equipos amateur.
+/// Presets comunes para equipos.
 const List<({String label, TeamColorPair colors})> teamColorPresets = [
   (label: 'Verde y blanco', colors: TeamColorPair(primary: Color(0xFF1B5E20), secondary: Color(0xFFFFFFFF))),
   (label: 'Azul y dorado', colors: TeamColorPair(primary: Color(0xFF0D47A1), secondary: Color(0xFFFFC107))),

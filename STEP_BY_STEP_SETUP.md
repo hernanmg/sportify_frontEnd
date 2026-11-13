@@ -1,4 +1,4 @@
-# 🚀 Guía Paso a Paso - Sportify Amateur Web Setup
+﻿# 🚀 Guía Paso a Paso - KeepSync Sports Web Setup
 
 ## 📋 **Resumen de Archivos Creados**
 

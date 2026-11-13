@@ -135,7 +135,7 @@ class _LoginScreenState extends State<UserLoginScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Sportify Amateur',
+                        'KeepSync Sports',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,

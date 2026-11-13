@@ -9,8 +9,8 @@ Future<void> showInviteCodeShareSheet(
   String? teamName,
 }) async {
   final message = teamName != null && teamName.isNotEmpty
-      ? 'Sumate a $teamName en Sportify Amateur. Código de invitación: $inviteCode'
-      : 'Sumate a nuestro equipo en Sportify Amateur. Código de invitación: $inviteCode';
+      ? 'Sumate a $teamName en KeepSync Sports. Código de invitación: $inviteCode'
+      : 'Sumate a nuestro equipo en KeepSync Sports. Código de invitación: $inviteCode';
 
   await showModalBottomSheet<void>(
     context: context,
@@ -47,7 +47,7 @@ Future<void> showInviteCodeShareSheet(
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: () async {
-              await Share.share(message, subject: 'Invitación Sportify Amateur');
+              await Share.share(message, subject: 'Invitación KeepSync Sports');
             },
             icon: const Icon(Icons.share),
             label: const Text('Compartir código'),

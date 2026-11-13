@@ -110,7 +110,7 @@ class MainApp extends StatelessWidget {
           child: child,
         );
       },
-      title: 'Sportify Amateur',
+      title: 'KeepSync Sports',
       theme: ThemeData(
         brightness: Brightness.light,
         primarySwatch: Colors.blue,

@@ -1,6 +1,6 @@
-# Android: de APK compartido a Play Store
+﻿# Android: de APK compartido a Play Store
 
-Guía práctica para Sportify Amateur (`applicationId`: `sportify.amateur`).
+Guía práctica para KeepSync Sports (`applicationId`: `app.keepsync.sports`).
 
 Complementa el backend: `backend_sportify_amateur/.../docs/RENDER_DEPLOY.md`.
 
@@ -26,7 +26,7 @@ No esperes a “terminar el producto”: el store se prepara mientras el piloto 
 
 | Ítem | Estado hoy | Acción antes de Play |
 |------|------------|----------------------|
-| `applicationId` | `sportify.amateur` | Ideal: `com.tuempresa.sportify` **antes** del primer upload (después cuesta cambiar) |
+| `applicationId` | `app.keepsync.sports` | Provisorio OK para test. Si el brand final no es KeepSync Sports, cambiar **antes** del primer upload a Play (después no se puede) |
 | Firma release | Usa `signingConfigs.debug` | Obligatorio: keystore propio de upload |
 | API | Render (`API_BASE_URL`) | Build release con `--dart-define` fijo a prod |
 | Versión | `pubspec.yaml` → `0.1.0` | Subir `version: x.y.z+N` en cada upload (`N` = versionCode) |
@@ -65,11 +65,14 @@ flutter build apk --release ^
 
 ### 2. Application ID definitivo
 
-Si vas a cambiar `sportify.amateur` → hacerlo **ahora**:
+Hoy es `app.keepsync.sports` (sin “amateur”). Si el brand final cambia por completo → hacerlo **antes** del primer upload:
 
 - `android/app/build.gradle` → `applicationId` y `namespace`
 - Carpetas Kotlin / `MainActivity` si aplica
-- Firebase / Google Sign-In / Facebook: re-registrar el nuevo package name
+- Firebase: **Agregar app** Android con el package nuevo y reemplazar `google-services.json` (el package viejo `sportify.amateur` ya no aplica)
+- Google Sign-In / Facebook: re-registrar el nuevo package name
+
+> **Testers con APK viejo:** al cambiar el `applicationId`, Android lo trata como app distinta. Hay que desinstalar la anterior e instalar la nueva.
 
 Una vez publicada una app con un ID, **no se puede renombrar** en Play.
 

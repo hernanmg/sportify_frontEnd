@@ -80,7 +80,7 @@ class BiometricAuthService {
       final label = biometricLabel(types);
       return await _localAuth.authenticate(
         localizedReason:
-            reason ?? 'Usá $label para entrar a Sportify Amateur',
+            reason ?? 'Usá $label para entrar a KeepSync Sports',
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: false,

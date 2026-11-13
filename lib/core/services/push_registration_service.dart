@@ -12,7 +12,7 @@ import 'package:sportify_amateur/core/services/device_service.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
 
 /// Canal Android (debe coincidir con AndroidManifest y backend FCM).
-const String kAndroidNotificationChannelId = 'sportify_alerts';
+const String kAndroidNotificationChannelId = 'keepsync_alerts';
 
 /// Registra el token FCM en el backend tras login (web / Android / iOS).
 class PushRegistrationService {
@@ -61,6 +61,15 @@ class PushRegistrationService {
       return;
     }
 
+    if (_isIOS) {
+      // iOS muestra el banner nativo en foreground; no duplicamos con local.
+      await messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    }
+
     FirebaseMessaging.onMessage.listen(_onForegroundMessage);
     FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
 
@@ -85,7 +94,16 @@ class PushRegistrationService {
     if (kIsWeb) return;
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(android: androidInit);
+    // El permiso en iOS lo pide FirebaseMessaging.requestPermission.
+    const darwinInit = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    const initSettings = InitializationSettings(
+      android: androidInit,
+      iOS: darwinInit,
+    );
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (response) {
@@ -102,7 +120,7 @@ class PushRegistrationService {
       await plugin?.createNotificationChannel(
         const AndroidNotificationChannel(
           kAndroidNotificationChannelId,
-          'Alertas Sportify',
+          'Alertas KeepSync',
           description: 'Convocatorias, lesiones y avisos del equipo',
           importance: Importance.high,
         ),
@@ -130,6 +148,7 @@ class PushRegistrationService {
     NotificationService().refreshUnreadCount();
 
     if (title == null || title.isEmpty) return;
+    if (_isIOS && message.notification != null) return;
 
     final action = message.data['action'] ?? '';
     final deepLink = message.data['deepLink'] ?? '';
@@ -142,11 +161,16 @@ class PushRegistrationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           kAndroidNotificationChannelId,
-          'Alertas Sportify',
+          'Alertas KeepSync',
           channelDescription: 'Convocatorias, lesiones y avisos del equipo',
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
         ),
       ),
       payload: payload,
@@ -197,6 +221,18 @@ class PushRegistrationService {
       if (kIsWeb) {
         return messaging.getToken(vapidKey: AppConfig.fcmVapidKey);
       }
+      if (_isIOS) {
+        // getToken falla con apns-token-not-set si APNs aún no respondió.
+        String? apns = await messaging.getAPNSToken();
+        for (var i = 0; apns == null && i < 5; i++) {
+          await Future<void>.delayed(const Duration(seconds: 2));
+          apns = await messaging.getAPNSToken();
+        }
+        if (apns == null) {
+          debugPrint('FCM iOS: sin token APNs (¿simulador o push no habilitado?)');
+          return null;
+        }
+      }
       return messaging.getToken();
     } catch (e) {
       debugPrint('FCM getToken: $e');
@@ -215,6 +251,8 @@ class PushRegistrationService {
       debugPrint('FCM: registro de token omitido (sesión no válida aún): $e');
     }
   }
+
+  bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   String _platformName() {
     if (kIsWeb) return 'web';
