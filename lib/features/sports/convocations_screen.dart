@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
@@ -81,7 +82,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
       if (mounted) {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: KeepSyncColors.flare),
         );
       }
     }
@@ -163,7 +164,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Convocatoria eliminada'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       }
@@ -171,7 +172,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: KeepSyncColors.flare),
         );
       }
       await _load();
@@ -185,7 +186,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Convocatoria enviada'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       }
@@ -193,7 +194,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: KeepSyncColors.flare),
         );
       }
     }
@@ -308,13 +309,13 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
           ? 'Los jugadores seleccionados ya estaban convocados'
           : 'Se sumaron ${result.added.length} jugador(es)';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: Colors.green),
+        SnackBar(content: Text(msg), backgroundColor: KeepSyncColors.turf),
       );
       await _load();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: KeepSyncColors.flare),
         );
       }
     }
@@ -337,7 +338,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: KeepSyncColors.flare),
         );
       }
     }
@@ -816,7 +817,7 @@ class ConvocationsScreenState extends State<ConvocationsScreen> {
                                       ),
                                       FilledButton(
                                         style: FilledButton.styleFrom(
-                                          backgroundColor: Colors.red,
+                                          backgroundColor: KeepSyncColors.flare,
                                         ),
                                         onPressed: () =>
                                             Navigator.pop(ctx, true),

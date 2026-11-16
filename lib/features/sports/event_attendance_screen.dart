@@ -1,6 +1,7 @@
-import 'package:connectivity_plus/connectivity_plus.dart';
+﻿import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/services/attendance_service.dart';
 import 'package:sportify_amateur/core/services/offline_attendance_cache.dart';
@@ -63,7 +64,7 @@ class _EventAttendanceScreenState extends State<EventAttendanceScreen>
                 ? '1 lista de asistencia sincronizada'
                 : '$synced listas sincronizadas',
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     }
@@ -124,7 +125,7 @@ class _EventAttendanceScreenState extends State<EventAttendanceScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AttendanceService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -187,7 +188,7 @@ class _EventAttendanceScreenState extends State<EventAttendanceScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Asistencia guardada'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
       Navigator.pop(context, true);
@@ -214,7 +215,7 @@ class _EventAttendanceScreenState extends State<EventAttendanceScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AttendanceService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }

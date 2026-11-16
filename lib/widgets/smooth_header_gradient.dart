@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 
 /// Cabecera con degradado suave (evita bandas/pixelado al estirar SliverAppBar).
 class SmoothHeaderGradient extends StatelessWidget {
@@ -15,17 +16,23 @@ class SmoothHeaderGradient extends StatelessWidget {
     this.child,
   });
 
-  factory SmoothHeaderGradient.green({Widget? child}) {
+  /// Degradado marca KeepSync (Ink → Ink3).
+  factory SmoothHeaderGradient.ink({Widget? child}) {
     return SmoothHeaderGradient(
       colors: _densify(const [
-        Color(0xFF1B5E20),
-        Color(0xFF2E7D32),
-        Color(0xFF388E3C),
-        Color(0xFF43A047),
-        Color(0xFF66BB6A),
+        KeepSyncColors.ink,
+        KeepSyncColors.ink2,
+        KeepSyncColors.ink3,
+        KeepSyncColors.ink2,
+        KeepSyncColors.ink,
       ]),
       child: child,
     );
+  }
+
+  @Deprecated('Usar SmoothHeaderGradient.ink')
+  factory SmoothHeaderGradient.green({Widget? child}) {
+    return SmoothHeaderGradient.ink(child: child);
   }
 
   factory SmoothHeaderGradient.primary(Color primary, {Widget? child}) {
@@ -36,7 +43,8 @@ class SmoothHeaderGradient extends StatelessWidget {
         hsl.withLightness((hsl.lightness * 0.88).clamp(0.0, 1.0)).toColor(),
         primary,
         hsl.withLightness((hsl.lightness * 1.05).clamp(0.0, 1.0)).toColor(),
-        hsl.withSaturation((hsl.saturation * 0.85).clamp(0.0, 1.0))
+        hsl
+            .withSaturation((hsl.saturation * 0.85).clamp(0.0, 1.0))
             .withLightness((hsl.lightness * 0.95).clamp(0.0, 1.0))
             .toColor(),
       ]),
@@ -72,13 +80,11 @@ class SmoothHeaderGradient extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (child != null) {
-      // En Column: el hijo define la altura; el degradado lo acompaña.
       return DecoratedBox(
         decoration: _decoration,
         child: child,
       );
     }
-    // En Stack/SliverAppBar: rellenar todo el espacio disponible.
     return DecoratedBox(
       decoration: _decoration,
       child: const SizedBox.expand(),

@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/finance_service.dart';
 import 'package:sportify_amateur/features/finance/payment_receipt_dialog.dart';
 import 'package:sportify_amateur/features/finance/finance_export_helper.dart';
@@ -265,7 +266,7 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              style: FilledButton.styleFrom(backgroundColor: KeepSyncColors.flare),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Eliminar'),
             ),
@@ -1023,7 +1024,7 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
                         ),
                         FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: Colors.red,
+                            backgroundColor: KeepSyncColors.flare,
                           ),
                           onPressed: () => Navigator.pop(ctx, true),
                           child: const Text('Eliminar'),
@@ -1238,8 +1239,8 @@ class TeamFinanceTabState extends State<TeamFinanceTab> {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: balance.balance > 0
-                                  ? Colors.red.shade700
-                                  : Colors.green.shade700,
+                                  ? KeepSyncColors.financeNegativeDark
+                                  : KeepSyncColors.financePositiveDark,
                             ),
                           ),
                           TextButton(

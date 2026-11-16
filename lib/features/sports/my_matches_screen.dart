@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/services/convocations_service.dart';
 import 'package:sportify_amateur/features/sports/post_match_screen.dart';
@@ -36,7 +37,7 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Error: $e'), backgroundColor: KeepSyncColors.flare),
       );
     }
   }

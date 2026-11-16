@@ -1,0 +1,12 @@
+---
+description: Caches y temps del agente en D:\Dev\caches; limpiar al terminar builds
+alwaysApply: true
+---
+
+# Caches en disco D
+
+- Caches pesados: `D:\Dev\caches\` (gradle, pub, cursor-sandbox, temp).
+- Env: `GRADLE_USER_HOME=D:\Dev\caches\gradle`, `PUB_CACHE=D:\Dev\caches\pub`.
+- Junction: `%LOCALAPPDATA%\Temp\cursor-sandbox-cache` → `D:\Dev\caches\cursor-sandbox` (no borrar el link).
+- Tras builds/APK/Gradle grandes: ejecutar `powershell -ExecutionPolicy Bypass -File D:\Dev\caches\clean-temps.ps1` o vaciar `D:\Dev\caches\temp` y el contenido de `cursor-sandbox` (sin quitar el junction).
+- No escribir caches grandes a C:; C: suele estar justo de espacio.

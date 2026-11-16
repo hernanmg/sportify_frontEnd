@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/models/player_roster.dart';
 import 'package:intl/intl.dart';
@@ -164,7 +165,7 @@ class _RosterFormScreenState extends State<RosterFormScreen> {
                   ? 'Jugador agregado a la lista de buena fe'
                   : 'Información del jugador actualizada',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
         Navigator.pop(context, true);
@@ -176,7 +177,7 @@ class _RosterFormScreenState extends State<RosterFormScreen> {
           SnackBar(
             content:
                 Text('Error: ${e.toString().replaceFirst('Exception: ', '')}'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -189,8 +190,7 @@ class _RosterFormScreenState extends State<RosterFormScreen> {
       appBar: AppBar(
         title:
             Text(widget.roster == null ? 'Agregar Jugador' : 'Editar Jugador'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -475,7 +475,7 @@ class _RosterFormScreenState extends State<RosterFormScreen> {
                     _isEnabled = value;
                   });
                 },
-                activeColor: Colors.green,
+                activeColor: KeepSyncColors.volt,
               ),
               const SizedBox(height: 32),
 
@@ -489,19 +489,20 @@ class _RosterFormScreenState extends State<RosterFormScreen> {
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                            color: Colors.white,
+                            color: KeepSyncColors.onVolt,
                             strokeWidth: 2,
                           ),
                         )
-                      : const Icon(Icons.save, color: Colors.white),
+                      : const Icon(Icons.save, color: KeepSyncColors.onVolt),
                   label: Text(
                     widget.roster == null
                         ? 'Agregar Jugador'
                         : 'Guardar Cambios',
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: KeepSyncColors.onVolt),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: KeepSyncColors.volt,
+                    foregroundColor: KeepSyncColors.onVolt,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -524,7 +525,7 @@ class _RosterFormScreenState extends State<RosterFormScreen> {
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Colors.green,
+          color: KeepSyncColors.volt,
         ),
       ),
     );

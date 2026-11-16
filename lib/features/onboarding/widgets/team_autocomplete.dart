@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/team.dart';
 
@@ -88,7 +89,7 @@ class _TeamAutocompleteState extends State<TeamAutocomplete> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('¡Equipo "${result.name}" creado exitosamente!'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     }
@@ -189,7 +190,7 @@ class _TeamAutocompleteState extends State<TeamAutocomplete> {
                 if (_showCreateOption && _controller.text.trim().isNotEmpty)
                   ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: Colors.green[100],
+                      backgroundColor: KeepSyncColors.turf[100],
                       child: Icon(
                         Icons.add,
                         color: Colors.green[800],

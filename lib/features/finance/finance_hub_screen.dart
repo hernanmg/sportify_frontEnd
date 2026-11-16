@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/widgets/keepsync_card_tabs.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/widgets/season_selector_chip.dart';
@@ -130,8 +131,6 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Finanzas'),
-          backgroundColor: Colors.green.shade700,
-          foregroundColor: Colors.white,
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -143,6 +142,24 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
       workspace.teamOptions,
     );
     final tabCount = canManageFinance ? 3 : 2;
+    final tabItems = <KeepSyncTabItem>[
+      const KeepSyncTabItem(
+        icon: Icons.person_rounded,
+        label: 'Mi cuenta',
+        subtitle: 'Cuotas y pagos',
+      ),
+      if (canManageFinance)
+        const KeepSyncTabItem(
+          icon: Icons.groups_rounded,
+          label: 'Equipo',
+          subtitle: 'Caja y resumen',
+        ),
+      const KeepSyncTabItem(
+        icon: Icons.receipt_long_rounded,
+        label: 'Movimientos',
+        subtitle: 'Ledger',
+      ),
+    ];
 
     return DefaultTabController(
       length: tabCount,
@@ -156,22 +173,6 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
                 selectedTeam != null
                     ? 'Finanzas · ${selectedTeam.name}'
                     : 'Finanzas',
-              ),
-              backgroundColor: Colors.green.shade700,
-              foregroundColor: Colors.white,
-              bottom: TabBar(
-                indicatorColor: Colors.white,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                tabs: [
-                  const Tab(icon: Icon(Icons.person), text: 'Mi cuenta'),
-                  if (canManageFinance)
-                    const Tab(icon: Icon(Icons.groups), text: 'Equipo'),
-                  const Tab(
-                    icon: Icon(Icons.receipt_long),
-                    text: 'Movimientos',
-                  ),
-                ],
               ),
               actions: [
                 const SeasonSelectorChip(),
@@ -200,6 +201,10 @@ class _FinanceHubScreenState extends State<FinanceHubScreen> {
             body: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                KeepSyncCardTabs.fromController(
+                  controller: tabController,
+                  items: tabItems,
+                ),
                 if (selectedTeam == null)
                   Padding(
                     padding: const EdgeInsets.all(16),

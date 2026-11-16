@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/navigation/app_navigator.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/finance_service.dart';
@@ -114,7 +115,7 @@ class _TrainingEventFinanceCardState extends State<TrainingEventFinanceCard> {
             'Gasto sumado al total. El aporte por jugador se actualiza '
             'según confirmaciones.',
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
           action: SnackBarAction(
             label: 'Finanzas',
             onPressed: () {
@@ -128,7 +129,7 @@ class _TrainingEventFinanceCardState extends State<TrainingEventFinanceCard> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(FinanceService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -168,7 +169,7 @@ class _TrainingEventFinanceCardState extends State<TrainingEventFinanceCard> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Pago acreditado en tu cuenta del entreno'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     } catch (e) {
@@ -176,7 +177,7 @@ class _TrainingEventFinanceCardState extends State<TrainingEventFinanceCard> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(FinanceService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }

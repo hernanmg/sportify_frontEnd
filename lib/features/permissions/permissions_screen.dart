@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/permission_service.dart';
 import 'package:sportify_amateur/models/permission.dart';
 
@@ -36,7 +37,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar permisos: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -75,7 +76,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Permiso "${result['name']}" creado exitosamente'),
-              backgroundColor: Colors.green,
+              backgroundColor: KeepSyncColors.turf,
             ),
           );
         }
@@ -84,7 +85,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error al crear permiso: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: KeepSyncColors.flare,
             ),
           );
         }
@@ -110,7 +111,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             SnackBar(
               content:
                   Text('Permiso "${result['name']}" actualizado exitosamente'),
-              backgroundColor: Colors.green,
+              backgroundColor: KeepSyncColors.turf,
             ),
           );
         }
@@ -119,7 +120,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error al actualizar permiso: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: KeepSyncColors.flare,
             ),
           );
         }
@@ -143,7 +144,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: KeepSyncColors.flare),
             child: const Text('Eliminar'),
           ),
         ],
@@ -159,7 +160,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             SnackBar(
               content: Text(
                   'Permiso "${PermissionService.getPermissionDisplayName(permission.name)}" eliminado'),
-              backgroundColor: Colors.green,
+              backgroundColor: KeepSyncColors.turf,
             ),
           );
         }
@@ -168,7 +169,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error al eliminar permiso: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: KeepSyncColors.flare,
             ),
           );
         }
@@ -351,7 +352,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       appBar: AppBar(
         title: const Text('Gestión de Permisos'),
         backgroundColor: Colors.purple,
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

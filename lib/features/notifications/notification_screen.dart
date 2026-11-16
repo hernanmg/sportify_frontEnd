@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/convocations_service.dart';
 import 'package:sportify_amateur/core/services/notification_service.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/features/sports/sports_management_args.dart';
 import 'package:sportify_amateur/models/notification.dart';
 import 'package:sportify_amateur/widgets/empty_state_hint.dart';
+import 'package:sportify_amateur/widgets/keepsync_card_tabs.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
@@ -74,7 +76,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar notificaciones: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -123,7 +125,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error al marcar como leída: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: KeepSyncColors.flare,
             ),
           );
         }
@@ -169,7 +171,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al eliminar: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -194,7 +196,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -206,13 +208,6 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notificaciones'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Recientes', icon: Icon(Icons.notifications)),
-            Tab(text: 'Filtros', icon: Icon(Icons.filter_list)),
-          ],
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.mark_email_read),
@@ -226,11 +221,33 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           ),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildNotificationsList(),
-          _buildFiltersView(),
+          KeepSyncCardTabs.fromController(
+            controller: _tabController,
+            items: const [
+              KeepSyncTabItem(
+                icon: Icons.notifications_rounded,
+                label: 'Recientes',
+                subtitle: 'Bandeja',
+              ),
+              KeepSyncTabItem(
+                icon: Icons.filter_list_rounded,
+                label: 'Filtros',
+                subtitle: 'Tipo y estado',
+              ),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildNotificationsList(),
+                _buildFiltersView(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -280,7 +297,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                     ),
                     FilledButton(
                       style: FilledButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: KeepSyncColors.flare,
                       ),
                       onPressed: () => Navigator.pop(ctx, true),
                       child: const Text('Eliminar'),

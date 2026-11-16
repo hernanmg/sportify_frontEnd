@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 /// Botones inferiores del wizard (sin Row+Icon que desborda en pantallas angostas).
 class OnboardingStepButtons extends StatelessWidget {
@@ -37,7 +37,6 @@ class OnboardingStepButtons extends StatelessWidget {
                 onPressed: onPrimary,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
                 ),
                 child: Text(primaryLabel),
               ),

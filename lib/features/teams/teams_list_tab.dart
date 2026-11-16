@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/team_branding_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
@@ -51,7 +52,7 @@ class TeamsListTabState extends State<TeamsListTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar equipos: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -111,7 +112,7 @@ class TeamsListTabState extends State<TeamsListTab> {
             result['message']?.toString() ??
                 'Te asignaste a ${team.name}',
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
       await _loadTeams();
@@ -120,7 +121,7 @@ class TeamsListTabState extends State<TeamsListTab> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(TeamService.errorMessage(e)),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
     }
@@ -141,7 +142,7 @@ class TeamsListTabState extends State<TeamsListTab> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: KeepSyncColors.flare),
             child:
                 const Text('Eliminar', style: TextStyle(color: Colors.white)),
           ),
@@ -156,7 +157,7 @@ class TeamsListTabState extends State<TeamsListTab> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Equipo "${team.name}" eliminado'),
-              backgroundColor: Colors.green,
+              backgroundColor: KeepSyncColors.turf,
             ),
           );
         }
@@ -166,7 +167,7 @@ class TeamsListTabState extends State<TeamsListTab> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error al eliminar: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: KeepSyncColors.flare,
             ),
           );
         }

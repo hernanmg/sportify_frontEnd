@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/services/team_extras_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
@@ -78,7 +78,6 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
       appBar: AppBar(
         title: const Text('Auditoría'),
         backgroundColor: Colors.blueGrey,
-        foregroundColor: Colors.white,
       ),
       body: _teams.isEmpty
           ? const Center(child: Text('No tenés equipos'))

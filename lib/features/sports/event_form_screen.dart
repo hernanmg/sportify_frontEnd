@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -1116,7 +1117,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Seleccioná un equipo para el evento'),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
       return;
@@ -1127,7 +1128,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Seleccioná al menos una categoría para el entrenamiento'),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
       return;
@@ -1207,7 +1208,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 content: Text(
                   'Seleccioná al menos un invitado del plantel o cargá un invitado externo con nombre.',
                 ),
-                backgroundColor: Colors.red,
+                backgroundColor: KeepSyncColors.flare,
               ),
             );
           }
@@ -1250,7 +1251,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
                     ? 'Serie creada: $created entrenamiento(s) generados'
                     : 'Serie guardada (los entrenamientos ya existían)',
               ),
-              backgroundColor: Colors.green,
+              backgroundColor: KeepSyncColors.turf,
             ),
           );
           Navigator.pop(context, true);
@@ -1362,7 +1363,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
             content: Text(widget.event == null
                 ? 'Evento creado exitosamente'
                 : 'Evento actualizado exitosamente'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       }
@@ -1371,7 +1372,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al guardar evento: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }

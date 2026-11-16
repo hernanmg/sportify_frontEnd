@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/core/services/permission_service.dart';
 import 'package:sportify_amateur/models/role.dart';
@@ -57,7 +58,7 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar permisos: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -102,7 +103,7 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
             content: Text(widget.role == null
                 ? 'Rol "$_name" creado exitosamente'
                 : 'Rol "$_name" actualizado exitosamente'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
         Navigator.pop(context, true);
@@ -112,7 +113,7 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -186,8 +187,6 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? 'Editar Rol' : 'Crear Rol'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -261,8 +260,6 @@ class _RoleFormScreenState extends State<RoleFormScreen> {
                       child: ElevatedButton(
                         onPressed: _isSubmitting ? null : _saveRole,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                         child: _isSubmitting

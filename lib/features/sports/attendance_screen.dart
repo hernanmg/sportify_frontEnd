@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/attendance_service.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/features/sports/event_attendance_screen.dart';
 import 'package:sportify_amateur/models/sport_event.dart';
+import 'package:sportify_amateur/widgets/keepsync_card_tabs.dart';
 
 class AttendanceScreen extends StatefulWidget {
   final int teamId;
@@ -55,7 +57,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AttendanceService.errorMessage(e)),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
     }
@@ -65,24 +67,45 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Asistencias'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Por jugador'),
-              Tab(text: 'Por sesión'),
-            ],
-          ),
-        ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : TabBarView(
-                children: [
-                  _playersTab(),
-                  _sessionsTab(),
-                ],
-              ),
+      child: Builder(
+        builder: (context) {
+          final tabs = DefaultTabController.of(context);
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Asistencias'),
+            ),
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                KeepSyncCardTabs.fromController(
+                  controller: tabs,
+                  items: const [
+                    KeepSyncTabItem(
+                      icon: Icons.person_rounded,
+                      label: 'Por jugador',
+                      subtitle: 'Resumen',
+                    ),
+                    KeepSyncTabItem(
+                      icon: Icons.event_available_rounded,
+                      label: 'Por sesión',
+                      subtitle: 'Entrenamientos',
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : TabBarView(
+                          children: [
+                            _playersTab(),
+                            _sessionsTab(),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

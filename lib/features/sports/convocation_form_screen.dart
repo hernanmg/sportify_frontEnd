@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/services/convocations_service.dart';
@@ -378,7 +379,7 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: KeepSyncColors.flare),
         );
       }
     } finally {
@@ -417,7 +418,7 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
                   ? 'Convocatoria enviada al plantel'
                   : 'Borrador guardado',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
         nav.pop(true);
@@ -425,7 +426,7 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: KeepSyncColors.flare),
         );
       }
     } finally {
@@ -452,8 +453,7 @@ class _ConvocationFormScreenState extends State<ConvocationFormScreen> {
               ? 'Editar convocatoria'
               : (_isOfficial ? 'Partido oficial' : 'Partido amistoso'),
         ),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+        backgroundColor: KeepSyncColors.turf,
       ),
       body: _step == 0 ? _buildStepMatch() : _buildStepSquad(),
     );

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
 import 'package:sportify_amateur/core/utils/user_capabilities.dart';
@@ -661,7 +662,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Evento actualizado'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     }
@@ -682,7 +683,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: KeepSyncColors.flare),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Eliminar'),
           ),
@@ -697,7 +698,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Evento eliminado'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     } catch (e) {
@@ -705,7 +706,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('No se pudo eliminar: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
     }

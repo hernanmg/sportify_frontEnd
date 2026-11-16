@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 
 enum EligibilityStatus {
   eligible('eligible'),
@@ -39,13 +40,13 @@ enum EligibilityColor {
   Color get materialColor {
     switch (this) {
       case EligibilityColor.green:
-        return Colors.green;
+        return KeepSyncColors.turf;
       case EligibilityColor.red:
-        return Colors.red;
+        return KeepSyncColors.flare;
       case EligibilityColor.orange:
-        return Colors.orange;
+        return const Color(0xFFF79009);
       case EligibilityColor.yellow:
-        return Colors.amber;
+        return KeepSyncColors.volt2;
     }
   }
 }

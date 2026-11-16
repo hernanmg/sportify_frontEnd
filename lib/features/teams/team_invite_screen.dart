@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
 import 'package:sportify_amateur/models/my_team_option.dart';
@@ -33,7 +34,7 @@ class _TeamInviteScreenState extends State<TeamInviteScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(TeamService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -55,8 +56,6 @@ class _TeamInviteScreenState extends State<TeamInviteScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Invitar — ${widget.team.name}'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),

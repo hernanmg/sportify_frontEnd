@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/event_expenses_service.dart';
 import 'package:sportify_amateur/core/utils/user_capabilities.dart';
@@ -342,7 +343,6 @@ class _SocialEventExpensesScreenState extends State<SocialEventExpensesScreen> {
       appBar: AppBar(
         title: const Text('Gastos del evento'),
         backgroundColor: Colors.deepPurple.shade700,
-        foregroundColor: Colors.white,
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _reload),
         ],

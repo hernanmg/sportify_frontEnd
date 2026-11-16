@@ -1,6 +1,7 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/team_extras_service.dart';
@@ -240,7 +241,7 @@ class _SponsorsScreenState extends State<SponsorsScreen> {
             child: const Text('Cancelar'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: KeepSyncColors.flare),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Eliminar'),
           ),
@@ -300,7 +301,6 @@ class _SponsorsScreenState extends State<SponsorsScreen> {
       appBar: AppBar(
         title: const Text('Patrocinadores'),
         backgroundColor: Colors.deepOrange,
-        foregroundColor: Colors.white,
       ),
       floatingActionButton: _isStaff && _teamId != null
           ? FloatingActionButton(

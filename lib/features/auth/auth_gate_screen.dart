@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/biometric_auth_service.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
+import 'package:sportify_amateur/widgets/keepsync_brand_logo.dart';
 
 /// Arranque: sesión guardada y opcionalmente biometría antes del dashboard.
 class AuthGateScreen extends StatefulWidget {
@@ -74,16 +76,23 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
+      backgroundColor: KeepSyncColors.ink,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.sports_soccer, size: 56),
-            SizedBox(height: 24),
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Cargando KeepSync Sports…'),
+            const KeepSyncBrandLogo.mark(height: 72),
+            const SizedBox(height: 24),
+            const CircularProgressIndicator(color: KeepSyncColors.volt),
+            const SizedBox(height: 16),
+            Text(
+              'Cargando KeepSync Sports…',
+              style: TextStyle(
+                color: KeepSyncColors.mutedDark,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),

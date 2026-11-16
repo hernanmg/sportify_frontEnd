@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/widgets/player_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
@@ -179,7 +180,7 @@ class PlayerStatusScreenState extends State<PlayerStatusScreen> {
                 onPressed: () => _toggleView(false),
                 icon: Icon(
                   Icons.view_list,
-                  color: !_gridView ? Colors.green : null,
+                  color: !_gridView ? KeepSyncColors.volt : null,
                 ),
               ),
               IconButton(
@@ -187,7 +188,7 @@ class PlayerStatusScreenState extends State<PlayerStatusScreen> {
                 onPressed: () => _toggleView(true),
                 icon: Icon(
                   Icons.grid_view,
-                  color: _gridView ? Colors.green : null,
+                  color: _gridView ? KeepSyncColors.volt : null,
                 ),
               ),
               IconButton(
@@ -449,7 +450,7 @@ class _PlayerStatusSheetState extends State<_PlayerStatusSheet> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error: $e'),
-                      backgroundColor: Colors.red,
+                      backgroundColor: KeepSyncColors.flare,
                     ),
                   );
                 }

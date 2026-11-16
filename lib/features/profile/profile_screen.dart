@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/account_service.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/user_profile_service.dart';
 import 'package:sportify_amateur/models/user_profile.dart';
@@ -52,7 +53,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             content: Text(
               'Error al cargar perfil: ${UserProfileService.errorMessage(e)}',
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -68,9 +69,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Perfil y Configuración'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        elevation: 0,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -95,7 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           icon: const Icon(Icons.logout),
                           label: const Text('Cerrar sesión'),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
+                            foregroundColor: KeepSyncColors.flare,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                         ),
@@ -109,8 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildProfileHeader() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: SmoothHeaderGradient.primary(
-        Colors.blue.shade700,
+      child: SmoothHeaderGradient.ink(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(

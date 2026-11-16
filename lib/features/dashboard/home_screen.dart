@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
 import 'package:sportify_amateur/core/common/team_branding_provider.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
@@ -12,6 +13,7 @@ import 'package:sportify_amateur/features/dashboard/player_home_dashboard.dart';
 import 'package:sportify_amateur/features/onboarding/dt_guided_tour.dart';
 import 'package:sportify_amateur/features/help/home_help_search_bar.dart';
 import 'package:sportify_amateur/features/shell/app_shell_scope.dart';
+import 'package:sportify_amateur/widgets/keepsync_brand_logo.dart';
 import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -74,7 +76,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.themeMode == ThemeMode.dark;
-    final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       body: CustomScrollView(
@@ -86,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen> {
             elevation: 0,
             scrolledUnderElevation: 0,
             surfaceTintColor: Colors.transparent,
-            foregroundColor: Colors.white,
             iconTheme: const IconThemeData(color: Colors.white),
             actionsIconTheme: const IconThemeData(color: Colors.white),
             actions: [
@@ -101,17 +101,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               Switch(
                 value: isDark,
-                activeThumbColor: Colors.white,
-                activeTrackColor: Colors.white.withValues(alpha: 0.45),
-                inactiveThumbColor: Colors.white70,
-                inactiveTrackColor: Colors.white.withValues(alpha: 0.25),
                 onChanged: themeProvider.toggleTheme,
               ),
             ],
             flexibleSpace: Stack(
               fit: StackFit.expand,
               children: [
-                SmoothHeaderGradient.primary(primary),
+                SmoothHeaderGradient.ink(),
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
@@ -140,65 +136,50 @@ class _HomeScreenState extends State<HomeScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Hola, $_userName',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black38,
-                                    blurRadius: 8,
-                                    offset: Offset(0, 1),
+                            Row(
+                              children: [
+                                const KeepSyncBrandLogo.mark(height: 28),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Hola, $_userName',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                             if (_role != null && _role!.isNotEmpty) ...[
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
+                                  color: KeepSyncColors.volt,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.35),
-                                  ),
                                 ),
                                 child: Text(
                                   RoleService.getRoleDisplayName(_role!),
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.95),
+                                  style: const TextStyle(
+                                    color: KeepSyncColors.onVolt,
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
                             ],
                           ],
                         )
-                      : const Text(
-                          'KeepSync Sports',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black38,
-                                blurRadius: 8,
-                                offset: Offset(0, 1),
-                              ),
-                            ],
-                          ),
+                      : const Align(
+                          alignment: Alignment.centerLeft,
+                          child: KeepSyncBrandLogo.wordmarkOnDark(height: 28),
                         ),
                   background: const SizedBox.shrink(),
                 ),

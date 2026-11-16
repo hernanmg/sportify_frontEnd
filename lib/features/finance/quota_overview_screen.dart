@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
@@ -63,7 +64,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(FinanceService.errorMessage(e)),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
     }
@@ -120,7 +121,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Cuotas generadas'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       }
@@ -130,7 +131,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(FinanceService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -202,7 +203,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Serie de $monthCount meses generada'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       }
@@ -212,7 +213,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(FinanceService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -267,7 +268,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Serie actualizada'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       }
@@ -277,7 +278,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(FinanceService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -300,7 +301,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              style: FilledButton.styleFrom(backgroundColor: KeepSyncColors.flare),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Eliminar'),
             ),
@@ -319,7 +320,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
             content: Text(
               result['message']?.toString() ?? 'Serie eliminada',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       }
@@ -329,7 +330,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(FinanceService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -347,7 +348,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Recordatorios enviados: ${r['sent']}'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     } catch (e) {
@@ -355,7 +356,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(FinanceService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -505,7 +506,7 @@ class _QuotaOverviewScreenState extends State<QuotaOverviewScreen> {
                                           ),
                                           FilledButton(
                                             style: FilledButton.styleFrom(
-                                              backgroundColor: Colors.red,
+                                              backgroundColor: KeepSyncColors.flare,
                                             ),
                                             onPressed: () =>
                                                 Navigator.pop(ctx, true),

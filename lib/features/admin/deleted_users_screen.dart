@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/user_service.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/models/user.dart';
@@ -36,7 +37,7 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar usuarios eliminados: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -59,7 +60,7 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            style: ElevatedButton.styleFrom(backgroundColor: KeepSyncColors.turf),
             child: const Text(
               'Restaurar',
               style: TextStyle(color: Colors.white),
@@ -75,7 +76,7 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Usuario "${user.name}" restaurado exitosamente'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
         _loadDeletedUsers();
@@ -83,7 +84,7 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al restaurar usuario: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -110,7 +111,7 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: KeepSyncColors.flare),
             child: const Text(
               'Eliminar Permanentemente',
               style: TextStyle(color: Colors.white),
@@ -134,7 +135,7 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al eliminar permanentemente: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -147,7 +148,6 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
       appBar: AppBar(
         title: const Text('Usuarios Eliminados'),
         backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -270,8 +270,6 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
             icon: const Icon(Icons.arrow_back),
             label: const Text('Volver a Gestión de Usuarios'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
             ),
           ),
         ],
@@ -293,7 +291,7 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: Colors.red.withOpacity(0.2),
+                  backgroundColor: KeepSyncColors.flare.withOpacity(0.2),
                   child: Icon(
                     Icons.person_off,
                     color: Colors.red[700],
@@ -416,8 +414,7 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
                     icon: const Icon(Icons.restore),
                     label: const Text('Restaurar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
+                      backgroundColor: KeepSyncColors.turf,
                     ),
                   ),
                 ),
@@ -428,8 +425,7 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
                     icon: const Icon(Icons.delete_forever),
                     label: const Text('Eliminar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
+                      backgroundColor: KeepSyncColors.flare,
                     ),
                   ),
                 ),

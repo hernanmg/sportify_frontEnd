@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/services/post_match_service.dart';
 import 'package:sportify_amateur/core/services/sport_events_service.dart';
@@ -678,7 +679,7 @@ class _SummaryTab extends StatelessWidget {
               padding: const EdgeInsets.only(top: 8),
               child: Chip(
                 label: const Text('Partido finalizado'),
-                backgroundColor: Colors.green.shade100,
+                backgroundColor: KeepSyncColors.turf,
               ),
             ),
           if (data.votingClosed)
@@ -705,7 +706,7 @@ class _SummaryTab extends StatelessWidget {
               padding: const EdgeInsets.only(top: 8),
               child: Chip(
                 label: const Text('Ya enviaste tu votación'),
-                backgroundColor: Colors.green.shade100,
+                backgroundColor: KeepSyncColors.turf,
               ),
             ),
           const SizedBox(height: 8),

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:sportify_amateur/core/common/app_config.dart';
 import 'package:sportify_amateur/core/services/post_match_service.dart';
@@ -259,7 +260,7 @@ class _MatchLineupBoardTabState extends State<MatchLineupBoardTab> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: KeepSyncColors.flare),
             child: const Text('Eliminar'),
           ),
         ],

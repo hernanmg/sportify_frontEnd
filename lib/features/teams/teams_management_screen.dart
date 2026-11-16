@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:sportify_amateur/features/teams/sports_catalog_tab.dart';
 import 'package:sportify_amateur/features/teams/categories_catalog_tab.dart';
 import 'package:sportify_amateur/features/teams/teams_list_tab.dart';
 import 'package:sportify_amateur/features/teams/team_form_screen.dart';
+import 'package:sportify_amateur/widgets/keepsync_card_tabs.dart';
 
 class TeamsManagementScreen extends StatefulWidget {
   const TeamsManagementScreen({super.key});
@@ -15,6 +16,24 @@ class _TeamsManagementScreenState extends State<TeamsManagementScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   final _teamsListKey = GlobalKey<TeamsListTabState>();
+
+  static const _tabs = [
+    KeepSyncTabItem(
+      icon: Icons.sports_rounded,
+      label: 'Deportes',
+      subtitle: 'Catálogo',
+    ),
+    KeepSyncTabItem(
+      icon: Icons.category_rounded,
+      label: 'Categorías',
+      subtitle: 'Divisiones',
+    ),
+    KeepSyncTabItem(
+      icon: Icons.groups_rounded,
+      label: 'Equipos',
+      subtitle: 'Planteles',
+    ),
+  ];
 
   @override
   void initState() {
@@ -44,33 +63,29 @@ class _TeamsManagementScreenState extends State<TeamsManagementScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gestión de Equipos'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(icon: Icon(Icons.sports), text: 'Deportes'),
-            Tab(icon: Icon(Icons.category), text: 'Categorías'),
-            Tab(icon: Icon(Icons.groups), text: 'Equipos'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SportsCatalogTab(),
-          const CategoriesCatalogTab(),
-          TeamsListTab(key: _teamsListKey),
+          KeepSyncCardTabs.fromController(
+            controller: _tabController,
+            items: _tabs,
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                const SportsCatalogTab(),
+                const CategoriesCatalogTab(),
+                TeamsListTab(key: _teamsListKey),
+              ],
+            ),
+          ),
         ],
       ),
       floatingActionButton: _tabController.index == 2
           ? FloatingActionButton(
               onPressed: _openTeamForm,
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
               child: const Icon(Icons.add),
             )
           : null,

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/sport_service.dart';
 import 'package:sportify_amateur/models/sport.dart';
 
@@ -108,7 +109,7 @@ class _SportsCatalogTabState extends State<SportsCatalogTab> {
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: KeepSyncColors.flare),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Eliminar'),
           ),
@@ -189,7 +190,6 @@ class _SportsCatalogTabState extends State<SportsCatalogTab> {
                     return Card(
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Colors.blue.shade100,
                           child: const Icon(Icons.sports, color: Colors.blue),
                         ),
                         title: Text(sport.name),

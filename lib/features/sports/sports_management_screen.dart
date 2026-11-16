@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/features/sports/roster_management_screen.dart';
 import 'package:sportify_amateur/features/sports/events_management_screen.dart';
 import 'package:sportify_amateur/features/sports/convocations_screen.dart';
@@ -23,6 +24,7 @@ import 'package:sportify_amateur/core/common/season_provider.dart';
 import 'package:sportify_amateur/core/utils/user_capabilities.dart';
 import 'package:sportify_amateur/features/sports/team_calendar_screen.dart';
 import 'package:sportify_amateur/widgets/season_selector_chip.dart';
+import 'package:sportify_amateur/widgets/keepsync_card_tabs.dart';
 
 enum _SportsMgmtTab { roster, events, convocations, playerStatus }
 
@@ -121,37 +123,13 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
   Widget _buildTabSelector() {
     if (_visibleTabs.length <= 1) return const SizedBox.shrink();
 
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Row(
-          children: _visibleTabs.asMap().entries.map((entry) {
-            final index = entry.key;
-            final tab = entry.value;
-            final meta = _tabMeta(tab);
-            final selected = _selectedTabIndex == index;
-            return Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: FilterChip(
-                avatar: Icon(
-                  meta.icon,
-                  size: 18,
-                  color: selected
-                      ? Theme.of(context).colorScheme.onSecondaryContainer
-                      : null,
-                ),
-                label: Text(meta.label),
-                selected: selected,
-                onSelected: (_) {
-                  setState(() => _selectedTabIndex = index);
-                },
-              ),
-            );
-          }).toList(),
-        ),
-      ),
+    return KeepSyncCardTabs(
+      selectedIndex: _selectedTabIndex,
+      onChanged: (index) => setState(() => _selectedTabIndex = index),
+      items: _visibleTabs.map((tab) {
+        final meta = _tabMeta(tab);
+        return KeepSyncTabItem(icon: meta.icon, label: meta.label);
+      }).toList(),
     );
   }
 
@@ -471,7 +449,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -500,7 +478,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Recordatorio de entrenamiento enviado'),
-              backgroundColor: Colors.green,
+              backgroundColor: KeepSyncColors.turf,
             ),
           );
         }
@@ -509,7 +487,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error al enviar recordatorio: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: KeepSyncColors.flare,
             ),
           );
         }
@@ -539,7 +517,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Recordatorio de pago enviado'),
-              backgroundColor: Colors.green,
+              backgroundColor: KeepSyncColors.turf,
             ),
           );
         }
@@ -548,7 +526,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error al enviar recordatorio: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: KeepSyncColors.flare,
             ),
           );
         }
@@ -564,7 +542,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Alertas médicas enviadas'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       }
@@ -573,7 +551,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al enviar alertas: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -603,7 +581,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Notificación de evento social enviada'),
-              backgroundColor: Colors.green,
+              backgroundColor: KeepSyncColors.turf,
             ),
           );
         }
@@ -612,7 +590,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error al crear evento: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: KeepSyncColors.flare,
             ),
           );
         }
@@ -661,7 +639,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('$e'), backgroundColor: KeepSyncColors.flare),
         );
       }
       return null;
@@ -768,7 +746,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Evento social creado'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     }
@@ -791,7 +769,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
               ),
               const SizedBox(height: 12),
               ListTile(
-                leading: const Icon(Icons.sports_soccer, color: Colors.green),
+                leading: const Icon(Icons.sports_soccer, color: KeepSyncColors.volt),
                 title: const Text('Partido con convocatoria'),
                 subtitle: const Text('Plantel → cancha (recomendado)'),
                 onTap: () => Navigator.pop(ctx, SportEventType.match),
@@ -850,7 +828,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Evento creado'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     }
@@ -869,7 +847,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Jugador agregado a la lista de buena fe'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     }
@@ -888,7 +866,7 @@ class _SportsManagementScreenState extends State<SportsManagementScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Convocatoria guardada'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     }

@@ -1,11 +1,11 @@
 {
-    "name": "sportify_amateur",
-    "short_name": "sportify_amateur",
+    "name": "KeepSync Sports",
+    "short_name": "KeepSync",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0A1628",
+    "theme_color": "#0A1628",
+    "description": "Gestión deportiva para equipos amateur y clubes.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

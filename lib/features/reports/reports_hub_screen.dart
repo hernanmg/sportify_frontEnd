@@ -1,4 +1,4 @@
-import 'package:intl/intl.dart';
+﻿import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
@@ -121,7 +121,6 @@ class _ReportsHubScreenState extends State<ReportsHubScreen> {
       appBar: AppBar(
         title: const Text('Informes'),
         backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
         actions: const [
           SeasonSelectorChip(),
           SizedBox(width: 8),

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/user_profile_service.dart';
 import 'package:sportify_amateur/models/user_profile.dart';
 
@@ -68,7 +69,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar perfil: ${UserProfileService.errorMessage(e)}'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -142,7 +143,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Perfil actualizado exitosamente'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
 
@@ -155,7 +156,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
             content: Text(
               'Error al actualizar perfil: ${UserProfileService.errorMessage(e)}',
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
             duration: const Duration(seconds: 6),
           ),
         );
@@ -168,8 +169,7 @@ class _ProfileInfoScreenState extends State<ProfileInfoScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Información del Perfil'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+        backgroundColor: KeepSyncColors.turf,
         actions: [
           TextButton(
             onPressed: _isSaving ? null : _saveProfile,

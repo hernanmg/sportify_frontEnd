@@ -51,6 +51,11 @@ flutter_icons:
   android: true
   ios: true
   remove_alpha_ios: true
-  image_path: "assets/icono_1.png"
+  image_path: "assets/brand/isotipo.png"
 flutter:
   uses-material-design: true
+  assets:
+    - assets/brand/isotipo.png
+    - assets/brand/isotipo-128.png
+    - assets/brand/logo-negativo.png
+    - assets/brand/logo-positivo.png

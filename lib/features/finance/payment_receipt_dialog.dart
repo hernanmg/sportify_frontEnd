@@ -1,6 +1,7 @@
-import 'dart:typed_data';
+﻿import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/finance_service.dart';
 
 /// Muestra el comprobante de un pago (imagen o PDF indicador).

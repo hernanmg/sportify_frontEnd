@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -44,7 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('¡Registro exitoso! Completa tu perfil'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
 
@@ -58,7 +59,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -70,12 +71,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Crear Cuenta'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -89,22 +86,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 padding: const EdgeInsets.all(20),
                 margin: const EdgeInsets.only(bottom: 32),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade50, Colors.blue.shade100],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
+                  color: KeepSyncColors.ink2,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: KeepSyncColors.borderDark),
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.blue,
-                        borderRadius: BorderRadius.circular(8),
+                        color: KeepSyncColors.volt,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
                         Icons.person_add,
-                        color: Colors.white,
+                        color: KeepSyncColors.onVolt,
                         size: 24,
                       ),
                     ),
@@ -118,7 +114,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              color: KeepSyncColors.paper,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -126,7 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             'Crea tu cuenta y gestiona tu experiencia deportiva',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: KeepSyncColors.mutedDark,
                             ),
                           ),
                         ],
@@ -259,7 +255,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _register,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -304,7 +299,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         TextSpan(
                           text: 'Inicia sesión',
                           style: TextStyle(
-                            color: Colors.blue,
+                            color: KeepSyncColors.volt,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -348,7 +343,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.blue, width: 2),
+          borderSide: const BorderSide(color: KeepSyncColors.volt, width: 2),
         ),
         filled: true,
         fillColor: Colors.white,

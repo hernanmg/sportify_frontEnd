@@ -1,6 +1,7 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -250,7 +251,7 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: KeepSyncColors.flare,
       ),
     );
   }
@@ -259,7 +260,7 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green,
+        backgroundColor: KeepSyncColors.turf,
       ),
     );
   }
@@ -442,8 +443,6 @@ class _TeamFormScreenState extends State<TeamFormScreen> {
                           child: ElevatedButton(
                             onPressed: _saveTeam,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               elevation: 0,
                               shape: RoundedRectangleBorder(

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/user_service.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/models/user.dart';
@@ -47,7 +48,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar datos: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -82,7 +83,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: KeepSyncColors.flare),
             child: const Text(
               'Eliminar',
               style: TextStyle(color: Colors.white),
@@ -98,7 +99,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Usuario "${user.name}" eliminado exitosamente'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
         _loadData();
@@ -106,7 +107,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al eliminar usuario: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -225,14 +226,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           SnackBar(
             content: Text(
                 'Rol de "${updatedUser.name}" cambiado a "${RoleService.getRoleDisplayName(result.name)}"'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cambiar rol: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -244,8 +245,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gestión de Usuarios'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

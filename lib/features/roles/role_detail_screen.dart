@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/models/role.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/core/services/permission_service.dart';
@@ -29,7 +30,6 @@ class _RoleDetailScreenState extends State<RoleDetailScreen> {
       appBar: AppBar(
         title: const Text("Detalle del Rol"),
         backgroundColor: Colors.purple,
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -53,7 +53,7 @@ class _RoleDetailScreenState extends State<RoleDetailScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Error al cargar rol para editar: $e'),
-                    backgroundColor: Colors.red,
+                    backgroundColor: KeepSyncColors.flare,
                   ),
                 );
               }

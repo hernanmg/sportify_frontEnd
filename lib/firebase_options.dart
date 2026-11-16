@@ -48,7 +48,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCNuDnOFPaijaIEStWebsY5i_yD_GVYORg',
-    appId: '1:489565755634:android:8c4e594a6514c44afd586b',
+    appId: '1:489565755634:android:d59899985a21285dfd586b',
     messagingSenderId: '489565755634',
     projectId: 'sportify-amateur-dev',
     storageBucket: 'sportify-amateur-dev.firebasestorage.app',
@@ -56,7 +56,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAez82BIutAhAlz8wz9zdLTe2mkisxJ-_A',
-    appId: '1:489565755634:ios:a4c4a80aeb8542ccfd586b',
+    appId: '1:489565755634:ios:52ee92c257b97f49fd586b',
     messagingSenderId: '489565755634',
     projectId: 'sportify-amateur-dev',
     storageBucket: 'sportify-amateur-dev.firebasestorage.app',

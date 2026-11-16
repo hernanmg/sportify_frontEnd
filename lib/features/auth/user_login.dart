@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sportify_amateur/core/services/auth_services.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/biometric_auth_service.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
+import 'package:sportify_amateur/widgets/keepsync_brand_logo.dart';
 
 class UserLoginScreen extends StatefulWidget {
   const UserLoginScreen({super.key});
@@ -55,7 +57,7 @@ class _LoginScreenState extends State<UserLoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AuthService.loginErrorMessage(e)),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
     } finally {
@@ -84,7 +86,7 @@ class _LoginScreenState extends State<UserLoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AuthService.loginErrorMessage(e)),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
     } finally {
@@ -101,20 +103,18 @@ class _LoginScreenState extends State<UserLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              primary.withValues(alpha: 0.85),
-              primary.withValues(alpha: 0.45),
-              Theme.of(context).scaffoldBackgroundColor,
+              KeepSyncColors.ink,
+              KeepSyncColors.ink2,
+              KeepSyncColors.ink,
             ],
-            stops: const [0.0, 0.35, 0.65],
+            stops: [0.0, 0.45, 1.0],
           ),
         ),
         child: SafeArea(
@@ -128,19 +128,7 @@ class _LoginScreenState extends State<UserLoginScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.sports_soccer,
-                        size: 72,
-                        color: Colors.white.withValues(alpha: 0.95),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'KeepSync Sports',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
+                      const KeepSyncBrandLogo.wordmarkOnDark(height: 44),
                       const SizedBox(height: 32),
                       Card(
                         elevation: 8,
@@ -216,7 +204,7 @@ class _LoginScreenState extends State<UserLoginScreen> {
                                         width: 22,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color: Colors.white,
+                                          color: KeepSyncColors.onVolt,
                                         ),
                                       )
                                     : const Text(

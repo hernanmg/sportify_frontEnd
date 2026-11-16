@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:sportify_amateur/widgets/invite_code_share_sheet.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
@@ -148,7 +149,7 @@ class _TeamOnboardingScreenState extends State<TeamOnboardingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Jugador agregado a la lista de buena fe'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     }
@@ -184,7 +185,6 @@ class _TeamOnboardingScreenState extends State<TeamOnboardingScreen> {
       appBar: AppBar(
         title: const Text('Onboarding del equipo'),
         backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
       ),
       body: Column(
         children: [

@@ -1,17 +1,8 @@
+export 'package:sportify_amateur/core/theme/keepsync_colors.dart';
+export 'package:sportify_amateur/core/theme/keepsync_theme.dart';
+
 import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_theme.dart';
 
-final ThemeData lightTheme = ThemeData(
-  brightness: Brightness.light,
-  primarySwatch: Colors.blue,
-  appBarTheme: AppBarTheme(
-    backgroundColor: Colors.blue,
-  ),
-);
-
-final ThemeData darkTheme = ThemeData(
-  brightness: Brightness.dark,
-  primarySwatch: Colors.blue,
-  appBarTheme: AppBarTheme(
-    backgroundColor: Colors.grey[900],
-  ),
-);
+final ThemeData lightTheme = KeepSyncTheme.light;
+final ThemeData darkTheme = KeepSyncTheme.dark;

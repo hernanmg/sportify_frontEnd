@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
@@ -170,7 +171,7 @@ class _PlayerHomeDashboardState extends State<PlayerHomeDashboard> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Error: $e'), backgroundColor: KeepSyncColors.flare),
       );
     } finally {
       if (mounted) setState(() => _responding = false);

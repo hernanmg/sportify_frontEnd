@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/account_service.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/biometric_auth_service.dart';
@@ -79,7 +80,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
               ? '$_biometricLabel activado para este dispositivo'
               : '$_biometricLabel desactivado',
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: KeepSyncColors.turf,
       ),
     );
   }
@@ -90,7 +91,6 @@ class _SecurityScreenState extends State<SecurityScreen> {
       appBar: AppBar(
         title: const Text('Seguridad'),
         backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -292,7 +292,6 @@ class _SecurityScreenState extends State<SecurityScreen> {
                   onPressed: _isLoading ? null : _changePassword,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -442,7 +441,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Contraseña cambiada exitosamente'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
 
@@ -455,7 +454,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
     }
@@ -530,7 +529,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, passwordController.text),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(backgroundColor: KeepSyncColors.flare),
               child: const Text(
                 'Eliminar definitivamente',
                 style: TextStyle(color: Colors.white),
@@ -550,7 +549,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Tu cuenta fue eliminada'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
       await AccountService.logoutAndGoToLogin(context, disableBiometric: true);
@@ -560,7 +559,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
     }

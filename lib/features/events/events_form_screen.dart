@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/event_service.dart';
 import 'package:sportify_amateur/models/event.dart';
 
@@ -226,7 +227,7 @@ class _EventsFormScreenScreenState extends State<EventsFormScreen> {
                 // Aquí iría la lógica para crear el evento
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: KeepSyncColors.turf,
                 padding: EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

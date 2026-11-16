@@ -7,9 +7,28 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:489565755634:android:8c4e594a6514c44afd586b",
+        "mobilesdk_app_id": "1:489565755634:android:d59899985a21285dfd586b",
         "android_client_info": {
           "package_name": "app.keepsync.sports"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNuDnOFPaijaIEStWebsY5i_yD_GVYORg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:489565755634:android:8c4e594a6514c44afd586b",
+        "android_client_info": {
+          "package_name": "sportify.amateur"
         }
       },
       "oauth_client": [],

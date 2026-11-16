@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class PersonalInfoStep extends StatefulWidget {
@@ -380,8 +380,6 @@ class _PersonalInfoStepState extends State<PersonalInfoStep> {
                   child: ElevatedButton(
                     onPressed: _isFormValid ? _handleNext : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

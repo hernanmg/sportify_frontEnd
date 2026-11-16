@@ -8,6 +8,7 @@ import 'package:sportify_amateur/core/navigation/app_navigator.dart';
 import 'package:sportify_amateur/core/services/push_registration_service.dart';
 import 'package:sportify_amateur/firebase_background.dart';
 import 'package:sportify_amateur/firebase_options.dart';
+import 'package:sportify_amateur/core/common/themes.dart';
 import 'package:sportify_amateur/core/common/themes_provider.dart';
 import 'package:sportify_amateur/features/auth/auth_gate_screen.dart';
 import 'package:sportify_amateur/features/auth/login.dart';
@@ -111,20 +112,8 @@ class MainApp extends StatelessWidget {
         );
       },
       title: 'KeepSync Sports',
-      theme: ThemeData(
-        brightness: Brightness.light,
-        primarySwatch: Colors.blue,
-        snackBarTheme: const SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-        ),
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.blue,
-        snackBarTheme: const SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-        ),
-      ),
+      theme: lightTheme,
+      darkTheme: darkTheme,
       themeMode: themeProvider.themeMode,
       initialRoute: '/',
       routes: {

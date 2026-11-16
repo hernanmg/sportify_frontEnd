@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
@@ -83,7 +84,7 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar eventos: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -353,7 +354,7 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
                     child: const Text('Cancelar'),
                   ),
                   FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                    style: FilledButton.styleFrom(backgroundColor: KeepSyncColors.flare),
                     onPressed: () => Navigator.pop(ctx, true),
                     child: const Text('Eliminar'),
                   ),
@@ -375,7 +376,7 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Evento eliminado'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       }
@@ -385,7 +386,7 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al eliminar: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -403,7 +404,7 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
         break;
       case SportEventType.match:
         iconData = Icons.sports_soccer;
-        iconColor = Colors.green;
+        iconColor = KeepSyncColors.volt;
         break;
       case SportEventType.social:
         iconData = Icons.celebration;
@@ -435,7 +436,7 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
         label = 'Programado';
         break;
       case SportEventStatus.confirmed:
-        color = Colors.green;
+        color = KeepSyncColors.turf;
         label = 'Confirmado';
         break;
       case SportEventStatus.inProgress:
@@ -499,7 +500,6 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
               const SizedBox(height: 16),
               ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Colors.blue.shade100,
                   child: const Icon(Icons.fitness_center, color: Colors.blue),
                 ),
                 title: const Text('Entrenamiento'),
@@ -508,8 +508,8 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
               ),
               ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Colors.green.shade100,
-                  child: const Icon(Icons.sports_soccer, color: Colors.green),
+                  backgroundColor: KeepSyncColors.turf,
+                  child: const Icon(Icons.sports_soccer, color: KeepSyncColors.volt),
                 ),
                 title: const Text('Partido'),
                 subtitle: const Text('Oficial o amistoso'),
@@ -596,7 +596,6 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Gestionar convocatoria para: ${event.title}'),
-        backgroundColor: Colors.blue,
         action: SnackBarAction(
           label: 'Ver',
           onPressed: () {
@@ -624,7 +623,7 @@ class EventsManagementScreenState extends State<EventsManagementScreen> {
               Navigator.pop(context);
               await _performDelete(event);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: KeepSyncColors.flare),
             child: const Text('Eliminar'),
           ),
         ],

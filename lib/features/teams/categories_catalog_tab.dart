@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:sportify_amateur/core/services/category_service.dart';
 import 'package:sportify_amateur/core/services/sport_service.dart';
@@ -265,7 +266,7 @@ class _CategoriesCatalogTabState extends State<CategoriesCatalogTab> {
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: KeepSyncColors.flare),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Eliminar'),
           ),

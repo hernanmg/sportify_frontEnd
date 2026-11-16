@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/active_workspace_provider.dart';
@@ -218,7 +219,7 @@ class _TeamCalendarScreenState extends State<TeamCalendarScreen> {
               if (_canCreateConvocation)
                 ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Colors.green.shade100,
+                    backgroundColor: KeepSyncColors.turf,
                     child: Icon(Icons.sports_soccer, color: Colors.green.shade800),
                   ),
                   title: const Text('Partido con convocatoria'),
@@ -233,7 +234,6 @@ class _TeamCalendarScreenState extends State<TeamCalendarScreen> {
               if (_canManageSportsEvents)
                 ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Colors.blue.shade100,
                     child: Icon(Icons.event, color: Colors.blue.shade800),
                   ),
                   title: const Text('Otro evento'),

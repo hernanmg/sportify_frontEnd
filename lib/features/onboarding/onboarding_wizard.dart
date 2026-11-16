@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/features/onboarding/steps/personal_info_step.dart';
 import 'package:sportify_amateur/features/onboarding/steps/sports_profile_step.dart';
 import 'package:sportify_amateur/features/onboarding/steps/institutional_info_step.dart';
@@ -320,7 +321,7 @@ class _OnboardingWizardState extends State<OnboardingWizard> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: KeepSyncColors.flare,
       ),
     );
   }

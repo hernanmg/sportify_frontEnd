@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/roster_service.dart';
 import 'package:sportify_amateur/core/services/sport_positions_service.dart';
@@ -170,7 +171,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar datos: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -525,7 +526,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Debes seleccionar un usuario'),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
       return;
@@ -537,7 +538,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Nombre y apellido son obligatorios'),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
       return;
@@ -547,7 +548,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Debes seleccionar un equipo'),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
       return;
@@ -557,7 +558,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Seleccioná al menos una categoría'),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
       return;
@@ -587,7 +588,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Tu ficha fue actualizada'),
-              backgroundColor: Colors.green,
+              backgroundColor: KeepSyncColors.turf,
             ),
           );
           Navigator.pop(context, true);
@@ -718,7 +719,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
                   ? '$displayName agregado a la lista de buena fe'
                   : 'Información de $displayName actualizada',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
         Navigator.pop(context, true);
@@ -765,7 +766,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
               label: 'Cerrar',
@@ -786,8 +787,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Cargando...'),
-          backgroundColor: Colors.green,
-          foregroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
         ),
         body: const Center(
           child: Column(
@@ -811,8 +811,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
                   ? 'Mi ficha'
                   : 'Editar Jugador',
         ),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -885,7 +884,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Colors.green,
+          color: KeepSyncColors.volt,
         ),
       ),
     );
@@ -1010,16 +1009,16 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
+        color: KeepSyncColors.volt.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.withOpacity(0.3)),
+        border: Border.all(color: KeepSyncColors.volt.withOpacity(0.28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
-              Icon(Icons.person, color: Colors.green),
+              Icon(Icons.person, color: KeepSyncColors.volt),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1265,9 +1264,9 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.08),
+        color: KeepSyncColors.volt.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.withValues(alpha: 0.25)),
+        border: Border.all(color: KeepSyncColors.volt.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1494,7 +1493,7 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
               _isEnabled = value;
             });
           },
-          activeColor: Colors.green,
+          activeColor: KeepSyncColors.volt,
         ),
       ],
     );
@@ -1510,21 +1509,22 @@ class _RosterFormImprovedScreenState extends State<RosterFormImprovedScreen> {
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                  color: Colors.white,
+                  color: KeepSyncColors.onVolt,
                   strokeWidth: 2,
                 ),
               )
-            : const Icon(Icons.save, color: Colors.white),
+            : const Icon(Icons.save, color: KeepSyncColors.onVolt),
         label: Text(
           widget.roster == null
               ? 'Agregar a Lista de Buena Fe'
               : _isSelfEditMode
                   ? 'Guardar mi ficha'
                   : 'Guardar Cambios',
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: KeepSyncColors.onVolt),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.volt,
+          foregroundColor: KeepSyncColors.onVolt,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

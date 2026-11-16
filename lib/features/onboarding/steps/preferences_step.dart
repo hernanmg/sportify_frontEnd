@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/features/onboarding/widgets/onboarding_step_buttons.dart';
 
 class PreferencesStep extends StatefulWidget {

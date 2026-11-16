@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/widgets/smooth_header_gradient.dart';
 import 'package:provider/provider.dart';
 import 'package:sportify_amateur/core/common/season_provider.dart';
@@ -134,7 +135,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('No se pudo cargar plantel (equipo $teamId): $e'),
-                  backgroundColor: Colors.red,
+                  backgroundColor: KeepSyncColors.flare,
                 ),
               );
             }
@@ -195,7 +196,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
             duration: const Duration(seconds: 5),
           ),
         );
@@ -332,7 +333,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('No se pudieron cargar usuarios: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -424,7 +425,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
             content: Text(
               '${player.playerName} vinculado a ${picked.displayName}',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       }
@@ -434,7 +435,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(RosterService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -458,7 +459,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              style: ElevatedButton.styleFrom(backgroundColor: KeepSyncColors.flare),
               child: const Text(
                 'Eliminar',
                 style: TextStyle(color: Colors.white),
@@ -476,7 +477,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${player.playerName} eliminado de la lista'),
-            backgroundColor: Colors.green,
+            backgroundColor: KeepSyncColors.turf,
           ),
         );
       }
@@ -486,7 +487,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al eliminar: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -500,25 +501,27 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
       appBar: AppBar(
         title: Text(
             widget.teamId != null ? 'Lista de buena fe' : 'Gestión de plantel'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+        backgroundColor: KeepSyncColors.ink2,
+        surfaceTintColor: Colors.transparent,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _addPlayer,
+          _rosterAppBarAction(
+            icon: Icons.add,
             tooltip: 'Agregar Jugador',
+            onPressed: _addPlayer,
+            primary: true,
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadRoster,
+          _rosterAppBarAction(
+            icon: Icons.refresh,
             tooltip: 'Recargar',
+            onPressed: _loadRoster,
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
           // Header con filtros (tema oscuro local: texto blanco sobre verde)
-          SmoothHeaderGradient.green(
+          SmoothHeaderGradient.ink(
             child: Theme(
               data: ThemeData.dark().copyWith(
                 brightness: Brightness.dark,
@@ -541,7 +544,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                             isExpanded: true,
                             isDense: true,
                             value: _selectedSeason,
-                            dropdownColor: Colors.green.shade700,
+                            dropdownColor: KeepSyncColors.ink3,
                             iconEnabledColor: Colors.white,
                             style: const TextStyle(
                               color: Colors.white,
@@ -601,7 +604,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                               )
                               ? _categoryFilter
                               : 'all',
-                          dropdownColor: Colors.green.shade700,
+                          dropdownColor: KeepSyncColors.ink3,
                           iconEnabledColor: Colors.white,
                           style: const TextStyle(color: Colors.white),
                           underline: Container(),
@@ -657,7 +660,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                       DropdownButton<String>(
                         isExpanded: true,
                         value: _filterStatus,
-                        dropdownColor: Colors.green.shade700,
+                        dropdownColor: KeepSyncColors.ink3,
                         iconEnabledColor: Colors.white,
                         style: const TextStyle(
                           color: Colors.white,
@@ -798,8 +801,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
             icon: const Icon(Icons.add),
             label: const Text('Agregar Primer Jugador'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
+              backgroundColor: KeepSyncColors.turf,
             ),
           ),
         ],
@@ -827,7 +829,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                     radius: 25,
                     badgeText: player.jerseyNumber.toString(),
                     backgroundColor:
-                        group.anyCanPlay ? Colors.green : Colors.grey,
+                        group.anyCanPlay ? KeepSyncColors.turf : Colors.grey,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -853,7 +855,6 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                                   style: const TextStyle(fontSize: 11),
                                 ),
                                 visualDensity: VisualDensity.compact,
-                                backgroundColor: Colors.blue.shade50,
                                 padding: EdgeInsets.zero,
                                 materialTapTargetSize:
                                     MaterialTapTargetSize.shrinkWrap,
@@ -985,7 +986,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: player.medicalSummaryPositive
-                        ? Colors.green.withValues(alpha: 0.1)
+                        ? KeepSyncColors.turf.withValues(alpha: 0.12)
                         : Colors.orange.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -994,7 +995,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                       Icon(
                         Icons.medical_services,
                         color: player.medicalSummaryPositive
-                            ? Colors.green
+                            ? KeepSyncColors.turf
                             : Colors.orange,
                         size: 20,
                       ),
@@ -1005,7 +1006,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             color: player.medicalSummaryPositive
-                                ? Colors.green[700]
+                                ? KeepSyncColors.turf
                                 : Colors.orange[900],
                           ),
                         ),
@@ -1044,7 +1045,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
                 child: const Text('Cancelar'),
               ),
               FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                style: FilledButton.styleFrom(backgroundColor: KeepSyncColors.flare),
                 onPressed: () => Navigator.pop(ctx, true),
                 child: const Text('Eliminar'),
               ),
@@ -1068,7 +1069,7 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
     IconData icon;
 
     if (player.canPlay) {
-      color = Colors.green;
+      color = KeepSyncColors.turf;
       text = 'Habilitado';
       icon = Icons.check_circle;
     } else if (!player.isEnabled) {
@@ -1110,6 +1111,34 @@ class RosterManagementScreenState extends State<RosterManagementScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _rosterAppBarAction({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+    bool primary = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        style: IconButton.styleFrom(
+          backgroundColor:
+              primary ? KeepSyncColors.volt : KeepSyncColors.ink3,
+          foregroundColor:
+              primary ? KeepSyncColors.onVolt : KeepSyncColors.paper,
+          side: primary
+              ? BorderSide.none
+              : const BorderSide(color: KeepSyncColors.borderDark),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        icon: Icon(icon),
       ),
     );
   }

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/role_service.dart';
 import 'package:sportify_amateur/core/services/permission_service.dart';
 import 'package:sportify_amateur/features/roles/role_detail_screen.dart';
@@ -44,7 +45,7 @@ class _RolesScreenState extends State<RolesScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al cargar datos: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -65,7 +66,7 @@ class _RolesScreenState extends State<RolesScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: KeepSyncColors.flare),
             child: const Text('Eliminar'),
           ),
         ],
@@ -81,7 +82,7 @@ class _RolesScreenState extends State<RolesScreen> {
             SnackBar(
               content: Text(
                   'Rol "${RoleService.getRoleDisplayName(role.name)}" eliminado'),
-              backgroundColor: Colors.green,
+              backgroundColor: KeepSyncColors.turf,
             ),
           );
         }
@@ -90,7 +91,7 @@ class _RolesScreenState extends State<RolesScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error al eliminar rol: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: KeepSyncColors.flare,
             ),
           );
         }
@@ -124,7 +125,7 @@ class _RolesScreenState extends State<RolesScreen> {
             SnackBar(
               content: Text(
                   'Permisos actualizados para "${RoleService.getRoleDisplayName(role.name)}"'),
-              backgroundColor: Colors.green,
+              backgroundColor: KeepSyncColors.turf,
             ),
           );
         }
@@ -133,7 +134,7 @@ class _RolesScreenState extends State<RolesScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error al actualizar permisos: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: KeepSyncColors.flare,
             ),
           );
         }
@@ -298,8 +299,6 @@ class _RolesScreenState extends State<RolesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gestión de Roles'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -340,7 +339,6 @@ class _RolesScreenState extends State<RolesScreen> {
             ),
           ).then((_) => _loadData());
         },
-        backgroundColor: Colors.blue,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );

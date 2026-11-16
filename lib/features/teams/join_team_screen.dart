@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:sportify_amateur/core/services/auth_storage_services.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
@@ -124,7 +125,7 @@ class _JoinTeamScreenState extends State<JoinTeamScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message']?.toString() ?? '¡Listo!'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
       Navigator.pop(context, true);
@@ -133,7 +134,7 @@ class _JoinTeamScreenState extends State<JoinTeamScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(TeamService.errorMessage(e)),
-            backgroundColor: Colors.red,
+            backgroundColor: KeepSyncColors.flare,
           ),
         );
       }
@@ -218,8 +219,7 @@ class _JoinTeamScreenState extends State<JoinTeamScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Unirme a un equipo'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+        backgroundColor: KeepSyncColors.turf,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -266,8 +266,7 @@ class _JoinTeamScreenState extends State<JoinTeamScreen> {
             ElevatedButton(
               onPressed: _loading ? null : _join,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
+                backgroundColor: KeepSyncColors.turf,
               ),
               child: _loading
                   ? const SizedBox(

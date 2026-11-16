@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:sportify_amateur/core/services/team_admin_service.dart';
 import 'package:sportify_amateur/core/services/team_service.dart';
@@ -263,7 +264,7 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Rol actualizado'),
-                      backgroundColor: Colors.green,
+                      backgroundColor: KeepSyncColors.turf,
                     ),
                   );
                 } catch (e) {
@@ -360,7 +361,7 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Hora de cumpleaños actualizada'),
-          backgroundColor: Colors.green,
+          backgroundColor: KeepSyncColors.turf,
         ),
       );
     } catch (e) {
@@ -369,7 +370,7 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(TeamAdminService.errorMessage(e)),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
     }
@@ -389,7 +390,7 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(TeamService.errorMessage(e)),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
     }
@@ -504,7 +505,7 @@ class _TeamAdminPanelScreenState extends State<TeamAdminPanelScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('No se pudo abrir el evento: $err'),
-          backgroundColor: Colors.red,
+          backgroundColor: KeepSyncColors.flare,
         ),
       );
     }

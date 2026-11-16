@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:sportify_amateur/core/theme/keepsync_colors.dart';
 import 'package:sportify_amateur/core/services/event_service.dart';
 import 'package:sportify_amateur/features/events/events_detail_screen.dart';
 import 'package:sportify_amateur/features/events/events_form_screen.dart';
@@ -96,7 +97,7 @@ class _EventsScreenState extends State<EventsScreen> {
           // Navegar a la pantalla de agregar evento
           print('nuevo partido');
         },
-        backgroundColor: Colors.green,
+        backgroundColor: KeepSyncColors.turf,
         child: Icon(Icons.add),
       ),
     );
